@@ -20,7 +20,7 @@ class Session(SkahaClient):
     @root_validator
     def set_server(cls, values: Dict[str, Any]):
         """Sets the server path after validation."""
-        values["server"] = values["server"] + "/session"
+        values["server"] = f"{values['server']}/{values['version']}/session"
         log.debug(f'Server set to {values["server"]}')
         return values
 

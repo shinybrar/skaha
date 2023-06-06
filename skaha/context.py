@@ -14,7 +14,7 @@ class Context(SkahaClient):
     @root_validator
     def set_server(cls, values: Dict[str, Any]):
         """Sets the server path after validation."""
-        values["server"] = values["server"] + "/context"
+        values["server"] = f"{values['server']}/{values['version']}/context"
         return values
 
     def resources(self) -> Dict[str, Any]:

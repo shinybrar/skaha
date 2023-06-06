@@ -16,6 +16,7 @@ class Images(SkahaClient):
     @root_validator
     def set_server(cls, values: Dict[str, Any]):
         """Sets the server path after validation."""
+        values["server"] = f"{values['server']}/{values['version']}/image"
         values["server"] = values["server"] + "/image"
         return values
 

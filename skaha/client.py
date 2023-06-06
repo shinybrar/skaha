@@ -31,6 +31,7 @@ class SkahaClient(BaseModel):
 
     Args:
         server (str): Server URL.
+        version (str): Skaha API version.
         certificate (str): Certificate file.
         timeout (int): Timeout for requests.
 
@@ -48,6 +49,7 @@ class SkahaClient(BaseModel):
     server: AnyHttpUrl = Field(
         default="https://ws-uv.canfar.net/skaha", title="Server URL", type=AnyHttpUrl
     )
+    version: str = Field(default="v0", title="Skaha API Version")
     certificate: FilePath = Field(
         default="{HOME}/.ssl/cadcproxy.pem".format(HOME=environ["HOME"]),
         type=str,
