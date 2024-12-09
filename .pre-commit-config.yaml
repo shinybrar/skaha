@@ -84,3 +84,11 @@ repos:
       language: python
       additional_dependencies: [radon]
       args: ["cc", "--min=C","--total-average","--exclude=tests/*.py"]
+  - repo: https://github.com/gitleaks/gitleaks
+    rev: v8.16.3
+    hooks:
+      - id: gitleaks
+  - repo: https://github.com/pylint-dev/pylint
+    rev: v2.17.2
+    hooks:
+      - id: pylint
