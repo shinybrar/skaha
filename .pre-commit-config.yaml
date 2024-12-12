@@ -33,7 +33,7 @@ repos:
       - id: black
 
   - repo: https://github.com/pre-commit/mirrors-mypy
-    rev: v1.12.1
+    rev: v1.13.0
     hooks:
       - id: mypy
         additional_dependencies: ["types-toml", "types-requests", "types-defusedxml"]
@@ -46,7 +46,7 @@ repos:
         args: [--convention=google, --add-ignore=D104]
 
   - repo: https://github.com/asottile/blacken-docs
-    rev: 1.19.0
+    rev: 1.19.1
     hooks:
       - id: blacken-docs
 
@@ -70,7 +70,7 @@ repos:
       - id: detect-private-key
 
   - repo: https://github.com/PyCQA/bandit
-    rev: '1.7.10'
+    rev: '1.8.0'
     hooks:
       - id: bandit
         args: ["--skip=B101"]
@@ -85,10 +85,6 @@ repos:
       additional_dependencies: [radon]
       args: ["cc", "--min=C","--total-average","--exclude=tests/*.py"]
   - repo: https://github.com/gitleaks/gitleaks
-    rev: v8.16.3
+    rev: v8.21.2
     hooks:
       - id: gitleaks
-  - repo: https://github.com/pylint-dev/pylint
-    rev: v2.17.2
-    hooks:
-      - id: pylint
