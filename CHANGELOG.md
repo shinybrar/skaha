@@ -1,5 +1,12 @@
 # Changelog
 
+## [1.5.1](https://github.com/shinybrar/skaha/compare/v1.5.0...v1.5.1) (2025-02-26)
+
+
+### Bug Fixes
+
+* **models:** createSpec model now outputs kind with alias type ([3184d5c](https://github.com/shinybrar/skaha/commit/3184d5c8df740d04b652fa94282682de9084b8d3))
+
 ## [1.5.0](https://github.com/shinybrar/skaha/compare/v1.4.4...v1.5.0) (2024-11-22)
 
 
