@@ -245,9 +245,11 @@ class Session(SkahaClient):
             env=env,
             replicas=replicas,
         )
-        data: Dict[str, Any] = specification.model_dump(exclude_none=True)
+        data: Dict[str, Any] = specification.model_dump(
+            exclude_none=True, by_alias=True
+        )
         log.info("Creating %d session(s) with parameters:", replicas)
-        log.info(data)
+        log.debug(data)
         payload: List[Tuple[str, Any]] = []
         arguments: List[Any] = []
         if not data.get("env"):

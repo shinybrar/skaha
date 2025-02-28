@@ -40,7 +40,7 @@ class CreateSpec(BaseModel):
         ...,
         description="Type of skaha session.",
         examples=["headless", "notebook"],
-        alias="type",
+        serialization_alias="type",
     )
     gpus: Optional[int] = Field(None, description="Number of GPUs.", ge=1, le=28)
     cmd: Optional[str] = Field(None, description="Command to run.", examples=["ls"])
@@ -51,7 +51,7 @@ class CreateSpec(BaseModel):
         None, description="Environment variables.", examples=[{"FOO": "BAR"}]
     )
     replicas: int = Field(
-        1, description="Number of sessions to launch.", ge=1, le=256, exclude=True
+        1, description="Number of sessions to launch.", ge=1, le=512, exclude=True
     )
 
     model_config = ConfigDict(validate_assignment=True, populate_by_name=True)

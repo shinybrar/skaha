@@ -7,6 +7,7 @@ from uuid import uuid4
 import pytest
 from pydantic import ValidationError
 
+from skaha.models import CreateSpec
 from skaha.session import Session
 
 pytest.IDENTITY: List[str] = []  # type: ignore
@@ -132,3 +133,22 @@ def test_delete_session(session: Session, name: str):
     # Delete the session
     deletion = session.destroy_with(prefix=name)  # type: ignore
     assert deletion == {pytest.IDENTITY[0]: True}  # type: ignore
+
+
+def test_create_session_with_type_field(session: Session, name: str):
+    """Test creating a session and confirm kind field is changed to type."""
+
+    specification: CreateSpec = CreateSpec(
+        name=name,
+        image="images.canfar.net/skaha/terminal:1.1.2",
+        cores=1,
+        ram=1,
+        kind="headless",
+        cmd="env",
+        replicas=1,
+        env={"TEST": "test"},
+    )
+    data: Dict[str, Any] = specification.model_dump(exclude_none=True, by_alias=True)
+    assert "type" in data
+    assert data["type"] == "headless"
+    assert "kind" not in data
