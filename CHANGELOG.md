@@ -1,5 +1,12 @@
 # Changelog
 
+## [1.5.2](https://github.com/shinybrar/skaha/compare/v1.5.1...v1.5.2) (2025-03-03)
+
+
+### Bug Fixes
+
+* **session:** fixed kind translation for session.create, increased max replicas limit to 512 ([9bfe357](https://github.com/shinybrar/skaha/commit/9bfe3575fb78209df546886d08654874799c7b07))
+
 ## [1.5.1](https://github.com/shinybrar/skaha/compare/v1.5.0...v1.5.1) (2025-02-26)
 
 
