@@ -24,7 +24,9 @@ async def scale(
         >>> from skaha.threaded import scale
             from asyncio import get_event_loop
             loop = get_event_loop()
-            loop.run_until_complete(scale(lambda x: x**2, [{'x': i} for i in range(10)]))
+            loop.run_until_complete(
+                scale(lambda x: x**2, [{'x': i} for i in range(10)])
+            )
     """
     workers = len(arguments)
     with concurrent.futures.ThreadPoolExecutor(max_workers=workers) as executor:

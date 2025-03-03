@@ -108,7 +108,8 @@ class Session(SkahaClient):
             >>> from skaha.session import Session
             >>> session = Session()
             >>> session.stats()
-            {'instances': {'session': 88, 'desktopApp': 30, 'headless': 0, 'total': 118},
+            {'instances': {
+             'session': 88, 'desktopApp': 30, 'headless': 0, 'total': 118},
              'cores': {'requestedCPUCores': 377,
              'coresAvailable': 960,
              'maxCores': {'cores': 32, 'withRam': '147Gi'}},

@@ -44,7 +44,7 @@ def test_default_certificate():
     try:
         SkahaClient()
     except ValidationError:
-        assert False
+        raise AssertionError()
     assert True
 
 

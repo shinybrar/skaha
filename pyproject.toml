@@ -64,3 +64,13 @@ dev-dependencies = [
     "types-defusedxml>=0.7.0.20240117",
     "ipython>=8.18.1",
 ]
+
+[tool.ruff.lint]
+select = ["E", "F", "I", "B", "PIE"]
+ignore = ["B904", "B028"]
+
+[tool.ruff.lint.isort]
+combine-as-imports = true
+
+[tool.ruff.lint.per-file-ignores]
+"__init__.py" = ["F403", "F405"]
