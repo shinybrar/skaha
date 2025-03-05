@@ -4,8 +4,9 @@ import logging
 from os import R_OK, access, environ
 from pathlib import Path
 from time import asctime, gmtime
-from typing import Annotated, Optional
+from typing import Annotated, Dict, Optional
 
+from httpx import AsyncClient, Client
 from pydantic import (
     AnyHttpUrl,
     BaseModel,
@@ -15,7 +16,6 @@ from pydantic import (
     field_validator,
     model_validator,
 )
-from requests import Session
 from typing_extensions import Self
 
 from skaha import __version__
@@ -34,8 +34,9 @@ class SkahaClient(BaseModel):
         server (str): Server URL.
         version (str): Skaha API version.
         certificate (str): Certificate file.
-        timeout (int): Timeout for requests.
-        session (Session): Requests HTTP Session object.
+        timeout (int): HTTP Timeout.
+        client (Client): HTTPx Client.
+        asynclient (AsyncClient): HTTPx Async Client.
         verify (bool): Verify SSL certificate.
         registry (ContainerRegistry): Credentials for a private registry.
 
@@ -52,7 +53,7 @@ class SkahaClient(BaseModel):
     server: AnyHttpUrl = Field(
         default="https://ws-uv.canfar.net/skaha",
         title="Skaha Server URL",
-        description="Location of the Skaha API server.",
+        description="Skaha API Server.",
     )
     version: str = Field(
         default="v0",
@@ -68,7 +69,7 @@ class SkahaClient(BaseModel):
     timeout: int = Field(
         default=15,
         title="HTTP Timeout",
-        description="HTTP Timeout in seconds for requests.",
+        description="HTTP Timeout.",
     )
     verify: bool = Field(default=True)
     registry: Annotated[
@@ -79,14 +80,20 @@ class SkahaClient(BaseModel):
             description="Credentials for a private container registry.",
         ),
     ] = None
-    session: Annotated[
-        Session,
-        Field(
-            default=Session(),
-            title="HTTP Requests Session",
-            description="HTTP Requests Session.",
-        ),
-    ] = Session()
+
+    client: Client = Field(
+        default=None, title="HTTPx Client", description="Synchronous HTTPx Client"
+    )
+    asynclient: AsyncClient = Field(
+        default=None, title="HTTPx Client", description="Asynchronous HTTPx Client"
+    )
+    concurrency: int = Field(
+        128,
+        title="Concurrency",
+        description="Number of concurrent requests for the async client.",
+        le=1024,
+        ge=1,
+    )
 
     model_config: ConfigDict = ConfigDict(arbitrary_types_allowed=True, extra="forbid")
 
@@ -109,24 +116,49 @@ class SkahaClient(BaseModel):
         return value
 
     @model_validator(mode="after")
-    def _create_session(self) -> Self:
-        """Update the session object with the HTTP headers.
+    def _configure_clients(self) -> Self:
+        """Configure the HTTPx Clients.
 
         Returns:
             Self: Updated SkahaClient object.
         """
-        self.session.headers.update({"X-Skaha-Server": str(self.server)})
-        self.session.headers.update(
-            {"Content-Type": "application/x-www-form-urlencoded"}
-        )
-        self.session.headers.update({"Accept": "*/*"})
-        self.session.headers.update({"Date": asctime(gmtime())})
-        self.session.headers.update({"X-Skaha-Client": f"python/{__version__}"})
-        self.session.headers.update({"X-Skaha-Authentication-Type": "certificate"})
-        self.session.cert = str(self.certificate)
-        self.session.verify = self.verify
-        if self.registry:
-            self.session.headers.update(
-                {"X-Skaha-Registry-Auth": f"{self.registry.encoded()}"}
+        # Create the HTTPx clients if they are not passed in
+        if not self.client:
+            self.client: Client = Client(
+                cert=str(self.certificate),
+                timeout=self.timeout,
+                verify=self.verify,
             )
+
+        if not self.asynclient:
+            self.asynclient: AsyncClient = AsyncClient(
+                cert=str(self.certificate),
+                timeout=self.timeout,
+                verify=self.verify,
+            )
+
+        # Configure the HTTP headers
+        headers = self._set_headers()
+        self.client.headers.update(headers)
+        self.asynclient.headers.update(headers)
+        # Configure the base URL for the clients
+        self.client.base_url = f"{self.server}/{self.version}"
+        self.asynclient.base_url = f"{self.server}/{self.version}"
         return self
+
+    def _set_headers(self) -> Dict[str, str]:
+        """Set the HTTP headers for the client.
+
+        Returns:
+            Dict[str, str]: HTTP headers.
+        """
+        headers: Dict[str, str] = {}
+        headers.update({"X-Skaha-Server": str(self.server)})
+        headers.update({"Content-Type": "application/x-www-form-urlencoded"})
+        headers.update({"Accept": "*/*"})
+        headers.update({"Date": asctime(gmtime())})
+        headers.update({"X-Skaha-Client": f"python/{__version__}"})
+        headers.update({"X-Skaha-Authentication-Type": "certificate"})
+        if self.registry:
+            headers.update({"X-Skaha-Registry-Auth": f"{self.registry.encoded()}"})
+        return headers

@@ -1,7 +1,7 @@
 """Test Skaha Client API."""
 
 import pytest
-import requests
+import httpx
 from pydantic import ValidationError
 
 from skaha.client import SkahaClient
@@ -10,27 +10,23 @@ from skaha.client import SkahaClient
 def test_client_has_session_attribute():
     """Test if it SkahaClient object contains requests.Session attribute."""
     client = SkahaClient()
-    assert hasattr(client, "session")
-    assert isinstance(client.session, requests.Session)
+    assert hasattr(client, "client")
+    assert isinstance(client.client, httpx.Client)
 
 
 def test_client_session():
     """Test SkahaClient object's session attribute contains ther right headers."""
     headers = [
-        "X-Skaha-Server",
-        "Content-Type",
-        "Accept",
-        "User-Agent",
-        "Date",
-        "X-Skaha-Version",
-        "X-Skaha-Client-Python-Version",
-        "X-Skaha-Client-Arch",
-        "X-Skaha-Client-OS",
-        "X-Skaha-Client-OS-Version",
-        "X-Skaha-Client-Platform",
+        "x-skaha-server",
+        "content-type",
+        "acccept",
+        "user-agent",
+        "date",
+        "user-agent",
+        "x-skaha-registry-auth"
     ]
-    client = SkahaClient()
-    assert any(list(map(lambda h: h in client.session.headers.keys(), headers)))
+    skaha = SkahaClient(registry={"username": "test", "secret": "test"})
+    assert any(list(map(lambda h: h in skaha.client.headers.keys(), headers)))
 
 
 def test_bad_server_no_schema():
