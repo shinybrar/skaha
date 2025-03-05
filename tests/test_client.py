@@ -1,7 +1,7 @@
 """Test Skaha Client API."""
 
-import pytest
 import httpx
+import pytest
 from pydantic import ValidationError
 
 from skaha.client import SkahaClient
@@ -23,7 +23,7 @@ def test_client_session():
         "user-agent",
         "date",
         "user-agent",
-        "x-skaha-registry-auth"
+        "x-skaha-registry-auth",
     ]
     skaha = SkahaClient(registry={"username": "test", "secret": "test"})
     assert any(list(map(lambda h: h in skaha.client.headers.keys(), headers)))
