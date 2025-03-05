@@ -35,10 +35,11 @@ class SkahaClient(BaseModel):
         version (str): Skaha API version.
         certificate (str): Certificate file.
         timeout (int): HTTP Timeout.
-        client (Client): HTTPx Client.
-        asynclient (AsyncClient): HTTPx Async Client.
         verify (bool): Verify SSL certificate.
         registry (ContainerRegistry): Credentials for a private registry.
+        client (Client): HTTPx Client.
+        asynclient (AsyncClient): HTTPx Async Client.
+        concurrency (int): Number of concurrent requests.
 
     Raises:
         ValidationError: If the client is misconfigured.
