@@ -143,7 +143,6 @@ class SkahaClient(BaseModel):
         Returns:
             int: Logging level.
         """
-
         log.setLevel(value)
         return value
 
