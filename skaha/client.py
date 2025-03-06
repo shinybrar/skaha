@@ -5,7 +5,7 @@ import ssl
 from os import R_OK, access, environ
 from pathlib import Path
 from time import asctime, gmtime
-from typing import Annotated, Dict, Optional
+from typing import Annotated, Dict, Optional, Tuple
 
 from httpx import AsyncClient, Client
 from pydantic import (
@@ -13,7 +13,7 @@ from pydantic import (
     BaseModel,
     ConfigDict,
     Field,
-    FilePath,
+    ValidationInfo,
     field_validator,
     model_validator,
 )
@@ -62,11 +62,11 @@ class SkahaClient(BaseModel):
         title="Skaha API Version",
         description="Version of the Skaha API to use.",
     )
-    certificate: FilePath = Field(
-        default=Path(f"{environ['HOME']}/.ssl/cadcproxy.pem"),
+    certificate: str = Field(
+        default=f"{environ['HOME']}/.ssl/cadcproxy.pem",
         title="X509 Certificate",
         description="Path to the X509 certificate used for authentication.",
-        validate_default=True,
+        validate_default=False,
     )
     timeout: int = Field(
         default=15,
@@ -105,6 +105,14 @@ class SkahaClient(BaseModel):
         ),
     ]
 
+    token: Optional[str] = Field(
+        None,
+        title="Authentication Token",
+        description="Authentication Token for the Skaha Server.",
+        exclude=True,
+        frozen=True,
+    )
+
     concurrency: int = Field(
         128,
         title="Concurrency",
@@ -112,13 +120,12 @@ class SkahaClient(BaseModel):
         le=1024,
         ge=1,
     )
-
     # Pydantic Configuration
     model_config = ConfigDict(arbitrary_types_allowed=True, extra="forbid")
 
     @field_validator("certificate")
     @classmethod
-    def _check_certificate(cls, value: FilePath) -> FilePath:
+    def _check_certificate(cls, value: str, info: ValidationInfo) -> str:
         """Validate the certificate file.
 
         Args:
@@ -127,11 +134,12 @@ class SkahaClient(BaseModel):
         Returns:
             FilePath: Validated Path to the certificate file.
         """
-        # Check if the certificate is a valid path
-        assert (
-            Path(value).resolve(strict=True).is_file()
-        ), f"{value} is not a file or does not exist."
-        assert access(Path(value), R_OK), f"{value} is not readable."
+        if not info.data.get("token"):
+            # Check if the certificate is a valid path
+            assert (
+                Path(value).resolve(strict=True).is_file()
+            ), f"{value} is not a file or does not exist."
+            assert access(Path(value), R_OK), f"{value} is not readable."
         return value
 
     @field_validator("server")
@@ -154,23 +162,13 @@ class SkahaClient(BaseModel):
         Returns:
             Self: Updated SkahaClient object.
         """
-        # Create the SSL context
-        ctx = ssl.create_default_context()
-        ctx.load_cert_chain(certfile=str(self.certificate))
-        if not self.client:
-            self.client = Client(
-                timeout=self.timeout,
-                verify=ctx,
-            )
-
-        if not self.asynclient:
-            self.asynclient = AsyncClient(
-                timeout=self.timeout,
-                verify=ctx,
-            )
+        if self.token:
+            self.client, self.asynclient = self._get_token_clients()
+        else:
+            self.client, self.asynclient = self._get_cert_clients()
 
         # Configure the HTTP headers
-        headers = self._set_headers()
+        headers = self._get_headers()
         self.client.headers.update(headers)
         self.asynclient.headers.update(headers)
         # Configure the base URL for the clients
@@ -178,8 +176,42 @@ class SkahaClient(BaseModel):
         self.asynclient.base_url = f"{self.server}/{self.version}"
         return self
 
-    def _set_headers(self) -> Dict[str, str]:
-        """Set the HTTP headers for the client.
+    def _get_token_clients(self) -> Tuple[Client, AsyncClient]:
+        """Get the clients with token authentication.
+
+        Returns:
+            Tuple[Client, AsyncClient]: Synchronous and Asynchronous HTTPx Clients.
+        """
+        log.info("Using token authentication.")
+        client: Client = Client(
+            timeout=self.timeout,
+        )
+        asynclient: AsyncClient = AsyncClient(
+            timeout=self.timeout,
+        )
+        return client, asynclient
+
+    def _get_cert_clients(self) -> Tuple[Client, AsyncClient]:
+        """Get the clients with certificate authentication.
+
+        Returns:
+            Tuple[Client, AsyncClient]: Synchronous and Asynchronous HTTPx Clients.
+        """
+        log.info("Using certificate authentication.")
+        ctx = ssl.create_default_context()
+        ctx.load_cert_chain(certfile=self.certificate)
+        client: Client = Client(
+            timeout=self.timeout,
+            verify=ctx,
+        )
+        asynclient: AsyncClient = AsyncClient(
+            timeout=self.timeout,
+            verify=ctx,
+        )
+        return client, asynclient
+
+    def _get_headers(self) -> Dict[str, str]:
+        """Get the HTTP headers for the client.
 
         Returns:
             Dict[str, str]: HTTP headers.
@@ -193,4 +225,7 @@ class SkahaClient(BaseModel):
         headers.update({"X-Skaha-Authentication-Type": "certificate"})
         if self.registry:
             headers.update({"X-Skaha-Registry-Auth": f"{self.registry.encoded()}"})
+        if self.token:
+            headers.update({"Authorization": f"Bearer {self.token}"})
+            headers.update({"X-Skaha-Authentication-Type": "token"})
         return headers

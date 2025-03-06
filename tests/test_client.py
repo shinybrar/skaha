@@ -1,5 +1,8 @@
 """Test Skaha Client API."""
 
+import tempfile
+from os import chmod
+
 import httpx
 import pytest
 from pydantic import ValidationError
@@ -46,11 +49,29 @@ def test_default_certificate():
 
 def test_bad_certificate():
     """Test bad certificate."""
-    with pytest.raises(ValidationError):
+    with pytest.raises(FileNotFoundError):
         SkahaClient(certificate="abcdefd")
 
 
 def test_bad_certificate_path():
     """Test bad certificate."""
-    with pytest.raises(ValidationError):
+    with pytest.raises(FileNotFoundError):
         SkahaClient(certificate="/gibberish/path")  # nosec: B108
+
+
+def test_token_setup():
+    """Test token setup."""
+    token: str = "abcdef"
+    skaha = SkahaClient(token=token)
+    assert skaha.token == token
+    assert skaha.client.headers["Authorization"] == f"Bearer {token}"
+
+
+def test_non_readible_certfile():
+    # Create a temporary file
+    temp = tempfile.NamedTemporaryFile(delete=False)
+    temp.close()
+    # Change the permissions
+    chmod(temp.name, 0o000)
+    with pytest.raises(ValidationError):
+        SkahaClient(certificate=temp.name)
