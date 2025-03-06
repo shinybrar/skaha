@@ -120,8 +120,32 @@ class SkahaClient(BaseModel):
         le=1024,
         ge=1,
     )
+
+    loglevel: int = Field(
+        20,
+        title="Logging Level",
+        description="10=DEBUG, 20=INFO, 30=WARNING, 40=ERROR, 50=CRITICAL",
+        le=50,
+        ge=10,
+    )
+
     # Pydantic Configuration
     model_config = ConfigDict(arbitrary_types_allowed=True, extra="forbid")
+
+    @field_validator("loglevel", mode="before")
+    @classmethod
+    def _set_log_level(cls, value: int) -> int:
+        """Set the log level for the client.
+
+        Args:
+            value (int): Logging level.
+
+        Returns:
+            int: Logging level.
+        """
+
+        log.setLevel(value)
+        return value
 
     @field_validator("certificate")
     @classmethod
