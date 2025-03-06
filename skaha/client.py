@@ -1,6 +1,7 @@
 """Skaha Client."""
 
 import logging
+import ssl
 from os import R_OK, access, environ
 from pathlib import Path
 from time import asctime, gmtime
@@ -51,7 +52,7 @@ class SkahaClient(BaseModel):
                 pass
     """
 
-    server: AnyHttpUrl = Field(
+    server: str = Field(
         default="https://ws-uv.canfar.net/skaha",
         title="Skaha Server URL",
         description="Skaha API Server.",
@@ -82,12 +83,28 @@ class SkahaClient(BaseModel):
         ),
     ] = None
 
-    client: Client = Field(
-        default=None, title="HTTPx Client", description="Synchronous HTTPx Client"
-    )
-    asynclient: AsyncClient = Field(
-        default=None, title="HTTPx Client", description="Asynchronous HTTPx Client"
-    )
+    client: Annotated[
+        Client,
+        Field(
+            default=None,
+            title="HTTPx Client",
+            description="Synchronous HTTPx Client",
+            validate_default=False,
+            exclude=True,
+        ),
+    ]
+
+    asynclient: Annotated[
+        AsyncClient,
+        Field(
+            default=None,
+            title="HTTPx Client",
+            description="Asynchronous HTTPx Client",
+            validate_default=False,
+            exclude=True,
+        ),
+    ]
+
     concurrency: int = Field(
         128,
         title="Concurrency",
@@ -96,7 +113,8 @@ class SkahaClient(BaseModel):
         ge=1,
     )
 
-    model_config: ConfigDict = ConfigDict(arbitrary_types_allowed=True, extra="forbid")
+    # Pydantic Configuration
+    model_config = ConfigDict(arbitrary_types_allowed=True, extra="forbid")
 
     @field_validator("certificate")
     @classmethod
@@ -116,6 +134,19 @@ class SkahaClient(BaseModel):
         assert access(Path(value), R_OK), f"{value} is not readable."
         return value
 
+    @field_validator("server")
+    @classmethod
+    def _check_server(cls, value: str) -> str:
+        """Validate the server URL.
+
+        Args:
+            value (str): Server URL.
+
+        Returns:
+            str: Validated Server URL.
+        """
+        return str(AnyHttpUrl(value))
+
     @model_validator(mode="after")
     def _configure_clients(self) -> Self:
         """Configure the HTTPx Clients.
@@ -123,19 +154,19 @@ class SkahaClient(BaseModel):
         Returns:
             Self: Updated SkahaClient object.
         """
-        # Create the HTTPx clients if they are not passed in
+        # Create the SSL context
+        ctx = ssl.create_default_context()
+        ctx.load_cert_chain(certfile=str(self.certificate))
         if not self.client:
-            self.client: Client = Client(
-                cert=str(self.certificate),
+            self.client = Client(
                 timeout=self.timeout,
-                verify=self.verify,
+                verify=ctx,
             )
 
         if not self.asynclient:
-            self.asynclient: AsyncClient = AsyncClient(
-                cert=str(self.certificate),
+            self.asynclient = AsyncClient(
                 timeout=self.timeout,
-                verify=self.verify,
+                verify=ctx,
             )
 
         # Configure the HTTP headers
