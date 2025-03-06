@@ -41,9 +41,12 @@ class SkahaClient(BaseModel):
         client (Client): HTTPx Client.
         asynclient (AsyncClient): HTTPx Async Client.
         concurrency (int): Number of concurrent requests.
+        token (str): Authentication token.
+        loglevel (int): Logging level. Default is 20 (INFO).
 
     Raises:
         ValidationError: If the client is misconfigured.
+        FileNotFoundError: If the cert file does not exist or is not readable.
 
     Examples:
         >>> from skaha.client import SkahaClient
@@ -73,7 +76,12 @@ class SkahaClient(BaseModel):
         title="HTTP Timeout",
         description="HTTP Timeout.",
     )
-    verify: bool = Field(default=True)
+    verify: bool = Field(
+        default=True,
+        title="Verify SSL Certificate[DEPRECATED]",
+        description="Whether verify SSL Certs[DEPRECATED].",
+        deprecated=True,
+    )
     registry: Annotated[
         Optional[ContainerRegistry],
         Field(
