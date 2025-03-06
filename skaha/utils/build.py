@@ -1,7 +1,8 @@
 """Utility functions for building parameters skaha client."""
 
-from typing import Any, Dict, Optional, List, Tuple
-from skaha.models import FetchSpec, KINDS, STATUS, VIEW, CreateSpec
+from typing import Any, Dict, List, Optional, Tuple
+
+from skaha.models import KINDS, STATUS, VIEW, CreateSpec, FetchSpec
 from skaha.utils import convert
 
 
@@ -10,16 +11,7 @@ def fetch_parameters(
     status: Optional[STATUS] = None,
     view: Optional[VIEW] = None,
 ) -> Dict[str, Any]:
-    """Build parameters for fetching sessions.
-
-    Args:
-        kind (Optional[KINDS], optional): _description_. Defaults to None.
-        status (Optional[STATUS], optional): _description_. Defaults to None.
-        view (Optional[VIEW], optional): _description_. Defaults to None.
-
-    Returns:
-        Dict[str, Any]: _description_
-    """
+    """Build parameters for fetching sessions."""
     values: Dict[str, Any] = {}
     for key, value in {"kind": kind, "status": status, "view": view}.items():
         if value:
@@ -42,6 +34,7 @@ def create_parameters(
     env: Optional[Dict[str, Any]] = None,
     replicas: int = 1,
 ) -> List[List[Tuple[str, Any]]]:
+    """Build parameters for creating sessions."""
     specification: CreateSpec = CreateSpec(
         name=name,
         image=image,
