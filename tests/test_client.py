@@ -28,7 +28,7 @@ def test_client_session():
         "user-agent",
         "x-skaha-registry-auth",
     ]
-    skaha = SkahaClient(registry={"username": "test", "secret": "test"})
+    skaha = SkahaClient(registry={"username": "test", "secret": "test"}, loglevel=30)
     assert any(list(map(lambda h: h in skaha.client.headers.keys(), headers)))
 
 
