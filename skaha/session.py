@@ -219,7 +219,7 @@ class Session(SkahaClient):
             name, image, cores, ram, kind, gpu, cmd, args, env, replicas
         )
         results: List[str] = []
-        log.info("Creating {replicas} {kind} session[s].")
+        log.info("Creating %d %s session[s].", replicas, kind)
         for payload in payloads:
             try:
                 response: Response = self.client.post(url="session", params=payload)
