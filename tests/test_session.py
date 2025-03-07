@@ -125,6 +125,8 @@ def test_session_logs(session: Session, name: str):
         if "TEST=test" in line:
             success = True
             break
+    stdout = session.logs(pytest.IDENTITY, verbose=True)  # type: ignore
+    assert stdout is None
     assert success
 
 
