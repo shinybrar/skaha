@@ -116,7 +116,9 @@ class Session(SkahaClient):
                 log.error(err)
         return results
 
-    def logs(self, ids: Union[List[str], str], verbose: bool = False) -> Dict[str, str]:
+    def logs(
+        self, ids: Union[List[str], str], verbose: bool = False
+    ) -> Optional[Dict[str, str]]:
         """Get logs from a session[s].
 
         Args:
@@ -148,6 +150,7 @@ class Session(SkahaClient):
             for key, value in results.items():
                 log.info("Session ID: %s\n", key)
                 logs.stdout(value)
+            return None
 
         return results
 
@@ -605,9 +608,8 @@ class AsyncSession(SkahaClient):
             >>> await session.destroy_with(prefix="car", kind="carta", status="Running")
 
         """
-        sessions = await self.fetch(kind=kind, status=status)
         ids: List[str] = []
-        for session in sessions:
+        for session in await self.fetch(kind=kind, status=status):
             if session["name"].startswith(prefix):
                 ids.append(session["id"])
         return await self.destroy(ids)
