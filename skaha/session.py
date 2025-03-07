@@ -21,6 +21,14 @@ class Session(SkahaClient):
 
     Args:
         SkahaClient (SkahaClient): Base HTTP client for making API requests.
+
+    Examples:
+        >>> from skaha.session import Session
+        >>> session = Session(
+                timeout=120,
+                concurrency=100, # <--- Has no effect on the sync client
+                loglevel=40,
+            )
     """
 
     def fetch(
@@ -294,6 +302,17 @@ class AsyncSession(SkahaClient):
 
     Args:
         SkahaClient (SkahaClient): Base HTTP client for making API requests.
+
+    Examples:
+        >>> from skaha.session import AsyncSession
+        >>> session = AsyncSession(
+                server="https://skaha.example.com",
+                version="v1",
+                token="token",
+                timeout=30,
+                concurrency=100,
+                loglevel=40,
+            )
     """
 
     async def fetch(
