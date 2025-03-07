@@ -87,6 +87,7 @@ nav:
   - Get Started: get-started.md
   - Examples: examples.md
   - API Reference:
+    - AsyncSession: async_session.md
     - Session: session.md
     - Images: images.md
     - Context: context.md

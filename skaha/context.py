@@ -2,21 +2,17 @@
 
 from typing import Any, Dict
 
-from pydantic import model_validator
-from requests.models import Response
-from typing_extensions import Self
+from httpx import Response
 
 from skaha.client import SkahaClient
 
 
 class Context(SkahaClient):
-    """Get available resources from the skaha server."""
+    """Skaha Context.
 
-    @model_validator(mode="after")
-    def _set_server(self) -> Self:
-        """Sets the server path after validation."""
-        self.server = f"{self.server}/{self.version}/context"  # type: ignore
-        return self
+    Args:
+        SkahaClient (skaha.client.SkahaClient): Configured Skaha Client.
+    """
 
     def resources(self) -> Dict[str, Any]:
         """Get available resources from the skaha server.
@@ -47,6 +43,6 @@ class Context(SkahaClient):
              }
             }
         """
-        response: Response = self.session.get(url=self.server)  # type: ignore
+        response: Response = self.client.get(url="context")
         response.raise_for_status()
         return response.json()

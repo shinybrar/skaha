@@ -5,6 +5,7 @@ from typing import Any, Dict, List
 from uuid import uuid4
 
 import pytest
+from httpx import HTTPError
 from pydantic import ValidationError
 
 from skaha.models import CreateSpec
@@ -125,6 +126,8 @@ def test_session_logs(session: Session, name: str):
         if "TEST=test" in line:
             success = True
             break
+    stdout = session.logs(pytest.IDENTITY, verbose=True)  # type: ignore
+    assert stdout is None
     assert success
 
 
@@ -152,3 +155,23 @@ def test_create_session_with_type_field(session: Session, name: str):
     assert "type" in data
     assert data["type"] == "headless"
     assert "kind" not in data
+
+
+def test_bad_error_exceptions():
+    """Test error handling."""
+    session = Session(server="https://bad.server.com")
+    with pytest.raises(HTTPError):
+        session.fetch()
+    with pytest.raises(HTTPError):
+        session.stats()
+    with pytest.raises(HTTPError):
+        session.destroy_with(prefix="bad")
+
+    assert not session.create(
+        name="bad",
+        image="images.canfar.net/skaha/terminal:1.1.2",
+    )
+
+    assert not session.info(["bad"])
+    assert not session.logs(["bad"])
+    assert {"bad": False} == session.destroy(["bad"])

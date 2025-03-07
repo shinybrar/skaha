@@ -1,38 +1,30 @@
-import asyncio
-from unittest.mock import patch
-
-from skaha.utils.threaded import get_event_loop
+from skaha.utils.convert import dict_to_tuples
 
 
-def test_get_event_loop_existing():
-    """Test getting an existing event loop."""
-    # Create a new event loop
-    loop = asyncio.new_event_loop()
-    asyncio.set_event_loop(loop)
-
-    # Call the get_event_loop function
-    retrieved_loop = get_event_loop()
-
-    # Assertions
-    assert (
-        retrieved_loop is loop
-    )  # The retrieved loop should be the same as the created loop
+def test_dict_to_tuples_empty():
+    assert dict_to_tuples({}) == []
 
 
-def test_get_event_loop_new():
-    """Test creating a new event loop when none exists."""
-    # Patch asyncio.get_event_loop to raise a RuntimeError
-    with patch("asyncio.get_event_loop", side_effect=RuntimeError):
-        # Call the get_event_loop function
-        retrieved_loop = get_event_loop()
+def test_dict_to_tuples_simple():
+    assert dict_to_tuples({"a": 1, "b": 2}) == [("a", 1), ("b", 2)]
 
-        # Assertions
-        assert isinstance(
-            retrieved_loop, asyncio.AbstractEventLoop
-        )  # Should return a new event loop
-        assert (
-            retrieved_loop.is_running() is False
-        )  # The new loop should not be running
 
-    # Clean up by closing the loop
-    retrieved_loop.close()
+def test_dict_to_tuples_nested():
+    assert dict_to_tuples({"a": {"x": 1, "y": 2}, "b": 3}) == [
+        ("a", "x=1"),
+        ("a", "y=2"),
+        ("b", 3),
+    ]
+
+
+def test_dict_to_tuples_mixed():
+    assert dict_to_tuples({"a": 1, "b": {"x": 2}, "c": {"y": 3, "z": 4}}) == [
+        ("a", 1),
+        ("b", "x=2"),
+        ("c", "y=3"),
+        ("c", "z=4"),
+    ]
+
+
+def test_dict_to_tuples_non_string_keys():
+    assert dict_to_tuples({1: "a", 2: {"x": "b"}}) == [(1, "a"), (2, "x=b")]

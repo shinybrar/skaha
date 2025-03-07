@@ -1,7 +1,6 @@
 """Models for Skaha API."""
 
 from base64 import b64encode
-from os import environ
 from typing import Any, Dict, Literal, Optional
 
 from pydantic import BaseModel, ConfigDict, Field, field_validator, model_validator
@@ -122,6 +121,8 @@ class ContainerRegistry(BaseModel):
         ...,
         description="Personal Access Token (PAT) for the container registry.",
         examples=["ghp_1234567890"],
+        min_length=1,
+        validate_default=True,
     )
 
     @field_validator("url")
@@ -138,39 +139,6 @@ class ContainerRegistry(BaseModel):
         assert (
             value == "images.canfar.net"
         ), "Currently only images.canfar.net is supported"
-        return value
-
-    @field_validator("username")
-    @classmethod
-    def _check_username(cls, value: str) -> str:
-        """Validate username.
-
-        Args:
-            value (str): Value to validate.
-
-        Returns:
-            str: Validated value.
-        """
-        if not value:
-            environ.get("SKAHA_REGISTRY_USERNAME", None)
-        assert value, "username is required"
-        return value
-
-    @field_validator("secret")
-    @classmethod
-    def _check_secret(cls, value: str) -> str:
-        """Validate secret.
-
-        Args:
-            value (str): Value to validate.
-
-        Returns:
-            str: Validated value.
-        """
-        if not value:
-            value = environ.get("SKAHA_REGISTRY_SECRET", None)  # type: ignore
-            log.info("Using SKAHA_REGISTRY_SECRET from environment")
-        assert value, "secret is required"
         return value
 
     def encoded(self) -> str:

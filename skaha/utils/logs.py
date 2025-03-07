@@ -1,7 +1,10 @@
 """Skaha Logging Utility."""
 
 import logging
-from typing import Optional
+from typing import List, Optional
+
+from rich.console import Console
+from rich.text import Text
 
 
 def get_logger(
@@ -51,3 +54,32 @@ def get_logger(
     logger.propagate = False
 
     return logger
+
+
+def stdout(logs: str) -> None:
+    """Prints log messages with colors based on severity.
+
+    Args:
+        logs (str): The log messages as a single string.
+    """
+    console = Console()
+    lines: List[str] = logs.strip().split("\n")
+
+    for line in lines:
+        # Default style is white.
+        style: str = "white"
+
+        # Set style based on log level indicator.
+        if line.startswith("[W"):
+            style = "yellow"
+        elif line.startswith("[I"):
+            style = "green"
+        # Check for error/warning keywords in messages from other apps.
+        if "ERROR" in line:
+            style = "bold red"
+        elif "WARNING" in line and not line.startswith("[W"):
+            style = "orange1"
+
+        # Create a Rich Text object with the chosen style.
+        text = Text(line, style=style)
+        console.print(text)
