@@ -30,7 +30,7 @@
     
     - 📡 Skaha now uses the `httpx` library for making HTTP requests instead of `requests`. This adds asynchronous support and also to circumvent the `requests` dependence on `urllib3` which was causing SSL issues on MacOS. See [this issue](https://github.com/urllib3/urllib3/issues/3020) for more details.
     - 🔑 Skaha now supports tokens for authentication. As a result, the constraints for providing a valid certificate filepath have been relaxed and are only enforced when the certificate is used for authentication.
-    - 🏎️💨 Added `loglevel` and `concurrency` support to manage the new explosion in functionality!
+    - 🏎️💨 Added `loglevel` and `concurrency` support to manage the new explosion in functionality!s
 
     ## **:scroll: Logs to `stdout`**
 
@@ -38,7 +38,8 @@
 
     ```python
     from skaha.session import AsyncSession
-    asession = AsyncSession()"
+
+    asession = AsyncSession()
     await asession.logs(ids=["some-uuid"], verbose=True)
     ```
 
