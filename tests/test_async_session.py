@@ -1,3 +1,4 @@
+from time import time
 from typing import List
 from uuid import uuid4
 
@@ -79,6 +80,30 @@ async def test_create_session(async_session: AsyncSession, name: str):
 
 @pytest.mark.asyncio
 @pytest.mark.order(2)
+async def test_get_succeeded(async_session: AsyncSession):
+    """Test getting succeeded sessions."""
+    limit: float = time() + 60  # 1 minute
+    while time() < limit:
+        response = await async_session.fetch(status="Succeeded")
+        for result in response:
+            if result["id"] == pytest.IDENTITY[0]:  # type: ignore
+                assert result["status"] == "Succeeded"
+                break
+
+
+@pytest.mark.asyncio
+@pytest.mark.order(3)
+async def test_get_logs(async_session: AsyncSession):
+    """Test getting logs for a session."""
+    logs = await async_session.logs(ids=pytest.IDENTITY)
+    assert logs != ""
+    assert "TEST" in logs[pytest.IDENTITY[0]]  # type: ignore
+    no_logs = await async_session.logs(ids=pytest.IDENTITY, verbose=True)
+    assert no_logs is None
+
+
+@pytest.mark.asyncio
+@pytest.mark.order(4)
 async def test_delete_session(async_session: AsyncSession, name: str):
     """Test deleting a session."""
     # Delete the session
