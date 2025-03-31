@@ -1,6 +1,6 @@
 """Skaha Overview."""
 
-import defusedxml.ElementTree as ET
+from defusedxml import ElementTree
 from httpx import Response
 from pydantic import model_validator
 from typing_extensions import Self
@@ -39,7 +39,7 @@ class Overview(SkahaClient):
         response: Response = self.client.get("availability")  # type: ignore # noqa
         response.raise_for_status()
         # Parse the XML string
-        root = ET.fromstring(response.text)  # type: ignore
+        root = ElementTree.fromstring(response.text)  # type: ignore
         available = root.find(
             ".//{http://www.ivoa.net/xml/VOSIAvailability/v1.0}available"
         ).text  # type: ignore

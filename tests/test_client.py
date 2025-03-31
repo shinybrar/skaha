@@ -29,7 +29,7 @@ def test_client_session():
         "x-skaha-registry-auth",
     ]
     skaha = SkahaClient(registry={"username": "test", "secret": "test"}, loglevel=30)
-    assert any(list(map(lambda h: h in skaha.client.headers.keys(), headers)))
+    assert any(header in skaha.client.headers.keys() for header in headers)
 
 
 def test_bad_server_no_schema():

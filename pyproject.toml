@@ -65,8 +65,9 @@ dev-dependencies = [
 ]
 
 [tool.ruff.lint]
-select = ["E", "F", "I", "B", "PIE"]
+select = ["E", "F", "W", "C", "N", "B", "I"]
 ignore = ["B904", "B028"]
+extend-ignore = ["D"]
 
 [tool.ruff.lint.isort]
 combine-as-imports = true
