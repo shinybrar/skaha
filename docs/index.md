@@ -34,7 +34,7 @@
 
     ## **:scroll: Logs to `stdout`**
 
-    The `[session|AsyncSession].logs` method now prints colored output to `stdout` instead of returning them as a string with `verbose=True` flag.
+    The `[Session|AsyncSession].logs` method now prints colored output to `stdout` instead of returning them as a string with `verbose=True` flag.
 
     ```python
     from skaha.session import AsyncSession
