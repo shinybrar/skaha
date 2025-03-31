@@ -122,10 +122,10 @@ class SkahaClient(BaseModel):
     )
 
     concurrency: int = Field(
-        128,
+        16,
         title="Concurrency",
         description="Number of concurrent requests for the async client.",
-        le=1024,
+        le=256,
         ge=1,
     )
 
