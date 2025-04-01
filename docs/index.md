@@ -4,6 +4,45 @@
 
     A lightweight python interface to the CANFAR Science Platform.
 
+!!! info "New in v1.6+"
+
+    ## **:rocket: Asynchronous Sessions**
+    Skaha now supports asynchronous sessions using the `AsyncSession` class while maintaining 1-to-1 compatibility with the `Session` class.
+
+    ```python
+    from skaha.session import AsyncSession
+
+    asession = AsyncSession()
+    response = await asession.create(
+        name="test",
+        image="images.canfar.net/skaha/base-notebook:latest",
+        cores=2,
+        ram=8,
+        gpu=1,
+        kind="headless",
+        cmd="env",
+        env={"KEY": "VALUE"},
+        replicas=3,
+    )
+    ```
+
+    ## **:back:END Upgrades**
+    
+    - 📡 Skaha now uses the `httpx` library for making HTTP requests instead of `requests`. This adds asynchronous support and also to circumvent the `requests` dependence on `urllib3` which was causing SSL issues on MacOS. See [this issue](https://github.com/urllib3/urllib3/issues/3020) for more details.
+    - 🔑 Skaha now supports tokens for authentication. As a result, the constraints for providing a valid certificate filepath have been relaxed and are only enforced when the certificate is used for authentication.
+    - 🏎️💨 Added `loglevel` and `concurrency` support to manage the new explosion in functionality!s
+
+    ## **:scroll: Logs to `stdout`**
+
+    The `[Session|AsyncSession].logs` method now prints colored output to `stdout` instead of returning them as a string with `verbose=True` flag.
+
+    ```python
+    from skaha.session import AsyncSession
+
+    asession = AsyncSession()
+    await asession.logs(ids=["some-uuid"], verbose=True)
+    ```
+
 !!! Info "New in v1.4+"
 
     **:lock: Support for Private Container Images on Harbor**

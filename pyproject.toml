@@ -32,10 +32,10 @@ classifiers = [
     "License :: OSI Approved :: GNU Affero General Public License v3 or later (AGPLv3+)",
 ]
 dependencies = [
-    "click>=8.1.7",
     "defusedxml>=0.7.1",
+    "httpx>=0.28.1",
     "pydantic>=2.9.2",
-    "requests>=2.32.3",
+    "rich>=13.9.4",
     "toml>=0.10.2",
     "vos>=3.6.1.1",
 ]
@@ -60,14 +60,14 @@ dev-dependencies = [
     "pytest-cov>=5.0.0",
     "ruff>=0.6.9",
     "types-toml>=0.10.8.20240310",
-    "types-requests>=2.32.0.20241016",
     "types-defusedxml>=0.7.0.20240117",
-    "ipython>=8.18.1",
+    "pytest-order>=1.3.0",
 ]
 
 [tool.ruff.lint]
-select = ["E", "F", "I", "B", "PIE"]
+select = ["E", "F", "W", "C", "N", "B", "I"]
 ignore = ["B904", "B028"]
+extend-ignore = ["D"]
 
 [tool.ruff.lint.isort]
 combine-as-imports = true

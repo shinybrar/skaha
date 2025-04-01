@@ -1,10 +1,10 @@
-# Session API
+# **:rocket: Asynchronous Sessions**
 
-The bread and butter of Skaha is the Session API. This API allows you to create, destroy, and get information about your sessions on the CANFAR Science Platform.
+Skaha now supports asynchronous sessions using the `AsyncSession` class while maintaining 1-to-1 compatibility with the `Session` class.
 
 ---
 
-::: skaha.session.Session
+::: skaha.session.AsyncSession
     handler: python
     selection:
       members:
