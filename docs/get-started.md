@@ -8,7 +8,7 @@ Before you can use the Skaha python package, you need a valid CANFAR account and
 
 !!! note "Skaha Requirements"
 
-    - Python 3.8+
+    - Python 3.9+
     - CANFAR Science Platform Account
 
 !!! code "Installation"
@@ -19,7 +19,9 @@ Before you can use the Skaha python package, you need a valid CANFAR account and
 
 ## Authentication
 
-Skaha uses a X509 security certificate for interactions with the CANFAR Science Platform. The certificate comes in the form of a `.pem` file which is saved in your home directory by default under the path `~/.ssl/cadcproxy.pem`.
+### X509 Authentication
+
+Skaha can use X509 security certificate for interactions with the CANFAR Science Platform. The certificate comes in the form of a `.pem` file which is saved in your home directory by default under the path `~/.ssl/cadcproxy.pem`.
 
 !!! info "X509 Certificate"
     You need to have a valid certificate in order to use the CANFAR Science Platform.
@@ -41,6 +43,19 @@ from skaha.session import Session
 
 session = Session(certificate="/path/to/certificate.pem")
 ```
+
+### Token Authentication
+
+Starting with v1.6, Skaha supports token authentication. You can use a token instead of a certificate for authentication. The token can be passed as a string or as a file path.
+
+```python
+from skaha.session import Session
+
+session = Session(token="your_token")
+```
+
+!!! note "Beta Feature"
+    Token authentication is a beta feature intended for testing purposes. It is not recommended for production use. As CADC migrates to token-based authentication, this feature will be updated to support with better documentation and examples for end-users.
 
 ## Container Registry Access
 

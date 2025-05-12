@@ -31,10 +31,18 @@ theme:
     edit: material/pencil-box
     view: material/eye-outline
   features:
-    - tabs
-    - instant
+    - navigation.tabs
+    - navigation.tabs.sticky
+    - navigation.instant
+    - navigation.instant.progress
+    - navigation.prune
+    - navigation.sections
+    - navigation.tracking
+    - navigation.indexes
     - content.code.annotate
-    - offline
+    - toc.follow
+    - toc.integrate
+    - navigation.top
 
 plugins:
   - search
