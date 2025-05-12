@@ -159,19 +159,37 @@ def test_create_session_with_type_field(session: Session, name: str):
 
 def test_bad_error_exceptions():
     """Test error handling."""
-    session = Session(server="https://bad.server.com")
+    local = Session(server="https://bad.server.com")
     with pytest.raises(HTTPError):
-        session.fetch()
+        local.fetch()
     with pytest.raises(HTTPError):
-        session.stats()
+        local.stats()
     with pytest.raises(HTTPError):
-        session.destroy_with(prefix="bad")
+        local.destroy_with(prefix="bad")
 
-    assert not session.create(
+    assert not local.create(
         name="bad",
         image="images.canfar.net/skaha/terminal:1.1.2",
     )
 
-    assert not session.info(["bad"])
-    assert not session.logs(["bad"])
-    assert {"bad": False} == session.destroy(["bad"])
+    assert not local.info(["bad"])
+    assert not local.logs(["bad"])
+    assert {"bad": False} == local.destroy(["bad"])
+
+
+def test_bad_repica_requests(session: Session):
+    """Test error handling."""
+    with pytest.raises(ValidationError):
+        session.create(
+            name="bad",
+            kind="firefly",
+            image="images.canfar.net/skaha/terminal:1.1.2",
+            replicas=10,
+        )
+    with pytest.raises(ValidationError):
+        session.create(
+            name="bad",
+            kind="desktop",
+            image="images.canfar.net/skaha/terminal:1.1.2",
+            replicas=513,
+        )

@@ -1,4 +1,4 @@
-# **:rocket: Asynchronous Sessions**
+# **Asynchronous Sessions**
 
 Skaha now supports asynchronous sessions using the `AsyncSession` class while maintaining 1-to-1 compatibility with the `Session` class.
 

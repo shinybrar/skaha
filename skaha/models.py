@@ -1,16 +1,24 @@
 """Models for Skaha API."""
 
+import warnings
 from base64 import b64encode
-from typing import Any, Dict, Literal, Optional
+from typing import Any, Dict, Literal, Optional, Tuple, get_args
 
-from pydantic import BaseModel, ConfigDict, Field, field_validator, model_validator
+from pydantic import (
+    BaseModel,
+    ConfigDict,
+    Field,
+    ValidationInfo,
+    field_validator,
+    model_validator,
+)
 from typing_extensions import Self
 
 from skaha.utils import logs
 
 log = logs.get_logger(__name__)
 
-KINDS = Literal["desktop", "notebook", "carta", "headless"]
+KINDS = Literal["desktop", "notebook", "carta", "headless", "firefly"]
 STATUS = Literal["Pending", "Running", "Terminating", "Succeeded", "Error"]
 VIEW = Literal["all"]
 
@@ -71,6 +79,49 @@ class CreateSpec(BaseModel):
                 self.kind == "headless"
             ), "cmd, args and env are only supported for headless sessions."
         return self
+
+    @field_validator("kind", mode="after")
+    @classmethod
+    def validate_kind(cls, value: KINDS, context: ValidationInfo) -> KINDS:
+        """Validate kind.
+
+        Args:
+            value (KINDS): Value to validate.
+
+        Returns:
+            KINDS: Validated value.
+        """
+        valid: Tuple[str] = get_args(KINDS)
+        if value not in valid:
+            raise ValueError(f"invalid session kind: {value}")
+
+        if value == "firefly" or value == "desktop":
+            if (
+                context.data.get("cmd")
+                or context.data.get("args")
+                or context.data.get("cores")
+                or context.data.get("ram")
+            ):
+                warnings.warn(f"cmd, args, cores and ram ignored for {value} sessions.")
+
+        return value
+
+    @field_validator("replicas")
+    @classmethod
+    def validate_replicas(cls, value: int, context: ValidationInfo) -> int:
+        """Validate replicas.
+
+        Args:
+            value (int): Value to validate.
+
+        Returns:
+            int: Validated value.
+        """
+        kind: str = context.data.get("kind", "")
+        if kind == "firefly" or kind == "desktop":
+            if value > 1:
+                raise ValueError(f"multiple replicas invalid for {kind} sessions.")
+        return value
 
 
 class FetchSpec(BaseModel):
