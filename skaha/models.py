@@ -1,16 +1,24 @@
 """Models for Skaha API."""
 
 from base64 import b64encode
-from typing import Any, Dict, Literal, Optional
+from typing import Any, Dict, Literal, Optional, Tuple, get_args
 
-from pydantic import BaseModel, ConfigDict, Field, field_validator, model_validator
+from pydantic import (
+    BaseModel,
+    ConfigDict,
+    Field,
+    ValidationInfo,
+    field_validator,
+    model_validator,
+)
 from typing_extensions import Self
+from warning import warn
 
 from skaha.utils import logs
 
 log = logs.get_logger(__name__)
 
-KINDS = Literal["desktop", "notebook", "carta", "headless"]
+KINDS = Literal["desktop", "notebook", "carta", "headless", "firefly"]
 STATUS = Literal["Pending", "Running", "Terminating", "Succeeded", "Error"]
 VIEW = Literal["all"]
 
@@ -71,6 +79,30 @@ class CreateSpec(BaseModel):
                 self.kind == "headless"
             ), "cmd, args and env are only supported for headless sessions."
         return self
+
+    @field_validator("kind", mode="after")
+    @classmethod
+    def validate_kind(cls, value: KINDS, context: ValidationInfo) -> KINDS:
+        """Validate kind.
+
+        Args:
+            value (KINDS): Value to validate.
+
+        Returns:
+            KINDS: Validated value.
+        """
+        valid: Tuple[str] = get_args(KINDS)
+        assert value in valid, f"Invalid session kind: {value}"
+
+        if value == "firefly" or value == "desktop":
+            if (
+                context.data.get("cmd")
+                or context.data.get("args")
+                or context.data.get("cores")
+                or context.data.get("ram")
+            ):
+                warn(f"cmd, args, cores and ram ignored for {value} sessions.")
+        return value
 
 
 class FetchSpec(BaseModel):
