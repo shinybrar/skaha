@@ -1,5 +1,6 @@
 """Models for Skaha API."""
 
+import warnings
 from base64 import b64encode
 from typing import Any, Dict, Literal, Optional, Tuple, get_args
 
@@ -7,12 +8,12 @@ from pydantic import (
     BaseModel,
     ConfigDict,
     Field,
+    ValidationError,
     ValidationInfo,
     field_validator,
     model_validator,
 )
 from typing_extensions import Self
-from warning import warn
 
 from skaha.utils import logs
 
@@ -101,7 +102,12 @@ class CreateSpec(BaseModel):
                 or context.data.get("cores")
                 or context.data.get("ram")
             ):
-                warn(f"cmd, args, cores and ram ignored for {value} sessions.")
+                warnings.warn(f"cmd, args, cores and ram ignored for {value} sessions.")
+
+            if int(context.data.get("replicas", 1)) > 1:
+                raise ValidationError(
+                    f"replicas > 1 is not supported for {value} sessions."
+                )
         return value
 
 
