@@ -92,7 +92,8 @@ class CreateSpec(BaseModel):
             KINDS: Validated value.
         """
         valid: Tuple[str] = get_args(KINDS)
-        assert value in valid, f"Invalid session kind: {value}"
+        if value not in valid:
+            raise ValueError(f"invalid session kind: {value}")
 
         if value == "firefly" or value == "desktop":
             if (
