@@ -1,5 +1,40 @@
 # Changelog
 
+## [1.6.0](https://github.com/shinybrar/skaha/compare/v1.5.2...v1.6.0) (2025-05-12)
+
+
+### Features
+
+* **client:** added loglevel to configure the python logging levels ([431f46d](https://github.com/shinybrar/skaha/commit/431f46dd4abebff53edb1485a5d5064ef432f3bf))
+* **client:** added token support to skaha client ([6c7c748](https://github.com/shinybrar/skaha/commit/6c7c7486b6a078a77b5a6b42e2c8162d95ff80f7))
+* **client:** updated skaha client to use httpx instead of requests ([4c10de8](https://github.com/shinybrar/skaha/commit/4c10de87451e9687fe29c17f363e5736b36e8203))
+* **logs:** added stdout for printing logs in terminal ([0c34cad](https://github.com/shinybrar/skaha/commit/0c34cada7fee945d710727222b27e17e7d46bd06))
+* **sessions:** added skaha AsyncSession ([2693272](https://github.com/shinybrar/skaha/commit/26932724e4533bf1823cfad97e3b9ccc8ef5fd7b))
+* **sessions:** added support for firefly ([87d16c1](https://github.com/shinybrar/skaha/commit/87d16c1637d5848fbc522c3340c611df40f6d2fa))
+
+
+### Bug Fixes
+
+* **api:** updated context, images, overview with httpx ([391e857](https://github.com/shinybrar/skaha/commit/391e85732dc324b1d2dee51c4d46d558e5d7d72f))
+* **client:** changed to the default and max values of parallel conns ([ce552bf](https://github.com/shinybrar/skaha/commit/ce552bff74602c3525154a5ef4308d9291e9cc53))
+* **client:** deprecated client.verify since it no longer affects any logic ([9eed6e9](https://github.com/shinybrar/skaha/commit/9eed6e95db5eadc45ed084bde5eab1cdab7ca727))
+* **client:** fixed annotation issues for client, asyncClient ([889a6a8](https://github.com/shinybrar/skaha/commit/889a6a8f9072cf663c10d648248e0a2928ba8873))
+* **models:** models no longer search for SKAHA_REGISTRY_[USERNAME|SECRET] from environ, this will be supported in future releases with a comprehensive environment variable support accross all configurable variables ([a1702c9](https://github.com/shinybrar/skaha/commit/a1702c90c1b735ab329b7eedbdabc5811a0eb915))
+* **models:** updated checks for session kind ([a8317f4](https://github.com/shinybrar/skaha/commit/a8317f41fa7f59b50d9fb0f7b52bb0a1aafc117d))
+* **session:** fixed sync log output when verbose is True ([6ac63f9](https://github.com/shinybrar/skaha/commit/6ac63f9e1a13d7c31d3e0626ae638bb40ed27650))
+* **session:** solidified the skaha async session api, moved common query building logic to utils.build ([3f11aee](https://github.com/shinybrar/skaha/commit/3f11aeea5b8ea3617a7d6eed4b4d86863ce4f856))
+
+
+### Documentation
+
+* **asyncSession:** added docs ([a8be7fc](https://github.com/shinybrar/skaha/commit/a8be7fc540c35f85d24b16f233ef46107302ac5a))
+* **client:** updated class docstring ([5531c6f](https://github.com/shinybrar/skaha/commit/5531c6f3794312a1fac64ffbed2f4e20033803c2))
+* **index:** typo fixes ([bc637c5](https://github.com/shinybrar/skaha/commit/bc637c5b0e8e05b17d768e8a7cb7b9fb9dd766ab))
+* **index:** updates ([a3c2e2e](https://github.com/shinybrar/skaha/commit/a3c2e2e12a9d6311f0a7541c2293749df52138bc))
+* **session:** updated docs for session and async sessions ([7e49fef](https://github.com/shinybrar/skaha/commit/7e49fef963dd536b2592b73b9c8d091cf0668984))
+* **updates:** docs ([c61fecd](https://github.com/shinybrar/skaha/commit/c61fecd574dc0db2e7a8b36120b5539416b6bdbe))
+* **updates:** site config + token support ([54d6ed9](https://github.com/shinybrar/skaha/commit/54d6ed92285a44421450e1139d5f22e62c863694))
+
 ## [1.5.2](https://github.com/shinybrar/skaha/compare/v1.5.1...v1.5.2) (2025-03-03)
 
 
