@@ -8,7 +8,6 @@ from pydantic import (
     BaseModel,
     ConfigDict,
     Field,
-    ValidationError,
     ValidationInfo,
     field_validator,
     model_validator,
@@ -104,10 +103,23 @@ class CreateSpec(BaseModel):
             ):
                 warnings.warn(f"cmd, args, cores and ram ignored for {value} sessions.")
 
-            if int(context.data.get("replicas", 1)) > 1:
-                raise ValidationError(
-                    f"replicas > 1 is not supported for {value} sessions."
-                )
+        return value
+
+    @field_validator("replicas")
+    @classmethod
+    def validate_replicas(cls, value: int, context: ValidationInfo) -> int:
+        """Validate replicas.
+
+        Args:
+            value (int): Value to validate.
+
+        Returns:
+            int: Validated value.
+        """
+        kind: str = context.data.get("kind", "")
+        if kind == "firefly" or kind == "desktop":
+            if value > 1:
+                raise ValueError(f"multiple replicas invalid for {kind} sessions.")
         return value
 
 
