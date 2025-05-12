@@ -15,13 +15,13 @@ theme:
       scheme: default
       toggle:
         icon: material/toggle-switch
-        name: Switch to dark mode
+        name: Hello darkness, my old friend
     # Palette toggle for dark mode
     - media: "(prefers-color-scheme: dark)"
       scheme: slate
       toggle:
         icon: material/toggle-switch-off-outline
-        name: Switch to light mode
+        name: Flash the neon lights
   font:
     text: Roboto
     code: Roboto Mono
@@ -50,6 +50,11 @@ plugins:
   - git-revision-date-localized:
         type: date
         fallback_to_build_date: true
+
+extra:
+  version:
+    provider: mike
+    default: latest
 
 # Extensions
 markdown_extensions:
