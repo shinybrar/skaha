@@ -19,16 +19,16 @@ This is because:
 
 import httpx
 
-from ...utils.logs import get_logger  # Correct relative import
+from skaha.utils.logs import get_logger
 
 
-def sync_log(response: httpx.Response) -> None:  # Renamed function
+def sync_log(response: httpx.Response) -> None:
     """Logs the response & re-raises an HTTPStatusError.
 
     Args:
         response: An httpx.Response object.
     """
-    logger = get_logger(__name__)  # Use get_logger
+    logger = get_logger(__name__)
     response.read()
     try:
         response.raise_for_status()
@@ -43,7 +43,7 @@ async def async_log(response: httpx.Response) -> None:  # Renamed function
     Args:
         response: An httpx.Response object.
     """
-    logger = get_logger(__name__)  # Use get_logger
+    logger = get_logger(__name__)
     await response.aread()
     try:
         response.raise_for_status()

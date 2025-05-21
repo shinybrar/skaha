@@ -20,7 +20,7 @@ from pydantic import (
 from typing_extensions import Self
 
 from skaha import __version__
-from skaha.hooks.httpx import errors  # Added import for hooks
+from skaha.hooks.httpx import errors
 from skaha.models import ContainerRegistry
 
 # Setup logging format
