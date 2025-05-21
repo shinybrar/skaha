@@ -1,7 +1,5 @@
-"""
-Module for providing httpx event hooks to log error responses.
+"""Module for providing httpx event hooks to log error responses.
 
-IMPORTANT:
 When using httpx event hooks, especially for 'response' events, it's crucial
 to explicitly read the response body using `response.read()` (for synchronous
 clients) or `await response.aread()` (for asynchronous clients) *before*
@@ -18,35 +16,37 @@ This is because:
    read first within the hook itself. Failing to do so might result in
    empty or incomplete information being logged.
 """
-import httpx
-from ...utils.logs import get_logger # Correct relative import
 
-def sync_log(response: httpx.Response) -> None: # Renamed function
-    """
-    Logs the response text and re-raises an httpx.HTTPStatusError if one occurs.
+import httpx
+
+from ...utils.logs import get_logger  # Correct relative import
+
+
+def sync_log(response: httpx.Response) -> None:  # Renamed function
+    """Logs the response & re-raises an HTTPStatusError.
 
     Args:
         response: An httpx.Response object.
     """
-    logger = get_logger(__name__) # Use get_logger
+    logger = get_logger(__name__)  # Use get_logger
     response.read()
     try:
         response.raise_for_status()
     except httpx.HTTPStatusError as e:
-        logger.error(response.text) # Use logger.error
+        logger.error(response.text)  # Use logger.error
         raise e
 
-async def async_log(response: httpx.Response) -> None: # Renamed function
-    """
-    Logs the response text and re-raises an httpx.HTTPStatusError if one occurs (async).
+
+async def async_log(response: httpx.Response) -> None:  # Renamed function
+    """Logs the response & re-raises an HTTPStatusError (async).
 
     Args:
         response: An httpx.Response object.
     """
-    logger = get_logger(__name__) # Use get_logger
+    logger = get_logger(__name__)  # Use get_logger
     await response.aread()
     try:
         response.raise_for_status()
     except httpx.HTTPStatusError as e:
-        logger.error(response.text) # Use logger.error
+        logger.error(response.text)  # Use logger.error
         raise e

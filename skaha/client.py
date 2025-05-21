@@ -20,8 +20,8 @@ from pydantic import (
 from typing_extensions import Self
 
 from skaha import __version__
+from skaha.hooks.httpx import errors  # Added import for hooks
 from skaha.models import ContainerRegistry
-from skaha.hooks.httpx import errors # Added import for hooks
 
 # Setup logging format
 logging.basicConfig(format="%(asctime)s %(levelname)s %(message)s", level=logging.INFO)
@@ -217,11 +217,11 @@ class SkahaClient(BaseModel):
         log.info("Using token authentication.")
         client: Client = Client(
             timeout=self.timeout,
-            event_hooks={'response': [errors.sync_log]} # Updated event hook
+            event_hooks={"response": [errors.sync_log]},  # Updated event hook
         )
         asynclient: AsyncClient = AsyncClient(
             timeout=self.timeout,
-            event_hooks={'response': [errors.async_log]} # Updated event hook
+            event_hooks={"response": [errors.async_log]},  # Updated event hook
         )
         return client, asynclient
 
@@ -237,12 +237,12 @@ class SkahaClient(BaseModel):
         client: Client = Client(
             timeout=self.timeout,
             verify=ctx,
-            event_hooks={'response': [errors.sync_log]} # Updated event hook
+            event_hooks={"response": [errors.sync_log]},  # Updated event hook
         )
         asynclient: AsyncClient = AsyncClient(
             timeout=self.timeout,
             verify=ctx,
-            event_hooks={'response': [errors.async_log]} # Updated event hook
+            event_hooks={"response": [errors.async_log]},  # Updated event hook
         )
         return client, asynclient
 
