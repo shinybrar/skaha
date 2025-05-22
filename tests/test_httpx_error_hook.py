@@ -13,8 +13,8 @@ logging.disable(logging.CRITICAL)
 
 
 @patch("skaha.hooks.httpx.errors.get_logger")
-def test_sync_log_handles_error_response(mock_get_logger_sync):
-    """Test that sync_log logs response.text and re-raises on HTTPStatusError."""
+def test_catch_handles_error_response(mock_get_logger_sync):
+    """Test that catch logs response.text and re-raises on HTTPStatusError."""
     mock_logger = MagicMock()
     mock_get_logger_sync.return_value = mock_logger
 
@@ -34,8 +34,8 @@ def test_sync_log_handles_error_response(mock_get_logger_sync):
 
 
 @patch("skaha.hooks.httpx.errors.get_logger")
-def test_sync_log_handles_success_response(mock_get_logger_sync_success):
-    """Test that sync_log does nothing if no HTTPStatusError is raised."""
+def test_catch_handles_success_response(mock_get_logger_sync_success):
+    """Test that catch does nothing if no HTTPStatusError is raised."""
     mock_logger = MagicMock()
     mock_get_logger_sync_success.return_value = mock_logger
 
@@ -55,8 +55,8 @@ def test_sync_log_handles_success_response(mock_get_logger_sync_success):
 
 @pytest.mark.asyncio
 @patch("skaha.hooks.httpx.errors.get_logger")
-async def test_async_log_handles_error_response(mock_get_logger_async):
-    """Test that async_log logs response.text and re-raises on HTTPStatusError."""
+async def test_acatch_handles_error_response(mock_get_logger_async):
+    """Test that acatch logs response.text and re-raises on HTTPStatusError."""
     mock_logger = MagicMock()
     mock_get_logger_async.return_value = mock_logger
 
@@ -76,8 +76,8 @@ async def test_async_log_handles_error_response(mock_get_logger_async):
 
 @pytest.mark.asyncio
 @patch("skaha.hooks.httpx.errors.get_logger")
-async def test_async_log_handles_success_response(mock_get_logger_async_success):
-    """Test that async_log does nothing if no HTTPStatusError is raised (async)."""
+async def test_acatch_handles_success_response(mock_get_logger_async_success):
+    """Test that acatch does nothing if no HTTPStatusError is raised (async)."""
     mock_logger = MagicMock()
     mock_get_logger_async_success.return_value = mock_logger
 
