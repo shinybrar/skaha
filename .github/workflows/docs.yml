@@ -1,9 +1,13 @@
 name: Deploy Docs
 
 on:
-  push:
-    tags:
-      - 'v*.*.*'
+  repository_dispatch:
+    types: [docs-publish]
+
+env:
+  RELEASES_CREATED: ${{ github.event.client_payload.releases_created }}
+  SHA: ${{ github.event.client_payload.sha }}
+  TAG: ${{ github.event.client_payload.tag_name }}
 
 permissions:
   contents: write
@@ -15,12 +19,17 @@ jobs:
         uses: step-security/harden-runner@0080882f6c36860b6ba35c610c98ce87d4e2f26f # v2.10.2
         with:
           egress-policy: audit
-      - name: version
-        id: version
-        run: echo "VERSION=${GITHUB_REF#refs/tags/}" >> $GITHUB_OUTPUT
       - uses: actions/checkout@f43a0e5ff2bd294095638e18286ca9a3d1956744 # v3.6.0
+      - name: Client Payload
+        run: |
+          echo "Client Payload: ${{ toJson(github.event.client_payload) }}"
       - uses: astral-sh/setup-uv@caf0cab7a618c569241d31dcd442f54681755d39 # v3.2.4
-      - run: |
+      - if: env.RELEASES_CREATED == 'true'
+        run: |
           uv python install
-          uv run mike deploy --push --update-aliases "${{ steps.version.outputs.VERSION }}" latest -F mkdocs.yml
+          uv run mike deploy --push --update-aliases "${{ env.TAG }}" latest -F mkdocs.yml
           uv run mike set-default --push latest -F mkdocs.yml
+      - if: env.RELEASES_CREATED == 'false'
+        run: |
+          uv python install
+          uv run mike deploy --push --update-aliases edge -F mkdocs.yml

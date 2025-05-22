@@ -71,7 +71,6 @@ class Session(SkahaClient):
         """
         parameters: Dict[str, Any] = build.fetch_parameters(kind, status, view)
         response: Response = self.client.get(url="session", params=parameters)
-        response.raise_for_status()
         return response.json()
 
     def stats(self) -> Dict[str, Any]:
@@ -93,7 +92,6 @@ class Session(SkahaClient):
         """
         parameters = {"view": "stats"}
         response: Response = self.client.get("session", params=parameters)
-        response.raise_for_status()
         return response.json()
 
     def info(self, ids: Union[List[str], str]) -> List[Dict[str, Any]]:
@@ -118,7 +116,7 @@ class Session(SkahaClient):
             try:
                 response: Response = self.client.get(
                     url=f"session/{value}", params=parameters
-                ).raise_for_status()
+                )
                 results.append(response.json())
             except HTTPError as err:
                 log.error(err)
@@ -149,7 +147,7 @@ class Session(SkahaClient):
             try:
                 response: Response = self.client.get(
                     url=f"session/{value}", params=parameters
-                ).raise_for_status()
+                )
                 results[value] = response.text
             except HTTPError as err:
                 log.error(err)
@@ -223,7 +221,6 @@ class Session(SkahaClient):
         for payload in payloads:
             try:
                 response: Response = self.client.post(url="session", params=payload)
-                response.raise_for_status()
                 results.append(response.text.rstrip("\r\n"))
             except HTTPError as err:
                 log.error(err)
@@ -250,8 +247,7 @@ class Session(SkahaClient):
         results: Dict[str, bool] = {}
         for value in ids:
             try:
-                response: Response = self.client.delete(url=f"session/{value}")
-                response.raise_for_status()
+                self.client.delete(url=f"session/{value}")
                 results[value] = True
             except HTTPError as err:
                 log.error(err)
@@ -368,7 +364,6 @@ class AsyncSession(SkahaClient):
         """
         parameters: Dict[str, Any] = build.fetch_parameters(kind, status, view)
         response: Response = await self.asynclient.get(url="session", params=parameters)
-        response.raise_for_status()
         return response.json()
 
     async def stats(self) -> Dict[str, Any]:
@@ -390,7 +385,6 @@ class AsyncSession(SkahaClient):
         """
         parameters = {"view": "stats"}
         response: Response = await self.asynclient.get("session", params=parameters)
-        response.raise_for_status()
         return response.json()
 
     async def info(self, ids: Union[List[str], str]) -> List[Dict[str, Any]]:
@@ -421,7 +415,6 @@ class AsyncSession(SkahaClient):
                 response = await self.asynclient.get(
                     url=f"session/{value}", params=parameters
                 )
-                response.raise_for_status()
                 return response.json()
 
         tasks = [bounded(value) for value in ids]
@@ -464,7 +457,6 @@ class AsyncSession(SkahaClient):
                 response = await self.asynclient.get(
                     url=f"session/{value}", params=parameters
                 )
-                response.raise_for_status()
                 return value, response.text
 
         tasks = [bounded(value) for value in ids]
@@ -546,7 +538,6 @@ class AsyncSession(SkahaClient):
         async def bounded(parameters: List[Tuple[str, Any]]) -> Any:
             async with semaphore:
                 response = await self.asynclient.post(url="session", params=parameters)
-                response.raise_for_status()
                 return response.text.rstrip("\r\n")
 
         for payload in payloads:
@@ -586,8 +577,7 @@ class AsyncSession(SkahaClient):
         async def bounded(value: str) -> Tuple[str, bool]:
             async with semaphore:
                 try:
-                    response = await self.asynclient.delete(url=f"session/{value}")
-                    response.raise_for_status()
+                    await self.asynclient.delete(url=f"session/{value}")
                     return value, True
                 except HTTPError as err:
                     log.error(err)

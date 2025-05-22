@@ -42,7 +42,6 @@ class Images(SkahaClient):
         if kind:
             data["type"] = kind
         response: Response = self.client.get("image", params=data)  # type: ignore # noqa
-        response.raise_for_status()
         payload: Dict[str, Any] = response.json()
         reply: List[str] = []
         for image in payload:

@@ -20,6 +20,7 @@ from pydantic import (
 from typing_extensions import Self
 
 from skaha import __version__
+from skaha.hooks.httpx import errors
 from skaha.models import ContainerRegistry
 
 # Setup logging format
@@ -216,9 +217,11 @@ class SkahaClient(BaseModel):
         log.info("Using token authentication.")
         client: Client = Client(
             timeout=self.timeout,
+            event_hooks={"response": [errors.catch]},
         )
         asynclient: AsyncClient = AsyncClient(
             timeout=self.timeout,
+            event_hooks={"response": [errors.acatch]},
         )
         return client, asynclient
 
@@ -229,15 +232,18 @@ class SkahaClient(BaseModel):
             Tuple[Client, AsyncClient]: Synchronous and Asynchronous HTTPx Clients.
         """
         log.info("Using certificate authentication.")
-        ctx = ssl.create_default_context()
+        ctx = ssl.create_default_context(ssl.Purpose.SERVER_AUTH)
+        ctx.minimum_version = ssl.TLSVersion.TLSv1_2
         ctx.load_cert_chain(certfile=self.certificate)
         client: Client = Client(
             timeout=self.timeout,
             verify=ctx,
+            event_hooks={"response": [errors.catch]},
         )
         asynclient: AsyncClient = AsyncClient(
             timeout=self.timeout,
             verify=ctx,
+            event_hooks={"response": [errors.acatch]},
         )
         return client, asynclient
 
