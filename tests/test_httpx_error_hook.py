@@ -18,7 +18,7 @@ def test_sync_log_handles_error_response(mock_get_logger_sync):
     mock_logger = MagicMock()
     mock_get_logger_sync.return_value = mock_logger
 
-    mock_request = httpx.Request("GET", "http://example.com/error")
+    mock_request = httpx.Request("GET", "https://example.com/error")
     # Prepare a mock response that will raise an error
     response_text = "Internal Server Error"
     mock_response = httpx.Response(500, text=response_text, request=mock_request)
@@ -39,7 +39,7 @@ def test_sync_log_handles_success_response(mock_get_logger_sync_success):
     mock_logger = MagicMock()
     mock_get_logger_sync_success.return_value = mock_logger
 
-    mock_request = httpx.Request("GET", "http://example.com/success")
+    mock_request = httpx.Request("GET", "https://example.com/success")
     mock_response = httpx.Response(200, text="OK", request=mock_request)
     mock_response.read = MagicMock()
     # raise_for_status on a 200 OK response should not raise an error
@@ -60,7 +60,7 @@ async def test_async_log_handles_error_response(mock_get_logger_async):
     mock_logger = MagicMock()
     mock_get_logger_async.return_value = mock_logger
 
-    mock_request = httpx.Request("GET", "http://example.com/async_error")
+    mock_request = httpx.Request("GET", "https://example.com/async_error")
     response_text = "Async Internal Server Error"
     mock_response = httpx.Response(500, text=response_text, request=mock_request)
     # Ensure aread() is an AsyncMock to check it's called
@@ -81,7 +81,7 @@ async def test_async_log_handles_success_response(mock_get_logger_async_success)
     mock_logger = MagicMock()
     mock_get_logger_async_success.return_value = mock_logger
 
-    mock_request = httpx.Request("GET", "http://example.com/async_success")
+    mock_request = httpx.Request("GET", "https://example.com/async_success")
     mock_response = httpx.Response(200, text="OK", request=mock_request)
     mock_response.aread = AsyncMock()
     # raise_for_status on a 200 OK response should not raise an error
