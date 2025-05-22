@@ -217,11 +217,11 @@ class SkahaClient(BaseModel):
         log.info("Using token authentication.")
         client: Client = Client(
             timeout=self.timeout,
-            event_hooks={"response": [errors.sync_log]},  # Updated event hook
+            event_hooks={"response": [errors.catch]},
         )
         asynclient: AsyncClient = AsyncClient(
             timeout=self.timeout,
-            event_hooks={"response": [errors.async_log]},  # Updated event hook
+            event_hooks={"response": [errors.acatch]},
         )
         return client, asynclient
 
@@ -237,12 +237,12 @@ class SkahaClient(BaseModel):
         client: Client = Client(
             timeout=self.timeout,
             verify=ctx,
-            event_hooks={"response": [errors.sync_log]},  # Updated event hook
+            event_hooks={"response": [errors.catch]},
         )
         asynclient: AsyncClient = AsyncClient(
             timeout=self.timeout,
             verify=ctx,
-            event_hooks={"response": [errors.async_log]},  # Updated event hook
+            event_hooks={"response": [errors.acatch]},
         )
         return client, asynclient
 

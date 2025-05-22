@@ -22,7 +22,7 @@ import httpx
 from skaha.utils.logs import get_logger
 
 
-def sync_log(response: httpx.Response) -> None:
+def catch(response: httpx.Response) -> None:
     """Logs the response & re-raises an HTTPStatusError.
 
     Args:
@@ -37,7 +37,7 @@ def sync_log(response: httpx.Response) -> None:
         raise e
 
 
-async def async_log(response: httpx.Response) -> None:  # Renamed function
+async def acatch(response: httpx.Response) -> None:  # Renamed function
     """Logs the response & re-raises an HTTPStatusError (async).
 
     Args:

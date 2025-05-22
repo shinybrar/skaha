@@ -7,7 +7,7 @@ import httpx
 import pytest
 
 # Import the functions to be tested
-from skaha.hooks.httpx.errors import async_log, sync_log
+from skaha.hooks.httpx.errors import acatch, catch
 
 logging.disable(logging.CRITICAL)
 
@@ -26,7 +26,7 @@ def test_sync_log_handles_error_response(mock_get_logger_sync):
     mock_response.read = MagicMock()
 
     with pytest.raises(httpx.HTTPStatusError):
-        sync_log(mock_response)
+        catch(mock_response)
 
     mock_response.read.assert_called_once()
     mock_logger.error.assert_called_once_with(response_text)
@@ -45,7 +45,7 @@ def test_sync_log_handles_success_response(mock_get_logger_sync_success):
     # raise_for_status on a 200 OK response should not raise an error
     mock_response.raise_for_status = MagicMock()
 
-    sync_log(mock_response)
+    catch(mock_response)
 
     mock_response.read.assert_called_once()
     mock_response.raise_for_status.assert_called_once()  # Verify it was called
@@ -67,7 +67,7 @@ async def test_async_log_handles_error_response(mock_get_logger_async):
     mock_response.aread = AsyncMock()
 
     with pytest.raises(httpx.HTTPStatusError):
-        await async_log(mock_response)
+        await acatch(mock_response)
 
     mock_response.aread.assert_called_once()  # Use assert_called_once for AsyncMock too
     mock_logger.error.assert_called_once_with(response_text)
@@ -87,7 +87,7 @@ async def test_async_log_handles_success_response(mock_get_logger_async_success)
     # raise_for_status on a 200 OK response should not raise an error
     mock_response.raise_for_status = MagicMock()
 
-    await async_log(mock_response)
+    await acatch(mock_response)
 
     mock_response.aread.assert_called_once()
     mock_response.raise_for_status.assert_called_once()
