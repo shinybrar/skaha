@@ -4,8 +4,6 @@ on:
   push:
     branches:
       - main
-    paths-ignore:
-      - 'docs/**'
 
 jobs:
   release-please:
@@ -15,7 +13,6 @@ jobs:
         uses: step-security/harden-runner@0080882f6c36860b6ba35c610c98ce87d4e2f26f # v2.10.2
         with:
           egress-policy: audit
-
       -
         name: Create release
         id: release-please
@@ -57,6 +54,20 @@ jobs:
         with:
           repository: shinybrar/skaha
           event-type: pypi-release
+          token: ${{ secrets.GITHUB_TOKEN }}
+          client-payload: |-
+            {
+              "releases_created": "${{ steps.release-please.outputs.releases_created }}",
+              "tag_name": "${{ steps.release-please.outputs.tag_name }}",
+              "sha": "${{ steps.release-please.outputs.sha }}"
+            }
+      -
+        name: Dispatch Docs Publish
+        if: always()
+        uses: peter-evans/repository-dispatch@ff45666b9427631e3450c54a1bcbee4d9ff4d7c0 # v3.0.0
+        with:
+          repository: shinybrar/skaha
+          event-type: docs-publish
           token: ${{ secrets.GITHUB_TOKEN }}
           client-payload: |-
             {
