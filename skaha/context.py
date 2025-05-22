@@ -44,5 +44,4 @@ class Context(SkahaClient):
             }
         """
         response: Response = self.client.get(url="context")
-        response.raise_for_status()
         return response.json()

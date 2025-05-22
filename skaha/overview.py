@@ -37,7 +37,6 @@ class Overview(SkahaClient):
             bool: True if the server is available, False otherwise.
         """
         response: Response = self.client.get("availability")  # type: ignore # noqa
-        response.raise_for_status()
         # Parse the XML string
         root = ElementTree.fromstring(response.text)  # type: ignore
         available = root.find(
