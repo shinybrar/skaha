@@ -232,7 +232,8 @@ class SkahaClient(BaseModel):
             Tuple[Client, AsyncClient]: Synchronous and Asynchronous HTTPx Clients.
         """
         log.info("Using certificate authentication.")
-        ctx = ssl.create_default_context()
+        ctx = ssl.create_default_context(ssl.Purpose.SERVER_AUTH)
+        ctx.minimum_version = ssl.TLSVersion.TLSv1_2
         ctx.load_cert_chain(certfile=self.certificate)
         client: Client = Client(
             timeout=self.timeout,
