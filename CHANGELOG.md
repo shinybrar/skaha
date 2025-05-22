@@ -1,5 +1,16 @@
 # Changelog
 
+## [1.6.1](https://github.com/shinybrar/skaha/compare/v1.6.0...v1.6.1) (2025-05-22)
+
+
+### Bug Fixes
+
+* **cleanup:** comments ([8a1a078](https://github.com/shinybrar/skaha/commit/8a1a0785232c404b5b0b68cbd4b8b0349d09a34c))
+* **gha:** fix for gh-pages push ([27aa8f8](https://github.com/shinybrar/skaha/commit/27aa8f816575d41b060aec947b8824ee5322f25b))
+* Implement httpx error logging hooks and client integration ([fee71c2](https://github.com/shinybrar/skaha/commit/fee71c287a7970cfad1f3db3cd1f12766f716fe1))
+* **pre-commit:** cleanup ([abb0839](https://github.com/shinybrar/skaha/commit/abb083980a90018d244ce0e4a91ecc363597f2e4))
+* **security:** restricting ssl context to use TLSv1.2 at a minimum ([09654d0](https://github.com/shinybrar/skaha/commit/09654d01d4fbd3092930fa82ef87d504ca4583c0))
+
 ## [1.6.0](https://github.com/shinybrar/skaha/compare/v1.5.2...v1.6.0) (2025-05-12)
 
 

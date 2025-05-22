@@ -1,6 +1,6 @@
 [project]
 name = "skaha"
-version = "1.6.0"
+version = "1.6.1"
 requires-python = ">=3.9"
 description = "Python Client for CANFAR Science Platform"
 license = { file = "LICENSE" }
