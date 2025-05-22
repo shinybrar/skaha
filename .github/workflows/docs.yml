@@ -39,3 +39,5 @@ jobs:
         run: |
           uv python install
           uv run mike deploy --push --update-aliases edge -F mkdocs.yml
+      - run: |
+          uv run mike list
