@@ -239,8 +239,10 @@ class SkahaClient(BaseModel):
             certdata = certfile.read()
         cert = x509.load_pem_x509_certificate(certdata, default_backend())
         now = datetime.now(timezone.utc)
-        assert cert.not_valid_after_utc > now, "SSL certificate expired."
-        assert cert.not_valid_before_utc < now, "SSL certificate not valid yet."
+        if cert.not_valid_after_utc <= now:
+            raise ValueError("SSL certificate expired.")
+        if cert.not_valid_before_utc >= now:
+            raise ValueError("SSL certificate not valid yet.")
         ctx = ssl.create_default_context(ssl.Purpose.SERVER_AUTH)
         ctx.minimum_version = ssl.TLSVersion.TLSv1_2
         ctx.load_cert_chain(certfile=self.certificate)
