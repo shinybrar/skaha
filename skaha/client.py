@@ -2,11 +2,14 @@
 
 import logging
 import ssl
+from datetime import datetime, timezone
 from os import R_OK, access, environ
 from pathlib import Path
 from time import asctime, gmtime
 from typing import Annotated, Dict, Optional, Tuple
 
+from cryptography import x509
+from cryptography.hazmat.backends import default_backend
 from httpx import AsyncClient, Client
 from pydantic import (
     AnyHttpUrl,
@@ -232,6 +235,12 @@ class SkahaClient(BaseModel):
             Tuple[Client, AsyncClient]: Synchronous and Asynchronous HTTPx Clients.
         """
         log.info("Using certificate authentication.")
+        with open(self.certificate, "rb") as certfile:
+            certdata = certfile.read()
+        cert = x509.load_pem_x509_certificate(certdata, default_backend())
+        now = datetime.now(timezone.utc)
+        assert cert.not_valid_after_utc > now, "SSL certificate expired."
+        assert cert.not_valid_before_utc < now, "SSL certificate not valid yet."
         ctx = ssl.create_default_context(ssl.Purpose.SERVER_AUTH)
         ctx.minimum_version = ssl.TLSVersion.TLSv1_2
         ctx.load_cert_chain(certfile=self.certificate)
