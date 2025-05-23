@@ -1,5 +1,13 @@
 # Changelog
 
+## [1.6.2](https://github.com/shinybrar/skaha/compare/v1.6.1...v1.6.2) (2025-05-23)
+
+
+### Bug Fixes
+
+* **security:** improvements to assertion checks ([2ea1108](https://github.com/shinybrar/skaha/commit/2ea11088d2879918d653dd1c7bd8eaf2ceff24d6))
+* **security:** X509 certs are checked if valid before first conn. to server ([08327a9](https://github.com/shinybrar/skaha/commit/08327a9ea233ed67084f5a1fd6347f919111aea5))
+
 ## [1.6.1](https://github.com/shinybrar/skaha/compare/v1.6.0...v1.6.1) (2025-05-22)
 
 
