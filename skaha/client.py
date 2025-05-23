@@ -2,11 +2,14 @@
 
 import logging
 import ssl
+from datetime import datetime, timezone
 from os import R_OK, access, environ
 from pathlib import Path
 from time import asctime, gmtime
 from typing import Annotated, Dict, Optional, Tuple
 
+from cryptography import x509
+from cryptography.hazmat.backends import default_backend
 from httpx import AsyncClient, Client
 from pydantic import (
     AnyHttpUrl,
@@ -172,6 +175,12 @@ class SkahaClient(BaseModel):
                 Path(value).resolve(strict=True).is_file()
             ), f"{value} is not a file or does not exist."
             assert access(Path(value), R_OK), f"{value} is not readable."
+            with open(value, "rb") as certfile:
+                certdata = certfile.read()
+            cert = x509.load_pem_x509_certificate(certdata, default_backend())
+            now_utc = datetime.now(timezone.utc)
+            assert cert.not_valid_after_utc <= now_utc, f"{value} expired."
+            assert cert.not_valid_before_utc >= now_utc, f"{value} not valid yet."
         return value
 
     @field_validator("server")
