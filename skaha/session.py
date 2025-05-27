@@ -241,8 +241,8 @@ class Session(SkahaClient):
         Examples:
             >>> from skaha.session import Session
             >>> session = Session()
-            >>> session.events(id="hjko98yghj")
-            >>> session.events(id=["hjko98yghj", "ikvp1jtp"])
+            >>> session.events(ids="hjko98yghj")
+            >>> session.events(ids=["hjko98yghj", "ikvp1jtp"])
         """
         if isinstance(ids, str):
             ids = [ids]
