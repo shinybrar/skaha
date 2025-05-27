@@ -1,5 +1,6 @@
 """Test the async session."""
 
+from asyncio import sleep
 from time import time
 from typing import List
 from uuid import uuid4
@@ -112,6 +113,7 @@ async def test_session_events(async_session: AsyncSession, name: str):
     done = False
     limit = time() + 60
     while not done and time() < limit:
+        await sleep(1)
         events = await async_session.events(pytest.IDENTITY)  # type: ignore
         if events:
             done = True

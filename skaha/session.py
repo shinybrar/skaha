@@ -238,6 +238,9 @@ class Session(SkahaClient):
         Returns:
             Optional[List[Dict[str, str]]]: A list of events for the session[s].
 
+        Notes:
+            When verbose is True, the events will be printed to stdout only.
+
         Examples:
             >>> from skaha.session import Session
             >>> session = Session()
@@ -600,6 +603,9 @@ class AsyncSession(SkahaClient):
 
         Returns:
             Optional[List[Dict[str, str]]]: A list of events for the session[s].
+
+        Notes:
+            When verbose is True, the events will be printed to stdout only.
 
         Examples:
             >>> from skaha.session import AsyncSession
