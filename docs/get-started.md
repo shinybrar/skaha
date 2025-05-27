@@ -2,14 +2,14 @@
 
 ## Before you Begin
 
-Before you can use the Skaha python package, you need a valid CANFAR account and access to the CANFAR Science Platform. To request access, [please request an account with the Canadian Astronomy Data Centre (CADC)](https://www.cadc-ccda.hia-iha.nrc-cnrc.gc.ca/en/auth/request.html).
+Before you can use the Skaha Python package, you need a valid account with access to the CANFAR Science Platform. To request access, [please request an account with the Canadian Astronomy Data Centre (CADC)](https://www.cadc-ccda.hia-iha.nrc-cnrc.gc.ca/en/auth/request.html).
 
 ## Quick Start
 
 !!! note "Skaha Requirements"
 
     - Python 3.9+
-    - CANFAR Science Platform Account
+    - Science Platform Account
 
 !!! code "Installation"
 
@@ -21,7 +21,7 @@ Before you can use the Skaha python package, you need a valid CANFAR account and
 
 ### X509 Authentication
 
-Skaha can use X509 security certificate for interactions with the CANFAR Science Platform. The certificate comes in the form of a `.pem` file which is saved in your home directory by default under the path `~/.ssl/cadcproxy.pem`.
+Skaha can use X509 security certificate for interactions with the Science Platform. The certificate comes in the form of a `.pem` file which is saved in your home directory by default under the path `~/.ssl/cadcproxy.pem`.
 
 !!! info "X509 Certificate"
     You need to have a valid certificate in order to use the CANFAR Science Platform.
@@ -36,13 +36,16 @@ Skaha can use X509 security certificate for interactions with the CANFAR Science
     DONE. 10 day certificate saved in /home/username/.ssl/cadcproxy.pem
     ```
 
-By default, `skaha` **only** looks at the location `$HOME/.ssl/cadcproxy.pem` for the X509 authentication certificate. When using the `skaha` python package, you can specify the location of your certificate when creating a new session.
 
-```python
-from skaha.session import Session
 
-session = Session(certificate="/path/to/certificate.pem")
-```
+!!! info "Certificate Location"
+
+    By default, `skaha` **only** looks at the location `$HOME/.ssl/cadcproxy.pem` for the X509 authentication certificate. When using the `skaha` python package, you can specify a custom location of your certificate with,
+    ```python
+    from skaha.session import Session
+
+    session = Session(certificate="/path/to/certificate.pem")
+    ```
 
 ### Token Authentication
 
@@ -51,7 +54,7 @@ Starting with v1.6, Skaha supports token authentication. You can use a token ins
 ```python
 from skaha.session import Session
 
-session = Session(token="your_token")
+session = Session(token="your_super_token")
 ```
 
 !!! note "Beta Feature"
