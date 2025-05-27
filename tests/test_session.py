@@ -141,7 +141,6 @@ def test_session_events(session: Session, name: str):
         if len(events) > 0:
             break
     assert pytest.IDENTITY[0] in events[0].keys()
-    assert len(events[pytest.IDENTITY[0]]) > 0  # type: ignore
 
 
 def test_delete_session(session: Session, name: str):

@@ -130,7 +130,8 @@ async def test_session_events(async_session: AsyncSession, name: str):
         events = await async_session.events(pytest.IDENTITY)  # type: ignore
         if events:
             done = True
-    assert pytest.IDENTITY[0] in events[0].keys()
+            assert pytest.IDENTITY[0] in events[0].keys()
+    assert done, "No events found for the session."
 
 
 @pytest.mark.asyncio
