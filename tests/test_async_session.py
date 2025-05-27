@@ -107,6 +107,20 @@ async def test_get_logs(async_session: AsyncSession):
 
 @pytest.mark.asyncio
 @pytest.mark.order(4)
+async def test_session_events(async_session: AsyncSession, name: str):
+    """Test getting session events."""
+    done = False
+    limit = time() + 60
+    while not done and time() < limit:
+        events = await async_session.events(pytest.IDENTITY)  # type: ignore
+        if events:
+            done = True
+            assert pytest.IDENTITY[0] in events[0].keys()
+    assert done, "No events found for the session."
+
+
+@pytest.mark.asyncio
+@pytest.mark.order(5)
 async def test_delete_session(async_session: AsyncSession, name: str):
     """Test deleting a session."""
     # Delete the session
@@ -118,20 +132,6 @@ async def test_delete_session(async_session: AsyncSession, name: str):
                 done = True
     deletion = await async_session.destroy_with(prefix=name)  # type: ignore
     assert deletion == {pytest.IDENTITY[0]: True}  # type: ignore
-
-
-@pytest.mark.asyncio
-@pytest.mark.order(5)
-async def test_session_events(async_session: AsyncSession, name: str):
-    """Test getting session events."""
-    done = False
-    limit = time() + 60
-    while not done and time() < limit:
-        events = await async_session.events(pytest.IDENTITY)  # type: ignore
-        if events:
-            done = True
-            assert pytest.IDENTITY[0] in events[0].keys()
-    assert done, "No events found for the session."
 
 
 @pytest.mark.asyncio
