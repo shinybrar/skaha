@@ -121,6 +121,19 @@ async def test_delete_session(async_session: AsyncSession, name: str):
 
 
 @pytest.mark.asyncio
+@pytest.mark.order(5)
+async def test_session_events(async_session: AsyncSession, name: str):
+    """Test getting session events."""
+    done = False
+    limit = time() + 60
+    while not done and time() < limit:
+        events = await async_session.events(pytest.IDENTITY)  # type: ignore
+        if events:
+            done = True
+    assert pytest.IDENTITY[0] in events[0].keys()
+
+
+@pytest.mark.asyncio
 async def test_bad_error_exceptions():
     """Test error handling."""
     asession = AsyncSession(server="https://bad.server.com")
