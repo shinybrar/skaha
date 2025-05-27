@@ -228,7 +228,7 @@ class Session(SkahaClient):
 
     def events(
         self, ids: Union[str, List[str]], verbose: bool = False
-    ) -> List[Dict[str, str]]:
+    ) -> Optional[List[Dict[str, str]]]:
         """Get deployment events for a session[s].
 
         Args:
@@ -236,7 +236,7 @@ class Session(SkahaClient):
             verbose (bool, optional): Print events to stdout. Defaults to False.
 
         Returns:
-            List[Dict[str, str]]: A list of events for the session[s].
+            Optional[List[Dict[str, str]]]: A list of events for the session[s].
 
         Examples:
             >>> from skaha.session import Session
@@ -260,8 +260,8 @@ class Session(SkahaClient):
             for result in results:
                 for key, value in result.items():
                     log.info("Session ID: %s", key)
-                    log.info(value)
-        return results
+                    log.info("\n %s", value)
+        return results if not verbose else None
 
     def destroy(self, ids: Union[str, List[str]]) -> Dict[str, bool]:
         """Destroy skaha session[s].
@@ -591,7 +591,7 @@ class AsyncSession(SkahaClient):
 
     async def events(
         self, ids: Union[str, List[str]], verbose: bool = False
-    ) -> List[Dict[str, str]]:
+    ) -> Optional[List[Dict[str, str]]]:
         """Get deployment events for a session[s].
 
         Args:
@@ -599,7 +599,7 @@ class AsyncSession(SkahaClient):
             verbose (bool, optional): Print events to stdout. Defaults to False.
 
         Returns:
-            List[Dict[str, str]]: A list of events for the session[s].
+            Optional[List[Dict[str, str]]]: A list of events for the session[s].
 
         Examples:
             >>> from skaha.session import AsyncSession
@@ -634,7 +634,7 @@ class AsyncSession(SkahaClient):
                 for key, value in result.items():
                     log.info("Session ID: %s", key)
                     log.info(value)
-        return results
+        return results if not verbose else None
 
     async def destroy(self, ids: Union[str, List[str]]) -> Dict[str, bool]:
         """Destroy session[s].
