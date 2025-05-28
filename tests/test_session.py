@@ -131,6 +131,18 @@ def test_session_logs(session: Session, name: str):
     assert success
 
 
+def test_session_events(session: Session, name: str):
+    """Test getting session events."""
+    limit = time() + 60  # 1 minute
+    events: List[Dict[str, str]] = []
+    while time() < limit:
+        sleep(1)
+        events = session.events(pytest.IDENTITY)  # type: ignore
+        if len(events) > 0:
+            break
+    assert pytest.IDENTITY[0] in events[0].keys()
+
+
 def test_delete_session(session: Session, name: str):
     """Test deleting a session."""
     # Delete the session

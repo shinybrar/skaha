@@ -13,11 +13,11 @@ log = logs.get_logger(__name__)
 
 
 class Session(SkahaClient):
-    """Skaha Session Management Client.
+    """Session Management Client.
 
-    This class provides methods to manage sessions in the Skaha system,
-    including fetching session details, creating new sessions,
-    retrieving logs, and destroying existing sessions.
+    This class provides methods to manage sessions, including fetching
+    session details, creating new sessions, retrieving logs, and
+    destroying existing sessions.
 
     Args:
         SkahaClient (SkahaClient): Base HTTP client for making API requests.
@@ -26,7 +26,7 @@ class Session(SkahaClient):
         >>> from skaha.session import Session
         >>> session = Session(
                 timeout=120,
-                concurrency=100, # <--- Has no effect on the sync client
+                concurrency=100, # No effect on sync client
                 loglevel=40,
             )
     """
@@ -49,7 +49,7 @@ class Session(SkahaClient):
             set to 'all', all user sessions are listed (with limited information).
 
         Returns:
-            list: Sessions information.
+            List[Dict[str, str]]: Sessions information.
 
         Examples:
             >>> from skaha.session import Session
@@ -57,12 +57,12 @@ class Session(SkahaClient):
             >>> session.fetch(kind="notebook")
             [{'id': 'ikvp1jtp',
               'userid': 'username',
-              'image': 'images.canfar.net/image/label:latest',
+              'image': 'image-server/image/label:latest',
               'type': 'notebook',
               'status': 'Running',
               'name': 'example-notebook',
               'startTime': '2222-12-14T02:24:06Z',
-              'connectURL': 'https://skaha.example.com/ikvp1jtp',
+              'connectURL': 'https://something.example.com/ikvp1jtp',
               'requestedRAM': '16G',
               'requestedCPUCores': '2',
               'requestedGPUCores': '<none>',
@@ -74,7 +74,7 @@ class Session(SkahaClient):
         return response.json()
 
     def stats(self) -> Dict[str, Any]:
-        """Get statistics for the entire skaha cluster.
+        """Get statistics for the entire platform.
 
         Returns:
             Dict[str, Any]: Cluster statistics.
@@ -226,6 +226,46 @@ class Session(SkahaClient):
                 log.error(err)
         return results
 
+    def events(
+        self, ids: Union[str, List[str]], verbose: bool = False
+    ) -> Optional[List[Dict[str, str]]]:
+        """Get deployment events for a session[s].
+
+        Args:
+            ids (Union[str, List[str]]): Session ID[s].
+            verbose (bool, optional): Print events to stdout. Defaults to False.
+
+        Returns:
+            Optional[List[Dict[str, str]]]: A list of events for the session[s].
+
+        Notes:
+            When verbose is True, the events will be printed to stdout only.
+
+        Examples:
+            >>> from skaha.session import Session
+            >>> session = Session()
+            >>> session.events(ids="hjko98yghj")
+            >>> session.events(ids=["hjko98yghj", "ikvp1jtp"])
+        """
+        if isinstance(ids, str):
+            ids = [ids]
+        results: List[Dict[str, str]] = []
+        parameters: Dict[str, str] = {"view": "events"}
+        for value in ids:
+            try:
+                response: Response = self.client.get(
+                    url=f"session/{value}", params=parameters
+                )
+                results.append({value: response.text})
+            except HTTPError as err:
+                log.error(err)
+        if verbose and results:
+            for result in results:
+                for key, value in result.items():
+                    log.info("Session ID: %s", key)
+                    log.info("\n %s", value)
+        return results if not verbose else None
+
     def destroy(self, ids: Union[str, List[str]]) -> Dict[str, bool]:
         """Destroy skaha session[s].
 
@@ -257,11 +297,11 @@ class Session(SkahaClient):
     def destroy_with(
         self, prefix: str, kind: KINDS = "headless", status: STATUS = "Succeeded"
     ) -> Dict[str, bool]:
-        """Destroy skaha session[s] matching search criteria.
+        """Destroy session[s] matching search criteria.
 
         Args:
             prefix (str): Prefix to match in the session name.
-            kind (KINDS): Type of skaha session. Defaults to "headless".
+            kind (KINDS): Type of session. Defaults to "headless".
             status (STATUS): Status of the session. Defaults to "Succeeded".
 
 
@@ -292,7 +332,7 @@ class Session(SkahaClient):
 class AsyncSession(SkahaClient):
     """Asynchronous Skaha Session Management Client.
 
-    This class provides methods to manage sessions in the Skaha system,
+    This class provides methods to manage sessions in the system,
     including fetching session details, creating new sessions,
     retrieving logs, and destroying existing sessions.
 
@@ -302,7 +342,7 @@ class AsyncSession(SkahaClient):
     Examples:
         >>> from skaha.session import AsyncSession
         >>> session = AsyncSession(
-                server="https://skaha.example.com",
+                server="https://something.example.com",
                 version="v1",
                 token="token",
                 timeout=30,
@@ -347,7 +387,7 @@ class AsyncSession(SkahaClient):
             1454823273,
             1025424273],
             'appid': '<none>',
-            'image': 'images-rc.canfar.net/skaha/skaha-notebook:22.09-test',
+            'image': 'image-server/repo/image:version',
             'type': 'notebook',
             'status': 'Running',
             'name': 'notebook1',
@@ -552,8 +592,58 @@ class AsyncSession(SkahaClient):
                 results.append(reply)
         return results
 
+    async def events(
+        self, ids: Union[str, List[str]], verbose: bool = False
+    ) -> Optional[List[Dict[str, str]]]:
+        """Get deployment events for a session[s].
+
+        Args:
+            ids (Union[str, List[str]]): Session ID[s].
+            verbose (bool, optional): Print events to stdout. Defaults to False.
+
+        Returns:
+            Optional[List[Dict[str, str]]]: A list of events for the session[s].
+
+        Notes:
+            When verbose is True, the events will be printed to stdout only.
+
+        Examples:
+            >>> from skaha.session import AsyncSession
+            >>> session = AsyncSession()
+            >>> await session.events(id="hjko98yghj")
+            >>> await session.events(id=["hjko98yghj", "ikvp1jtp"])
+        """
+        if isinstance(ids, str):
+            ids = [ids]
+        results: List[Dict[str, str]] = []
+        parameters: Dict[str, str] = {"view": "events"}
+        tasks: List[Any] = []
+        semaphore: asyncio.Semaphore = asyncio.Semaphore(self.concurrency)
+
+        async def bounded(value: str) -> Dict[str, str]:
+            async with semaphore:
+                response = await self.asynclient.get(
+                    url=f"session/{value}", params=parameters
+                )
+                return {value: response.text}
+
+        tasks = [bounded(value) for value in ids]
+        responses = await asyncio.gather(*tasks, return_exceptions=True)
+        for reply in responses:
+            if isinstance(reply, Exception):
+                log.error(reply)
+            elif isinstance(reply, dict):
+                results.append(dict(reply))  # type: ignore
+
+        if verbose and results:
+            for result in results:
+                for key, value in result.items():
+                    log.info("Session ID: %s", key)
+                    log.info(value)
+        return results if not verbose else None
+
     async def destroy(self, ids: Union[str, List[str]]) -> Dict[str, bool]:
-        """Destroy skaha session[s].
+        """Destroy session[s].
 
         Args:
             ids (Union[str, List[str]]): Session ID[s].
@@ -593,11 +683,11 @@ class AsyncSession(SkahaClient):
     async def destroy_with(
         self, prefix: str, kind: KINDS = "headless", status: STATUS = "Succeeded"
     ) -> Dict[str, bool]:
-        """Destroy skaha session[s] matching search criteria.
+        """Destroy session[s] matching search criteria.
 
         Args:
             prefix (str): Prefix to match in the session name.
-            kind (KINDS): Type of skaha session. Defaults to "headless".
+            kind (KINDS): Type of session. Defaults to "headless".
             status (STATUS): Status of the session. Defaults to "Succeeded".
 
 
