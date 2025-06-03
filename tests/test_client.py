@@ -13,6 +13,7 @@ from skaha.client import SkahaClient
 def test_client_has_session_attribute():
     """Test if it SkahaClient object contains requests.Session attribute."""
     client = SkahaClient()
+    client.client.base_url
     assert hasattr(client, "client")
     assert isinstance(client.client, httpx.Client)
 
@@ -63,7 +64,7 @@ def test_token_setup():
     """Test token setup."""
     token: str = "abcdef"
     skaha = SkahaClient(token=token)
-    assert skaha.token == token
+    assert skaha.token.get_secret_value() == token
     assert skaha.client.headers["Authorization"] == f"Bearer {token}"
 
 
@@ -73,5 +74,5 @@ def test_non_readible_certfile():
     temp.close()
     # Change the permissions
     chmod(temp.name, 0o000)
-    with pytest.raises(ValidationError):
+    with pytest.raises(PermissionError):
         SkahaClient(certificate=temp.name)
