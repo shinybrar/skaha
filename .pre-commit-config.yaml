@@ -1,54 +1,17 @@
 repos:
-
-  - repo: https://github.com/pycqa/isort
-    rev: 5.13.2
+  - repo: https://github.com/astral-sh/ruff-pre-commit
+    rev: v0.11.12
     hooks:
-      - id: isort
-        args: [ --multi-line=3, --trailing-comma, --force-grid-wrap=0, --use-parentheses, --line-width=88]
-
-  - repo: https://github.com/pycqa/flake8
-    rev: 7.1.1
-    hooks:
-    - id: flake8
-      args: [--max-line-length=89, --max-complexity=15]
-
-    # Code Complexity Score Rank
-    # 1 to 5	A	low - simple block
-    # 6 - 10	B	low - well structured and stable block
-    # 11 - 20	C	moderate - slightly complex block
-    # 21 - 30	D	more than moderate - more complex block
-    # 31 - 40	E	high - complex block, alarming
-    # 41+	F	very high - error-prone, unstable block
-
-
-  - repo: https://github.com/asottile/pyupgrade
-    rev: v3.19.0
-    hooks:
-    -   id: pyupgrade
-        args: [--py36-plus]
-
-  - repo: https://github.com/psf/black
-    rev: 24.10.0
-    hooks:
-      - id: black
+      - id: ruff
+        args: [--fix]
+      - id: ruff-format
 
   - repo: https://github.com/pre-commit/mirrors-mypy
-    rev: v1.13.0
+    rev: v1.16.0
     hooks:
       - id: mypy
         additional_dependencies: ["types-toml", "types-requests", "types-defusedxml"]
         args: [--ignore-missing-imports]
-
-  - repo: https://github.com/pycqa/pydocstyle
-    rev: 6.3.0  # pick a git hash / tag to point to
-    hooks:
-      - id: pydocstyle
-        args: [--convention=google, --add-ignore=D104]
-
-  - repo: https://github.com/asottile/blacken-docs
-    rev: 1.19.1
-    hooks:
-      - id: blacken-docs
 
   - repo: https://github.com/pre-commit/pre-commit-hooks
     rev: v5.0.0
@@ -57,7 +20,6 @@ repos:
         exclude: ^docs/*
       - id: end-of-file-fixer
         exclude: ^docs/*
-      - id: debug-statements
       - id: check-case-conflict
       - id: check-json
       - id: check-yaml
@@ -65,12 +27,11 @@ repos:
       - id: mixed-line-ending
       - id: check-toml
       - id: pretty-format-json
-      - id: check-docstring-first
       - id: check-symlinks
       - id: detect-private-key
 
   - repo: https://github.com/PyCQA/bandit
-    rev: '1.8.0'
+    rev: '1.8.3'
     hooks:
       - id: bandit
         args: ["--skip=B101"]
@@ -84,7 +45,8 @@ repos:
       language: python
       additional_dependencies: [radon]
       args: ["cc", "--min=C","--total-average","--exclude=tests/*.py"]
+
   - repo: https://github.com/gitleaks/gitleaks
-    rev: v8.21.2
+    rev: v8.27.0
     hooks:
       - id: gitleaks

@@ -16,8 +16,8 @@ from httpx import AsyncClient, Client, Limits
 from pydantic import (
     AnyHttpUrl,
     Field,
-    SecretStr,
     PrivateAttr,
+    SecretStr,
     ValidationInfo,
     computed_field,
     field_validator,
@@ -215,8 +215,8 @@ class SkahaClient(BaseSettings):
         return self
 
     # Model Properties
-    @computed_field
     @property
+    @computed_field
     def client(self) -> Client:
         """Get the HTTPx Client.
 
@@ -227,8 +227,8 @@ class SkahaClient(BaseSettings):
             self._client = self._create_client()
         return self._client
 
-    @computed_field
     @property
+    @computed_field
     def asynclient(self) -> AsyncClient:
         """Get the HTTPx Async Client.
 
@@ -329,7 +329,7 @@ class SkahaClient(BaseSettings):
     # Context Manager Methods
     @contextmanager
     def _session(self):
-        """Sync Context"""
+        """Sync context."""
         try:
             yield self.client
         finally:
@@ -342,7 +342,7 @@ class SkahaClient(BaseSettings):
     def __exit__(self, exc_type, exc_val, exc_tb):
         """Sync context manager exit."""
         self._close()
-    
+
     def _close(self):
         """Close sync client."""
         if self._client:
@@ -351,7 +351,7 @@ class SkahaClient(BaseSettings):
 
     @asynccontextmanager
     async def _asession(self):
-        """Async Context"""
+        """Async context."""
         try:
             yield self.asynclient
         finally:
@@ -364,13 +364,13 @@ class SkahaClient(BaseSettings):
     async def __aexit__(self, exc_type, exc_val, exc_tb):
         """Async context manager exit."""
         await self._aclose()
-    
+
     async def _aclose(self):
         """Close async client."""
         if self._asynclient:
             await self._asynclient.aclose()
             self._asynclient = None
-    
+
     def _force_aclose(self):
         if not self._asynclient:
             return
@@ -395,5 +395,3 @@ class SkahaClient(BaseSettings):
             self._force_aclose()
         except Exception as error:
             log.error(error)
-            
-            
