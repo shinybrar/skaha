@@ -136,7 +136,6 @@ select = [
     "B",    # flake8-bugbear
     "A",    # flake8-builtins
     "COM",  # flake8-commas
-    "CPY",  # flake8-copyright
     "C4",   # flake8-comprehensions
     "DTZ",  # flake8-datetimez
     "T10",  # flake8-debugger
