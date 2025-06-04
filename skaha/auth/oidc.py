@@ -22,7 +22,7 @@ class SlowDownError(Exception):
     """Exception raised when the client should slow down its requests."""
 
 
-def discover(url: str) -> Dict[str, str]:
+def discover(url: str) -> dict[str, str]:
     """Discover OIDC provider configuration.
 
     Args:
@@ -36,7 +36,7 @@ def discover(url: str) -> Dict[str, str]:
     return response.json()
 
 
-def register(url: str) -> Dict[str, str]:
+def register(url: str) -> dict[str, str]:
     """Register a new client with the OIDC provider.
 
     Args:
@@ -45,7 +45,7 @@ def register(url: str) -> Dict[str, str]:
     Returns:
         Dict[str, str]: client registration details.
     """
-    payload: Dict[str, Any] = {
+    payload: dict[str, Any] = {
         "client_name": "Science Platform CLI",
         "grant_types": [
             "urn:ietf:params:oauth:grant-type:device_code",
@@ -77,13 +77,13 @@ def _poll_token(url: str, identity: str, secret: str, code: str):
         return data
     err = data.get("error")
     if err == "authorization_pending":
-        raise AuthPendingError()
+        raise AuthPendingError
     if err == "slow_down":
-        raise SlowDownError()
+        raise SlowDownError
     resp.raise_for_status()
 
 
-def authflow(device_auth_url: str, token_url:str, identity: str, secret: str):
+def authflow(device_auth_url: str, token_url: str, identity: str, secret: str):
     """OIDC Authorization Flow.
 
     Args:
@@ -94,7 +94,7 @@ def authflow(device_auth_url: str, token_url:str, identity: str, secret: str):
     Returns:
         _type_: _description_
     """
-    payload: Dict[str, Any] = {
+    payload: dict[str, Any] = {
         "client_id": identity,
         "scope": "openid profile email offline_access",
     }
@@ -144,7 +144,10 @@ def authflow(device_auth_url: str, token_url:str, identity: str, secret: str):
         while True:
             try:
                 return _poll_token(
-                    token_url, identity, secret, code
+                    token_url,
+                    identity,
+                    secret,
+                    code,
                 )
             except AuthPendingError:
                 time.sleep(interval)
@@ -154,7 +157,7 @@ def authflow(device_auth_url: str, token_url:str, identity: str, secret: str):
                 # new_interval = base * (1 + log(slow_count+1))
                 interval = max(
                     interval,
-                    int(interval * (1 + math.log(count + 1)))
+                    int(interval * (1 + math.log(count + 1))),
                 )
                 time.sleep(interval)
             # check timeout
@@ -174,11 +177,10 @@ def authflow(device_auth_url: str, token_url:str, identity: str, secret: str):
     return tokens
 
 
-
 if __name__ == "__main__":
     console.print("Starting OIDC Device Authorization Flow...")
     discovery_url: str = "https://ska-iam.stfc.ac.uk/.well-known/openid-configuration"
-    config: Dict[str, str] = discover(discovery_url)
+    config: dict[str, str] = discover(discovery_url)
 
     console.print("\n")
     device_auth_endpoint = config["device_authorization_endpoint"]
@@ -191,7 +193,7 @@ if __name__ == "__main__":
     console.print("\n")
     console.print("Registering client with OIDC provider...")
 
-    client_info: Dict[str, str] = register(register_url)
+    client_info: dict[str, str] = register(register_url)
     identity = client_info["client_id"]
     secret = client_info["client_secret"]
     console.print("Client registered successfully.")
@@ -208,7 +210,7 @@ if __name__ == "__main__":
     # Lets use access token to get user info
     userinfo_url: str = config["userinfo_endpoint"]
     headers = {
-        "Authorization": f"Bearer {TOKENS.get('access_token')}"
+        "Authorization": f"Bearer {TOKENS.get('access_token')}",
     }
     userinfo_response = httpx.get(userinfo_url, headers=headers)
     userinfo_response.raise_for_status()

@@ -3,7 +3,7 @@
 from typing import Any, Dict, List, Tuple
 
 
-def dict_to_tuples(dictionary: Dict[str, Any]) -> List[Tuple[str, Any]]:
+def dict_to_tuples(dictionary: dict[str, Any]) -> list[tuple[str, Any]]:
     """Convert a dictionary to a list of tuples.
 
     Args:
@@ -13,7 +13,7 @@ def dict_to_tuples(dictionary: Dict[str, Any]) -> List[Tuple[str, Any]]:
         List[Tuple[str, Any]]: List of tuples.
     """
     # Create an empty list to store the tuples
-    tuples: List[Tuple[str, Any]] = []
+    tuples: list[tuple[str, Any]] = []
     # Iterate over the key-value pairs in the dictionary
     for key, value in dictionary.items():
         # If the value is a dictionary, convert it to a list of tuples

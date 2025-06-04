@@ -2,9 +2,9 @@
 
 from typing import Any, Dict
 
-from skaha.client import SkahaClient
-
 from httpx import Response
+
+from skaha.client import SkahaClient
 
 
 class Context(SkahaClient):
@@ -14,7 +14,7 @@ class Context(SkahaClient):
         SkahaClient (skaha.client.SkahaClient): Configured Skaha Client.
     """
 
-    def resources(self) -> Dict[str, Any]:
+    def resources(self) -> dict[str, Any]:
         """Get available resources from the skaha server.
 
         Returns:

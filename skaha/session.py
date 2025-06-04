@@ -3,12 +3,11 @@
 import asyncio
 from typing import Any, Dict, List, Optional, Tuple, Union
 
+from httpx import HTTPError, Response
+
 from skaha.client import SkahaClient
 from skaha.models import KINDS, STATUS, VIEW
 from skaha.utils import build, logs
-
-from httpx import HTTPError, Response
-
 
 log = logs.get_logger(__name__)
 
@@ -37,7 +36,7 @@ class Session(SkahaClient):
         kind: Optional[KINDS] = None,
         status: Optional[STATUS] = None,
         view: Optional[VIEW] = None,
-    ) -> List[Dict[str, str]]:
+    ) -> list[dict[str, str]]:
         """List open sessions for the user.
 
         Args:
@@ -70,11 +69,11 @@ class Session(SkahaClient):
               'coresInUse': '0m',
               'ramInUse': '101Mi'}]
         """
-        parameters: Dict[str, Any] = build.fetch_parameters(kind, status, view)
+        parameters: dict[str, Any] = build.fetch_parameters(kind, status, view)
         response: Response = self.client.get(url="session", params=parameters)
         return response.json()
 
-    def stats(self) -> Dict[str, Any]:
+    def stats(self) -> dict[str, Any]:
         """Get statistics for the entire platform.
 
         Returns:
@@ -95,7 +94,7 @@ class Session(SkahaClient):
         response: Response = self.client.get("session", params=parameters)
         return response.json()
 
-    def info(self, ids: Union[List[str], str]) -> List[Dict[str, Any]]:
+    def info(self, ids: Union[list[str], str]) -> list[dict[str, Any]]:
         """Get information about session[s].
 
         Args:
@@ -111,8 +110,8 @@ class Session(SkahaClient):
         # Convert id to list if it is a string
         if isinstance(ids, str):
             ids = [ids]
-        parameters: Dict[str, str] = {"view": "event"}
-        results: List[Dict[str, Any]] = []
+        parameters: dict[str, str] = {"view": "event"}
+        results: list[dict[str, Any]] = []
         for value in ids:
             try:
                 response: Response = self.client.get(
@@ -126,9 +125,9 @@ class Session(SkahaClient):
 
     def logs(
         self,
-        ids: Union[List[str], str],
+        ids: Union[list[str], str],
         verbose: bool = False,
-    ) -> Optional[Dict[str, str]]:
+    ) -> Optional[dict[str, str]]:
         """Get logs from a session[s].
 
         Args:
@@ -144,8 +143,8 @@ class Session(SkahaClient):
         """
         if isinstance(ids, str):
             ids = [ids]
-        parameters: Dict[str, str] = {"view": "logs"}
-        results: Dict[str, str] = {}
+        parameters: dict[str, str] = {"view": "logs"}
+        results: dict[str, str] = {}
 
         for value in ids:
             try:
@@ -175,9 +174,9 @@ class Session(SkahaClient):
         gpu: Optional[int] = None,
         cmd: Optional[str] = None,
         args: Optional[str] = None,
-        env: Optional[Dict[str, Any]] = None,
+        env: Optional[dict[str, Any]] = None,
         replicas: int = 1,
-    ) -> List[str]:
+    ) -> list[str]:
         """Launch a skaha session.
 
         Args:
@@ -230,7 +229,7 @@ class Session(SkahaClient):
             env,
             replicas,
         )
-        results: List[str] = []
+        results: list[str] = []
         log.info("Creating %d %s session[s].", replicas, kind)
         for payload in payloads:
             try:
@@ -242,9 +241,9 @@ class Session(SkahaClient):
 
     def events(
         self,
-        ids: Union[str, List[str]],
+        ids: Union[str, list[str]],
         verbose: bool = False,
-    ) -> Optional[List[Dict[str, str]]]:
+    ) -> Optional[list[dict[str, str]]]:
         """Get deployment events for a session[s].
 
         Args:
@@ -265,8 +264,8 @@ class Session(SkahaClient):
         """
         if isinstance(ids, str):
             ids = [ids]
-        results: List[Dict[str, str]] = []
-        parameters: Dict[str, str] = {"view": "events"}
+        results: list[dict[str, str]] = []
+        parameters: dict[str, str] = {"view": "events"}
         for value in ids:
             try:
                 response: Response = self.client.get(
@@ -283,7 +282,7 @@ class Session(SkahaClient):
                     log.info("\n %s", value)
         return results if not verbose else None
 
-    def destroy(self, ids: Union[str, List[str]]) -> Dict[str, bool]:
+    def destroy(self, ids: Union[str, list[str]]) -> dict[str, bool]:
         """Destroy skaha session[s].
 
         Args:
@@ -301,7 +300,7 @@ class Session(SkahaClient):
         """
         if isinstance(ids, str):
             ids = [ids]
-        results: Dict[str, bool] = {}
+        results: dict[str, bool] = {}
         for value in ids:
             try:
                 self.client.delete(url=f"session/{value}")
@@ -316,7 +315,7 @@ class Session(SkahaClient):
         prefix: str,
         kind: KINDS = "headless",
         status: STATUS = "Succeeded",
-    ) -> Dict[str, bool]:
+    ) -> dict[str, bool]:
         """Destroy session[s] matching search criteria.
 
         Args:
@@ -342,7 +341,7 @@ class Session(SkahaClient):
 
         """
         sessions = self.fetch(kind=kind, status=status)
-        ids: List[str] = []
+        ids: list[str] = []
         for session in sessions:
             if session["name"].startswith(prefix):
                 ids.append(session["id"])
@@ -376,7 +375,7 @@ class AsyncSession(SkahaClient):
         kind: Optional[KINDS] = None,
         status: Optional[STATUS] = None,
         view: Optional[VIEW] = None,
-    ) -> List[Dict[str, str]]:
+    ) -> list[dict[str, str]]:
         """List open sessions for the user.
 
         Args:
@@ -422,11 +421,11 @@ class AsyncSession(SkahaClient):
             'cpuCoresInUse': '<none>',
             'gpuUtilization': '<none>'}]
         """
-        parameters: Dict[str, Any] = build.fetch_parameters(kind, status, view)
+        parameters: dict[str, Any] = build.fetch_parameters(kind, status, view)
         response: Response = await self.asynclient.get(url="session", params=parameters)
         return response.json()
 
-    async def stats(self) -> Dict[str, Any]:
+    async def stats(self) -> dict[str, Any]:
         """Get statistics for the entire skaha cluster.
 
         Returns:
@@ -447,7 +446,7 @@ class AsyncSession(SkahaClient):
         response: Response = await self.asynclient.get("session", params=parameters)
         return response.json()
 
-    async def info(self, ids: Union[List[str], str]) -> List[Dict[str, Any]]:
+    async def info(self, ids: Union[list[str], str]) -> list[dict[str, Any]]:
         """Get information about session[s].
 
         Args:
@@ -465,12 +464,12 @@ class AsyncSession(SkahaClient):
         # Convert id to list if it is a string
         if isinstance(ids, str):
             ids = [ids]
-        parameters: Dict[str, str] = {"view": "event"}
-        results: List[Dict[str, Any]] = []
-        tasks: List[Any] = []
+        parameters: dict[str, str] = {"view": "event"}
+        results: list[dict[str, Any]] = []
+        tasks: list[Any] = []
         semaphore: asyncio.Semaphore = asyncio.Semaphore(self.concurrency)
 
-        async def bounded(value: str) -> Dict[str, Any]:
+        async def bounded(value: str) -> dict[str, Any]:
             async with semaphore:
                 response = await self.asynclient.get(
                     url=f"session/{value}",
@@ -489,9 +488,9 @@ class AsyncSession(SkahaClient):
 
     async def logs(
         self,
-        ids: Union[List[str], str],
+        ids: Union[list[str], str],
         verbose: bool = False,
-    ) -> Optional[Dict[str, str]]:
+    ) -> Optional[dict[str, str]]:
         """Get logs from a session[s].
 
         Args:
@@ -509,13 +508,13 @@ class AsyncSession(SkahaClient):
         """
         if isinstance(ids, str):
             ids = [ids]
-        parameters: Dict[str, str] = {"view": "logs"}
-        results: Dict[str, str] = {}
+        parameters: dict[str, str] = {"view": "logs"}
+        results: dict[str, str] = {}
 
         semaphore: asyncio.Semaphore = asyncio.Semaphore(self.concurrency)
-        tasks: List[Any] = []
+        tasks: list[Any] = []
 
-        async def bounded(value: str) -> Tuple[str, str]:
+        async def bounded(value: str) -> tuple[str, str]:
             async with semaphore:
                 response = await self.asynclient.get(
                     url=f"session/{value}",
@@ -549,9 +548,9 @@ class AsyncSession(SkahaClient):
         gpu: Optional[int] = None,
         cmd: Optional[str] = None,
         args: Optional[str] = None,
-        env: Optional[Dict[str, Any]] = None,
+        env: Optional[dict[str, Any]] = None,
         replicas: int = 1,
-    ) -> List[str]:
+    ) -> list[str]:
         """Launch a skaha session.
 
         Args:
@@ -592,7 +591,7 @@ class AsyncSession(SkahaClient):
                 )
             >>> ["hjko98yghj", "ikvp1jtp"]
         """
-        payloads: List[List[Tuple[str, Any]]] = build.create_parameters(
+        payloads: list[list[tuple[str, Any]]] = build.create_parameters(
             name,
             image,
             cores,
@@ -604,11 +603,11 @@ class AsyncSession(SkahaClient):
             env,
             replicas,
         )
-        results: List[str] = []
-        tasks: List[Any] = []
+        results: list[str] = []
+        tasks: list[Any] = []
         semaphore: asyncio.Semaphore = asyncio.Semaphore(self.concurrency)
 
-        async def bounded(parameters: List[Tuple[str, Any]]) -> Any:
+        async def bounded(parameters: list[tuple[str, Any]]) -> Any:
             async with semaphore:
                 response = await self.asynclient.post(url="session", params=parameters)
                 return response.text.rstrip("\r\n")
@@ -627,9 +626,9 @@ class AsyncSession(SkahaClient):
 
     async def events(
         self,
-        ids: Union[str, List[str]],
+        ids: Union[str, list[str]],
         verbose: bool = False,
-    ) -> Optional[List[Dict[str, str]]]:
+    ) -> Optional[list[dict[str, str]]]:
         """Get deployment events for a session[s].
 
         Args:
@@ -650,12 +649,12 @@ class AsyncSession(SkahaClient):
         """
         if isinstance(ids, str):
             ids = [ids]
-        results: List[Dict[str, str]] = []
-        parameters: Dict[str, str] = {"view": "events"}
-        tasks: List[Any] = []
+        results: list[dict[str, str]] = []
+        parameters: dict[str, str] = {"view": "events"}
+        tasks: list[Any] = []
         semaphore: asyncio.Semaphore = asyncio.Semaphore(self.concurrency)
 
-        async def bounded(value: str) -> Dict[str, str]:
+        async def bounded(value: str) -> dict[str, str]:
             async with semaphore:
                 response = await self.asynclient.get(
                     url=f"session/{value}",
@@ -678,7 +677,7 @@ class AsyncSession(SkahaClient):
                     log.info(value)
         return results if not verbose else None
 
-    async def destroy(self, ids: Union[str, List[str]]) -> Dict[str, bool]:
+    async def destroy(self, ids: Union[str, list[str]]) -> dict[str, bool]:
         """Destroy session[s].
 
         Args:
@@ -696,11 +695,11 @@ class AsyncSession(SkahaClient):
         """
         if isinstance(ids, str):
             ids = [ids]
-        results: Dict[str, bool] = {}
+        results: dict[str, bool] = {}
         semaphore: asyncio.Semaphore = asyncio.Semaphore(self.concurrency)
-        tasks: List[Any] = []
+        tasks: list[Any] = []
 
-        async def bounded(value: str) -> Tuple[str, bool]:
+        async def bounded(value: str) -> tuple[str, bool]:
             async with semaphore:
                 try:
                     await self.asynclient.delete(url=f"session/{value}")
@@ -721,7 +720,7 @@ class AsyncSession(SkahaClient):
         prefix: str,
         kind: KINDS = "headless",
         status: STATUS = "Succeeded",
-    ) -> Dict[str, bool]:
+    ) -> dict[str, bool]:
         """Destroy session[s] matching search criteria.
 
         Args:
@@ -746,7 +745,7 @@ class AsyncSession(SkahaClient):
             >>> await session.destroy_with(prefix="car", kind="carta", status="Running")
 
         """
-        ids: List[str] = []
+        ids: list[str] = []
         for session in await self.fetch(kind=kind, status=status):
             if session["name"].startswith(prefix):
                 ids.append(session["id"])

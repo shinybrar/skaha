@@ -4,8 +4,6 @@ import warnings
 from base64 import b64encode
 from typing import Any, Dict, Literal, Optional, Tuple, get_args
 
-from skaha.utils import logs
-
 from pydantic import (
     BaseModel,
     ConfigDict,
@@ -16,6 +14,7 @@ from pydantic import (
 )
 from typing_extensions import Self
 
+from skaha.utils import logs
 
 log = logs.get_logger(__name__)
 
@@ -59,7 +58,7 @@ class CreateSpec(BaseModel):
         description="Arguments to the command.",
         examples=["-la"],
     )
-    env: Optional[Dict[str, Any]] = Field(
+    env: Optional[dict[str, Any]] = Field(
         None,
         description="Environment variables.",
         examples=[{"FOO": "BAR"}],
@@ -102,7 +101,7 @@ class CreateSpec(BaseModel):
         Returns:
             KINDS: Validated value.
         """
-        valid: Tuple[str] = get_args(KINDS)
+        valid: tuple[str] = get_args(KINDS)
         if value not in valid:
             raise ValueError(f"invalid session kind: {value}")
 

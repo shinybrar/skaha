@@ -4,7 +4,6 @@ from pathlib import Path
 
 import toml
 
-
 log = getLogger(__name__)
 
 # Root path to the Skaha Project

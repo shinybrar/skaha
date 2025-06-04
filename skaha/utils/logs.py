@@ -65,7 +65,7 @@ def stdout(logs: str) -> None:
         logs (str): The log messages as a single string.
     """
     console = Console()
-    lines: List[str] = logs.strip().split("\n")
+    lines: list[str] = logs.strip().split("\n")
 
     for line in lines:
         # Default style is white.

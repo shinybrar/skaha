@@ -10,9 +10,9 @@ def fetch_parameters(
     kind: Optional[KINDS] = None,
     status: Optional[STATUS] = None,
     view: Optional[VIEW] = None,
-) -> Dict[str, Any]:
+) -> dict[str, Any]:
     """Build parameters for fetching sessions."""
-    values: Dict[str, Any] = {}
+    values: dict[str, Any] = {}
     for key, value in {"kind": kind, "status": status, "view": view}.items():
         if value:
             values[key] = value
@@ -31,9 +31,9 @@ def create_parameters(
     gpu: Optional[int] = None,
     cmd: Optional[str] = None,
     args: Optional[str] = None,
-    env: Optional[Dict[str, Any]] = None,
+    env: Optional[dict[str, Any]] = None,
     replicas: int = 1,
-) -> List[List[Tuple[str, Any]]]:
+) -> list[list[tuple[str, Any]]]:
     """Build parameters for creating sessions."""
     specification: CreateSpec = CreateSpec(
         name=name,
@@ -47,9 +47,9 @@ def create_parameters(
         env=env,
         replicas=replicas,
     )
-    data: Dict[str, Any] = specification.model_dump(exclude_none=True, by_alias=True)
-    payload: List[Tuple[str, Any]] = []
-    payloads: List[List[Tuple[str, Any]]] = []
+    data: dict[str, Any] = specification.model_dump(exclude_none=True, by_alias=True)
+    payload: list[tuple[str, Any]] = []
+    payloads: list[list[tuple[str, Any]]] = []
     if "env" not in data:
         data["env"] = {}
     for replica in range(replicas):

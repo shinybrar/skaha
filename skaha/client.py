@@ -3,17 +3,14 @@
 import asyncio
 import logging
 import ssl
+from collections.abc import AsyncIterator, Iterator
 from contextlib import asynccontextmanager, contextmanager
 from datetime import datetime, timezone
 from os import R_OK, access
 from pathlib import Path
 from time import asctime, gmtime
 from types import TracebackType
-from typing import Annotated, Any, AsyncIterator, Dict, Iterator, Optional
-
-from skaha import __version__
-from skaha.hooks.httpx import errors
-from skaha.models import ContainerRegistry
+from typing import Annotated, Any, Dict, Optional
 
 from cryptography import x509
 from cryptography.hazmat.backends import default_backend
@@ -30,6 +27,9 @@ from pydantic import (
 from pydantic_settings import BaseSettings, SettingsConfigDict
 from typing_extensions import Self
 
+from skaha import __version__
+from skaha.hooks.httpx import errors
+from skaha.models import ContainerRegistry
 
 # Setup logging format
 logging.basicConfig(format="%(asctime)s %(levelname)s %(message)s", level=logging.INFO)
@@ -243,7 +243,7 @@ class SkahaClient(BaseSettings):
         Returns:
             Client: HTTPx Client.
         """
-        kwargs: Dict[str, Any] = {
+        kwargs: dict[str, Any] = {
             "timeout": self.timeout,
             "event_hooks": {"response": [errors.catch]},
         }
@@ -260,7 +260,7 @@ class SkahaClient(BaseSettings):
         Returns:
             AsyncClient: HTTPx Async Client.
         """
-        kwargs: Dict[str, Any] = {
+        kwargs: dict[str, Any] = {
             "timeout": self.timeout,
             "event_hooks": {"response": [errors.acatch]},
             "limits": Limits(
@@ -288,13 +288,13 @@ class SkahaClient(BaseSettings):
         ctx.load_cert_chain(certfile=certfile)
         return ctx
 
-    def _get_headers(self) -> Dict[str, str]:
+    def _get_headers(self) -> dict[str, str]:
         """Generate HTTP headers for the client.
 
         Returns:
             Dict[str, str]: HTTP headers.
         """
-        headers: Dict[str, str] = {
+        headers: dict[str, str] = {
             "X-Skaha-Server": str(self.server),
             "Content-Type": "application/x-www-form-urlencoded",
             "Accept": "application/json",

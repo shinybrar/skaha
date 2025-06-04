@@ -2,11 +2,10 @@
 
 from typing import Any, Dict, List, Optional
 
-from skaha.client import SkahaClient
-from skaha.utils.logs import get_logger
-
 from httpx import Response
 
+from skaha.client import SkahaClient
+from skaha.utils.logs import get_logger
 
 log = get_logger(__name__)
 
@@ -21,7 +20,7 @@ class Images(SkahaClient):
         Images: Skaha Image Management Object.
     """
 
-    def fetch(self, kind: Optional[str] = None) -> List[str]:
+    def fetch(self, kind: Optional[str] = None) -> list[str]:
         """Get images from Skaha Server.
 
         Args:
@@ -38,13 +37,13 @@ class Images(SkahaClient):
              ...
              'images.canfar.net/skaha/terminal:1.1.1']
         """
-        data: Dict[str, str] = {}
+        data: dict[str, str] = {}
         # If kind is not None, add it to the data dictionary
         if kind:
             data["type"] = kind
         response: Response = self.client.get("image", params=data)  # type: ignore
-        payload: Dict[str, Any] = response.json()
-        reply: List[str] = []
+        payload: dict[str, Any] = response.json()
+        reply: list[str] = []
         for image in payload:
             reply.append(image["id"])  # type: ignore
         return reply

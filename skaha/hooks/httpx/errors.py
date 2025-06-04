@@ -17,9 +17,9 @@ This is because:
    empty or incomplete information being logged.
 """
 
-from skaha.utils.logs import get_logger
-
 import httpx
+
+from skaha.utils.logs import get_logger
 
 
 def catch(response: httpx.Response) -> None:

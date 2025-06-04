@@ -15,14 +15,14 @@ from skaha.session import AsyncSession
 @pytest.fixture(scope="module")
 def name():
     """Return a random name."""
-    yield str(uuid4().hex[:7])
+    return str(uuid4().hex[:7])
 
 
-@pytest.fixture()
+@pytest.fixture
 def asession():
     """Test images."""
     session = AsyncSession()
-    yield session
+    return session
 
 
 @pytest.mark.asyncio
@@ -67,7 +67,7 @@ async def test_create_session_invalid(asession: AsyncSession, name: str):
 @pytest.mark.order(1)
 async def test_create_session(asession: AsyncSession, name: str):
     """Test creating a session."""
-    identity: List[str] = await asession.create(
+    identity: list[str] = await asession.create(
         name=name,
         kind="headless",
         cores=1,
@@ -154,4 +154,4 @@ async def test_bad_error_exceptions():
 
     assert not await asession.info(["bad"])
     assert not await asession.logs(["bad"])
-    assert {"bad": False} == await asession.destroy(["bad"])
+    assert await asession.destroy(["bad"]) == {"bad": False}
