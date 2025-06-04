@@ -207,17 +207,6 @@ ignore = [
 
 [tool.ruff.lint.isort]
 known-first-party = ["skaha"]
-combine-as-imports = true
-force-wrap-aliases = true
-lines-after-imports = 2
-default-section = "third-party"
-section-order = [
-    "future",
-    "standard-library",
-    "first-party",
-    "local-folder",
-    "third-party"
-]
 
 
 [tool.ruff.lint.pydocstyle]

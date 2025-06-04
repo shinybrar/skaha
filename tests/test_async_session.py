@@ -19,44 +19,44 @@ def name():
 
 
 @pytest.fixture()
-def async_session():
+def asession():
     """Test images."""
     session = AsyncSession()
     yield session
 
 
 @pytest.mark.asyncio
-async def test_fetch_with_kind(async_session: AsyncSession):
+async def test_fetch_with_kind(asession: AsyncSession):
     """Test fetching images with kind."""
-    await async_session.fetch(kind="headless")
+    await asession.fetch(kind="headless")
 
 
 @pytest.mark.asyncio
-async def test_fetch_malformed_kind(async_session: AsyncSession):
+async def test_fetch_malformed_kind(asession: AsyncSession):
     """Test fetching images with malformed kind."""
     with pytest.raises(ValidationError):
-        await async_session.fetch(kind="invalid")  # type: ignore
+        await asession.fetch(kind="invalid")  # type: ignore
 
 
 @pytest.mark.asyncio
-async def test_fetch_with_malformed_view(async_session: AsyncSession):
+async def test_fetch_with_malformed_view(asession: AsyncSession):
     """Test fetching images with malformed view."""
     with pytest.raises(ValidationError):
-        await async_session.fetch(view="invalid")  # type: ignore
+        await asession.fetch(view="invalid")  # type: ignore
 
 
 @pytest.mark.asyncio
-async def test_get_session_stats(async_session: AsyncSession):
+async def test_get_session_stats(asession: AsyncSession):
     """Test fetching images with kind."""
-    response = await async_session.stats()
+    response = await asession.stats()
     assert "instances" in response.keys()
 
 
 @pytest.mark.asyncio
-async def test_create_session_invalid(async_session: AsyncSession, name: str):
+async def test_create_session_invalid(asession: AsyncSession, name: str):
     """Test creating a session with malformed kind."""
     with pytest.raises(ValidationError):
-        await async_session.create(
+        await asession.create(
             name=name,
             kind="invalid",  # type: ignore
             image="jupyter/base-notebook",
@@ -65,9 +65,9 @@ async def test_create_session_invalid(async_session: AsyncSession, name: str):
 
 @pytest.mark.asyncio
 @pytest.mark.order(1)
-async def test_create_session(async_session: AsyncSession, name: str):
+async def test_create_session(asession: AsyncSession, name: str):
     """Test creating a session."""
-    identity: List[str] = await async_session.create(
+    identity: List[str] = await asession.create(
         name=name,
         kind="headless",
         cores=1,
@@ -84,11 +84,11 @@ async def test_create_session(async_session: AsyncSession, name: str):
 
 @pytest.mark.asyncio
 @pytest.mark.order(2)
-async def test_get_succeeded(async_session: AsyncSession):
+async def test_get_succeeded(asession: AsyncSession):
     """Test getting succeeded sessions."""
     limit: float = time() + 60  # 1 minute
     while time() < limit:
-        response = await async_session.fetch(status="Succeeded")
+        response = await asession.fetch(status="Succeeded")
         for result in response:
             if result["id"] == pytest.IDENTITY[0]:  # type: ignore
                 assert result["status"] == "Succeeded"
@@ -97,24 +97,24 @@ async def test_get_succeeded(async_session: AsyncSession):
 
 @pytest.mark.asyncio
 @pytest.mark.order(3)
-async def test_get_logs(async_session: AsyncSession):
+async def test_get_logs(asession: AsyncSession):
     """Test getting logs for a session."""
-    logs = await async_session.logs(ids=pytest.IDENTITY)
+    logs = await asession.logs(ids=pytest.IDENTITY)
     assert logs != ""
     assert "TEST" in logs[pytest.IDENTITY[0]]  # type: ignore
-    no_logs = await async_session.logs(ids=pytest.IDENTITY, verbose=True)
+    no_logs = await asession.logs(ids=pytest.IDENTITY, verbose=True)
     assert no_logs is None
 
 
 @pytest.mark.asyncio
 @pytest.mark.order(4)
-async def test_session_events(async_session: AsyncSession, name: str):
+async def test_session_events(asession: AsyncSession, name: str):
     """Test getting session events."""
     done = False
     limit = time() + 60
     while not done and time() < limit:
         await sleep(1)
-        events = await async_session.events(pytest.IDENTITY)  # type: ignore
+        events = await asession.events(pytest.IDENTITY)  # type: ignore
         if events:
             done = True
             assert pytest.IDENTITY[0] in events[0].keys()
@@ -123,16 +123,16 @@ async def test_session_events(async_session: AsyncSession, name: str):
 
 @pytest.mark.asyncio
 @pytest.mark.order(5)
-async def test_delete_session(async_session: AsyncSession, name: str):
+async def test_delete_session(asession: AsyncSession, name: str):
     """Test deleting a session."""
     # Delete the session
     done = False
     while not done:
-        info = await async_session.info(ids=pytest.IDENTITY)  # type: ignore
+        info = await asession.info(ids=pytest.IDENTITY)  # type: ignore
         for status in info:
             if status["status"] == "Succeeded":
                 done = True
-    deletion = await async_session.destroy_with(prefix=name)  # type: ignore
+    deletion = await asession.destroy_with(prefix=name)  # type: ignore
     assert deletion == {pytest.IDENTITY[0]: True}  # type: ignore
 
 

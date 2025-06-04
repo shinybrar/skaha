@@ -86,7 +86,7 @@ class CreateSpec(BaseModel):
             Dict[str, Any]: Validated values.
         """
         if self.cmd or self.args or self.env:
-            if not self.king == "headless":
+            if not self.kind == "headless":
                 raise ValueError("cmd, args, env only allowed for headless sessions.")
         return self
 
