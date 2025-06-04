@@ -17,9 +17,9 @@ This is because:
    empty or incomplete information being logged.
 """
 
-import httpx
-
 from skaha.utils.logs import get_logger
+
+import httpx
 
 
 def catch(response: httpx.Response) -> None:
@@ -32,9 +32,9 @@ def catch(response: httpx.Response) -> None:
     response.read()
     try:
         response.raise_for_status()
-    except httpx.HTTPStatusError as e:
+    except httpx.HTTPStatusError as error:
         logger.error(response.text)  # Use logger.error
-        raise e
+        raise error
 
 
 async def acatch(response: httpx.Response) -> None:  # Renamed function
@@ -47,6 +47,6 @@ async def acatch(response: httpx.Response) -> None:  # Renamed function
     await response.aread()
     try:
         response.raise_for_status()
-    except httpx.HTTPStatusError as e:
+    except httpx.HTTPStatusError as error:
         logger.error(response.text)  # Use logger.error
-        raise e
+        raise error

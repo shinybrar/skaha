@@ -2,9 +2,9 @@
 
 from typing import Any, Dict
 
-from httpx import Response
-
 from skaha.client import SkahaClient
+
+from httpx import Response
 
 
 class Context(SkahaClient):

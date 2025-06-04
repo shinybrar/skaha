@@ -4,6 +4,8 @@ import warnings
 from base64 import b64encode
 from typing import Any, Dict, Literal, Optional, Tuple, get_args
 
+from skaha.utils import logs
+
 from pydantic import (
     BaseModel,
     ConfigDict,
@@ -14,7 +16,6 @@ from pydantic import (
 )
 from typing_extensions import Self
 
-from skaha.utils import logs
 
 log = logs.get_logger(__name__)
 
@@ -34,7 +35,9 @@ class CreateSpec(BaseModel):
     """
 
     name: str = Field(
-        ..., description="A unique name for the session.", examples=["skaha-test"]
+        ...,
+        description="A unique name for the session.",
+        examples=["skaha-test"],
     )
     image: str = Field(
         ...,
@@ -52,13 +55,21 @@ class CreateSpec(BaseModel):
     gpus: Optional[int] = Field(None, description="Number of GPUs.", ge=1, le=28)
     cmd: Optional[str] = Field(None, description="Command to run.", examples=["ls"])
     args: Optional[str] = Field(
-        None, description="Arguments to the command.", examples=["-la"]
+        None,
+        description="Arguments to the command.",
+        examples=["-la"],
     )
     env: Optional[Dict[str, Any]] = Field(
-        None, description="Environment variables.", examples=[{"FOO": "BAR"}]
+        None,
+        description="Environment variables.",
+        examples=[{"FOO": "BAR"}],
     )
     replicas: int = Field(
-        1, description="Number of sessions to launch.", ge=1, le=512, exclude=True
+        1,
+        description="Number of sessions to launch.",
+        ge=1,
+        le=512,
+        exclude=True,
     )
 
     model_config = ConfigDict(validate_assignment=True, populate_by_name=True)
@@ -75,18 +86,18 @@ class CreateSpec(BaseModel):
             Dict[str, Any]: Validated values.
         """
         if self.cmd or self.args or self.env:
-            assert (
-                self.kind == "headless"
-            ), "cmd, args and env are only supported for headless sessions."
+            if not self.king == "headless":
+                raise ValueError("cmd, args, env only allowed for headless sessions.")
         return self
 
     @field_validator("kind", mode="after")
     @classmethod
-    def validate_kind(cls, value: KINDS, context: ValidationInfo) -> KINDS:
+    def _validate_kind(cls, value: KINDS, context: ValidationInfo) -> KINDS:
         """Validate kind.
 
         Args:
             value (KINDS): Value to validate.
+            context(ValidationInfo): Class validation context.
 
         Returns:
             KINDS: Validated value.
@@ -108,11 +119,12 @@ class CreateSpec(BaseModel):
 
     @field_validator("replicas")
     @classmethod
-    def validate_replicas(cls, value: int, context: ValidationInfo) -> int:
+    def _validate_replicas(cls, value: int, context: ValidationInfo) -> int:
         """Validate replicas.
 
         Args:
             value (int): Value to validate.
+            context(ValidationInfo): Class validation context.
 
         Returns:
             int: Validated value.
@@ -135,10 +147,15 @@ class FetchSpec(BaseModel):
     """
 
     kind: Optional[KINDS] = Field(
-        None, description="Type of skaha session.", examples=["headless"], alias="type"
+        None,
+        description="Type of skaha session.",
+        examples=["headless"],
+        alias="type",
     )
     status: Optional[STATUS] = Field(
-        None, description="Status of the session.", examples=["Running"]
+        None,
+        description="Status of the session.",
+        examples=["Running"],
     )
     view: Optional[VIEW] = Field(None, description="Number of views.", examples=["all"])
 
@@ -187,9 +204,8 @@ class ContainerRegistry(BaseModel):
         Returns:
             str: Validated value.
         """
-        assert (
-            value == "images.canfar.net"
-        ), "Currently only images.canfar.net is supported"
+        if not value == "images.canfar.net":
+            raise ValueError("Only images.canfar.net is supported.")
         return value
 
     def encoded(self) -> str:

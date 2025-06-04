@@ -1,12 +1,13 @@
 """Skaha Overview."""
 
+from skaha.client import SkahaClient
+from skaha.utils import logs
+
 from defusedxml import ElementTree
 from httpx import Response
 from pydantic import model_validator
 from typing_extensions import Self
 
-from skaha.client import SkahaClient
-from skaha.utils import logs
 
 log = logs.get_logger(__name__)
 
@@ -36,14 +37,14 @@ class Overview(SkahaClient):
         Returns:
             bool: True if the server is available, False otherwise.
         """
-        response: Response = self.client.get("availability")  # type: ignore # noqa
+        response: Response = self.client.get("availability")  # type: ignore
         # Parse the XML string
         root = ElementTree.fromstring(response.text)  # type: ignore
         available = root.find(
-            ".//{http://www.ivoa.net/xml/VOSIAvailability/v1.0}available"
+            ".//{http://www.ivoa.net/xml/VOSIAvailability/v1.0}available",
         ).text  # type: ignore
         note = root.find(
-            ".//{http://www.ivoa.net/xml/VOSIAvailability/v1.0}note"
+            ".//{http://www.ivoa.net/xml/VOSIAvailability/v1.0}note",
         ).text  # type: ignore
         log.info(note)
         if available == "true":

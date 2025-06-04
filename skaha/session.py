@@ -3,11 +3,12 @@
 import asyncio
 from typing import Any, Dict, List, Optional, Tuple, Union
 
-from httpx import HTTPError, Response
-
 from skaha.client import SkahaClient
 from skaha.models import KINDS, STATUS, VIEW
 from skaha.utils import build, logs
+
+from httpx import HTTPError, Response
+
 
 log = logs.get_logger(__name__)
 
@@ -98,7 +99,7 @@ class Session(SkahaClient):
         """Get information about session[s].
 
         Args:
-            id (Union[List[str], str]): Session ID[s].
+            ids (Union[List[str], str]): Session ID[s].
 
         Returns:
             Dict[str, Any]: Session information.
@@ -115,7 +116,8 @@ class Session(SkahaClient):
         for value in ids:
             try:
                 response: Response = self.client.get(
-                    url=f"session/{value}", params=parameters
+                    url=f"session/{value}",
+                    params=parameters,
                 )
                 results.append(response.json())
             except HTTPError as err:
@@ -123,7 +125,9 @@ class Session(SkahaClient):
         return results
 
     def logs(
-        self, ids: Union[List[str], str], verbose: bool = False
+        self,
+        ids: Union[List[str], str],
+        verbose: bool = False,
     ) -> Optional[Dict[str, str]]:
         """Get logs from a session[s].
 
@@ -146,7 +150,8 @@ class Session(SkahaClient):
         for value in ids:
             try:
                 response: Response = self.client.get(
-                    url=f"session/{value}", params=parameters
+                    url=f"session/{value}",
+                    params=parameters,
                 )
                 results[value] = response.text
             except HTTPError as err:
@@ -214,7 +219,16 @@ class Session(SkahaClient):
             >>> ["hjko98yghj", "ikvp1jtp"]
         """
         payloads = build.create_parameters(
-            name, image, cores, ram, kind, gpu, cmd, args, env, replicas
+            name,
+            image,
+            cores,
+            ram,
+            kind,
+            gpu,
+            cmd,
+            args,
+            env,
+            replicas,
         )
         results: List[str] = []
         log.info("Creating %d %s session[s].", replicas, kind)
@@ -227,7 +241,9 @@ class Session(SkahaClient):
         return results
 
     def events(
-        self, ids: Union[str, List[str]], verbose: bool = False
+        self,
+        ids: Union[str, List[str]],
+        verbose: bool = False,
     ) -> Optional[List[Dict[str, str]]]:
         """Get deployment events for a session[s].
 
@@ -254,7 +270,8 @@ class Session(SkahaClient):
         for value in ids:
             try:
                 response: Response = self.client.get(
-                    url=f"session/{value}", params=parameters
+                    url=f"session/{value}",
+                    params=parameters,
                 )
                 results.append({value: response.text})
             except HTTPError as err:
@@ -295,7 +312,10 @@ class Session(SkahaClient):
         return results
 
     def destroy_with(
-        self, prefix: str, kind: KINDS = "headless", status: STATUS = "Succeeded"
+        self,
+        prefix: str,
+        kind: KINDS = "headless",
+        status: STATUS = "Succeeded",
     ) -> Dict[str, bool]:
         """Destroy session[s] matching search criteria.
 
@@ -431,7 +451,7 @@ class AsyncSession(SkahaClient):
         """Get information about session[s].
 
         Args:
-            id (Union[List[str], str]): Session ID[s].
+            ids (Union[List[str], str]): Session ID[s].
 
         Returns:
             Dict[str, Any]: Session information.
@@ -453,7 +473,8 @@ class AsyncSession(SkahaClient):
         async def bounded(value: str) -> Dict[str, Any]:
             async with semaphore:
                 response = await self.asynclient.get(
-                    url=f"session/{value}", params=parameters
+                    url=f"session/{value}",
+                    params=parameters,
                 )
                 return response.json()
 
@@ -467,7 +488,9 @@ class AsyncSession(SkahaClient):
         return results
 
     async def logs(
-        self, ids: Union[List[str], str], verbose: bool = False
+        self,
+        ids: Union[List[str], str],
+        verbose: bool = False,
     ) -> Optional[Dict[str, str]]:
         """Get logs from a session[s].
 
@@ -495,7 +518,8 @@ class AsyncSession(SkahaClient):
         async def bounded(value: str) -> Tuple[str, str]:
             async with semaphore:
                 response = await self.asynclient.get(
-                    url=f"session/{value}", params=parameters
+                    url=f"session/{value}",
+                    params=parameters,
                 )
                 return value, response.text
 
@@ -569,7 +593,16 @@ class AsyncSession(SkahaClient):
             >>> ["hjko98yghj", "ikvp1jtp"]
         """
         payloads: List[List[Tuple[str, Any]]] = build.create_parameters(
-            name, image, cores, ram, kind, gpu, cmd, args, env, replicas
+            name,
+            image,
+            cores,
+            ram,
+            kind,
+            gpu,
+            cmd,
+            args,
+            env,
+            replicas,
         )
         results: List[str] = []
         tasks: List[Any] = []
@@ -593,7 +626,9 @@ class AsyncSession(SkahaClient):
         return results
 
     async def events(
-        self, ids: Union[str, List[str]], verbose: bool = False
+        self,
+        ids: Union[str, List[str]],
+        verbose: bool = False,
     ) -> Optional[List[Dict[str, str]]]:
         """Get deployment events for a session[s].
 
@@ -623,7 +658,8 @@ class AsyncSession(SkahaClient):
         async def bounded(value: str) -> Dict[str, str]:
             async with semaphore:
                 response = await self.asynclient.get(
-                    url=f"session/{value}", params=parameters
+                    url=f"session/{value}",
+                    params=parameters,
                 )
                 return {value: response.text}
 
@@ -681,7 +717,10 @@ class AsyncSession(SkahaClient):
         return results
 
     async def destroy_with(
-        self, prefix: str, kind: KINDS = "headless", status: STATUS = "Succeeded"
+        self,
+        prefix: str,
+        kind: KINDS = "headless",
+        status: STATUS = "Succeeded",
     ) -> Dict[str, bool]:
         """Destroy session[s] matching search criteria.
 

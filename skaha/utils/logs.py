@@ -8,7 +8,9 @@ from rich.text import Text
 
 
 def get_logger(
-    name: str = __name__, level: int = logging.INFO, filename: Optional[str] = None
+    name: str = __name__,
+    level: int = logging.INFO,
+    filename: Optional[str] = None,
 ) -> logging.Logger:
     """Logging utility.
 
@@ -31,7 +33,7 @@ def get_logger(
 
     # create formatter
     formatter = logging.Formatter(
-        "%(asctime)s - %(name)s - %(levelname)s - %(message)s"
+        "%(asctime)s - %(name)s - %(levelname)s - %(message)s",
     )
 
     # add formatter to ch

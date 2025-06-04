@@ -2,10 +2,11 @@
 
 from typing import Any, Dict, List, Optional
 
-from httpx import Response
-
 from skaha.client import SkahaClient
 from skaha.utils.logs import get_logger
+
+from httpx import Response
+
 
 log = get_logger(__name__)
 
@@ -41,7 +42,7 @@ class Images(SkahaClient):
         # If kind is not None, add it to the data dictionary
         if kind:
             data["type"] = kind
-        response: Response = self.client.get("image", params=data)  # type: ignore # noqa
+        response: Response = self.client.get("image", params=data)  # type: ignore
         payload: Dict[str, Any] = response.json()
         reply: List[str] = []
         for image in payload:

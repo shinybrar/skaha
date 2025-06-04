@@ -8,7 +8,12 @@ from datetime import datetime, timezone
 from os import R_OK, access
 from pathlib import Path
 from time import asctime, gmtime
-from typing import Annotated, Any, Dict, Optional
+from types import TracebackType
+from typing import Annotated, Any, AsyncIterator, Dict, Iterator, Optional
+
+from skaha import __version__
+from skaha.hooks.httpx import errors
+from skaha.models import ContainerRegistry
 
 from cryptography import x509
 from cryptography.hazmat.backends import default_backend
@@ -19,16 +24,12 @@ from pydantic import (
     PrivateAttr,
     SecretStr,
     ValidationInfo,
-    computed_field,
     field_validator,
     model_validator,
 )
 from pydantic_settings import BaseSettings, SettingsConfigDict
 from typing_extensions import Self
 
-from skaha import __version__
-from skaha.hooks.httpx import errors
-from skaha.models import ContainerRegistry
 
 # Setup logging format
 logging.basicConfig(format="%(asctime)s %(levelname)s %(message)s", level=logging.INFO)
@@ -166,6 +167,7 @@ class SkahaClient(BaseSettings):
 
         Args:
             value (Path): Path to the certificate file.
+            info (ValidationInfo): Validation context.
 
         Returns:
             Path: Validated Path to the certificate file.
@@ -187,17 +189,14 @@ class SkahaClient(BaseSettings):
             raise PermissionError(f"cert file {value} is not readable.")
 
         # Certifcation Date Validation
-        try:
-            data = destination.read_bytes()
-            cert = x509.load_pem_x509_certificate(data, default_backend())
-            now_utc = datetime.now(timezone.utc)
+        data = destination.read_bytes()
+        cert = x509.load_pem_x509_certificate(data, default_backend())
+        now_utc = datetime.now(timezone.utc)
 
-            if cert.not_valid_after_utc <= now_utc:
-                raise ValueError(f"cert {value} expired.")
-            if cert.not_valid_before_utc >= now_utc:
-                raise ValueError(f"cert {value} not valid yet.")
-        except Exception as e:
-            raise ValueError(f"invalid cert file {value}: {e}")
+        if cert.not_valid_after_utc <= now_utc:
+            raise ValueError(f"cert {value} expired.")
+        if cert.not_valid_before_utc >= now_utc:
+            raise ValueError(f"cert {value} not valid yet.")
         return value
 
     @model_validator(mode="after")
@@ -216,7 +215,6 @@ class SkahaClient(BaseSettings):
 
     # Model Properties
     @property
-    @computed_field
     def client(self) -> Client:
         """Get the HTTPx Client.
 
@@ -228,7 +226,6 @@ class SkahaClient(BaseSettings):
         return self._client
 
     @property
-    @computed_field
     def asynclient(self) -> AsyncClient:
         """Get the HTTPx Async Client.
 
@@ -310,73 +307,87 @@ class SkahaClient(BaseSettings):
                 {
                     "Authorization": f"Bearer {self.token.get_secret_value()}",
                     "X-Skaha-Authentication-Type": "token",
-                }
+                },
             )
         if self.registry:
             headers.update(
                 {
                     "X-Skaha-Registry-Auth": self.registry.encoded(),
-                }
+                },
             )
         if self.certificate:
             headers.update(
                 {
                     "X-Skaha-Authentication-Type": "certificate",
-                }
+                },
             )
         return headers
 
     # Context Manager Methods
     @contextmanager
-    def _session(self):
+    def _session(self) -> Iterator[Client]:
         """Sync context."""
         try:
             yield self.client
         finally:
             self._close()
 
-    def __enter__(self):
+    def __enter__(self) -> Self:
         """Sync context manager entry."""
         return self
 
-    def __exit__(self, exc_type, exc_val, exc_tb):
+    def __exit__(
+        self,
+        exc_type: Optional[type[BaseException]],
+        exc_val: Optional[BaseException],
+        exc_tb: Optional[TracebackType],
+    ) -> None:
         """Sync context manager exit."""
         self._close()
 
-    def _close(self):
+    def _close(self) -> None:
         """Close sync client."""
         if self._client:
             self._client.close()
             self._client = None
 
     @asynccontextmanager
-    async def _asession(self):
+    async def _asession(self) -> AsyncIterator[AsyncClient]:
         """Async context."""
         try:
             yield self.asynclient
         finally:
             await self._aclose()
 
-    async def __aenter__(self):
+    async def __aenter__(self) -> Self:
         """Async context manager entry."""
         return self
 
-    async def __aexit__(self, exc_type, exc_val, exc_tb):
+    async def __aexit__(
+        self,
+        exc_type: Optional[type[BaseException]],
+        exc_val: Optional[BaseException],
+        exc_tb: Optional[TracebackType],
+    ) -> None:
         """Async context manager exit."""
         await self._aclose()
 
-    async def _aclose(self):
+    async def _aclose(self) -> None:
         """Close async client."""
         if self._asynclient:
             await self._asynclient.aclose()
             self._asynclient = None
 
-    def _force_aclose(self):
+    def _force_aclose(self) -> None:
+        """Force close async client."""
         if not self._asynclient:
             return
         try:
+            tasks = set()
             loop = asyncio.get_running_loop()
-            loop.create_task(self._aclose())
+            task = loop.create_task(self._aclose())
+            tasks.add(task)
+            task.add_done_callback(tasks.discard)
         except RuntimeError:
             if hasattr(self._asynclient, "_transport"):
                 if self._asynclient._transport:
@@ -386,12 +397,9 @@ class SkahaClient(BaseSettings):
         finally:
             self._asynclient = None
 
-    def __del__(self):
+    def __del__(self) -> None:
         """Cleanup on deletion."""
-        try:
-            # Sync session cleanup
-            self._close()
-            # Async session cleanup
-            self._force_aclose()
-        except Exception as error:
-            log.error(error)
+        # Sync session cleanup
+        self._close()
+        # Async session cleanup
+        self._force_aclose()
