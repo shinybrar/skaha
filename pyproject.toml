@@ -189,6 +189,7 @@ ignore = [
     "PLR2004", # Magic value used in comparison
     "S101",    # Use of assert detected (allow in tests)
     "TRY003",  # Avoid specifying long messages outside the exception class
+    "COM812",  # missing-trailing-comma
 ]
 
 [tool.ruff.lint.per-file-ignores]
