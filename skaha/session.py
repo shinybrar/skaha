@@ -1,15 +1,20 @@
 """Skaha Headless Session."""
 
+from __future__ import annotations
+
 import asyncio
-from typing import Any, Dict, List, Optional, Tuple, Union
+from typing import TYPE_CHECKING, Any
 
 from httpx import HTTPError, Response
 
+from skaha import get_logger
 from skaha.client import SkahaClient
-from skaha.models import KINDS, STATUS, VIEW
-from skaha.utils import build, logs
+from skaha.utils import build
 
-log = logs.get_logger(__name__)
+if TYPE_CHECKING:
+    from skaha.models import KINDS, STATUS, VIEW
+
+log = get_logger(__name__)
 
 
 class Session(SkahaClient):
@@ -33,9 +38,9 @@ class Session(SkahaClient):
 
     def fetch(
         self,
-        kind: Optional[KINDS] = None,
-        status: Optional[STATUS] = None,
-        view: Optional[VIEW] = None,
+        kind: KINDS | None = None,
+        status: STATUS | None = None,
+        view: VIEW | None = None,
     ) -> list[dict[str, str]]:
         """List open sessions for the user.
 
@@ -94,7 +99,7 @@ class Session(SkahaClient):
         response: Response = self.client.get("session", params=parameters)
         return response.json()
 
-    def info(self, ids: Union[list[str], str]) -> list[dict[str, Any]]:
+    def info(self, ids: list[str] | str) -> list[dict[str, Any]]:
         """Get information about session[s].
 
         Args:
@@ -120,14 +125,14 @@ class Session(SkahaClient):
                 )
                 results.append(response.json())
             except HTTPError as err:
-                log.error(err)
+                log.exception(err)
         return results
 
     def logs(
         self,
-        ids: Union[list[str], str],
+        ids: list[str] | str,
         verbose: bool = False,
-    ) -> Optional[dict[str, str]]:
+    ) -> dict[str, str] | None:
         """Get logs from a session[s].
 
         Args:
@@ -154,12 +159,12 @@ class Session(SkahaClient):
                 )
                 results[value] = response.text
             except HTTPError as err:
-                log.error(err)
+                log.exception(err)
 
         if verbose:
             for key, value in results.items():
                 log.info("Session ID: %s\n", key)
-                logs.stdout(value)
+                log.info(value)
             return None
 
         return results
@@ -171,10 +176,10 @@ class Session(SkahaClient):
         cores: int = 2,
         ram: int = 4,
         kind: KINDS = "headless",
-        gpu: Optional[int] = None,
-        cmd: Optional[str] = None,
-        args: Optional[str] = None,
-        env: Optional[dict[str, Any]] = None,
+        gpu: int | None = None,
+        cmd: str | None = None,
+        args: str | None = None,
+        env: dict[str, Any] | None = None,
         replicas: int = 1,
     ) -> list[str]:
         """Launch a skaha session.
@@ -236,14 +241,14 @@ class Session(SkahaClient):
                 response: Response = self.client.post(url="session", params=payload)
                 results.append(response.text.rstrip("\r\n"))
             except HTTPError as err:
-                log.error(err)
+                log.exception(err)
         return results
 
     def events(
         self,
-        ids: Union[str, list[str]],
+        ids: str | list[str],
         verbose: bool = False,
-    ) -> Optional[list[dict[str, str]]]:
+    ) -> list[dict[str, str]] | None:
         """Get deployment events for a session[s].
 
         Args:
@@ -274,7 +279,7 @@ class Session(SkahaClient):
                 )
                 results.append({value: response.text})
             except HTTPError as err:
-                log.error(err)
+                log.exception(err)
         if verbose and results:
             for result in results:
                 for key, value in result.items():
@@ -282,7 +287,7 @@ class Session(SkahaClient):
                     log.info("\n %s", value)
         return results if not verbose else None
 
-    def destroy(self, ids: Union[str, list[str]]) -> dict[str, bool]:
+    def destroy(self, ids: str | list[str]) -> dict[str, bool]:
         """Destroy skaha session[s].
 
         Args:
@@ -306,7 +311,7 @@ class Session(SkahaClient):
                 self.client.delete(url=f"session/{value}")
                 results[value] = True
             except HTTPError as err:
-                log.error(err)
+                log.exception(err)
                 results[value] = False
         return results
 
@@ -372,9 +377,9 @@ class AsyncSession(SkahaClient):
 
     async def fetch(
         self,
-        kind: Optional[KINDS] = None,
-        status: Optional[STATUS] = None,
-        view: Optional[VIEW] = None,
+        kind: KINDS | None = None,
+        status: STATUS | None = None,
+        view: VIEW | None = None,
     ) -> list[dict[str, str]]:
         """List open sessions for the user.
 
@@ -446,7 +451,7 @@ class AsyncSession(SkahaClient):
         response: Response = await self.asynclient.get("session", params=parameters)
         return response.json()
 
-    async def info(self, ids: Union[list[str], str]) -> list[dict[str, Any]]:
+    async def info(self, ids: list[str] | str) -> list[dict[str, Any]]:
         """Get information about session[s].
 
         Args:
@@ -483,14 +488,14 @@ class AsyncSession(SkahaClient):
             if isinstance(reply, Exception):
                 log.error(reply)
             elif isinstance(reply, dict):
-                results.append(reply)  # type: ignore
+                results.append(reply)
         return results
 
     async def logs(
         self,
-        ids: Union[list[str], str],
+        ids: list[str] | str,
         verbose: bool = False,
-    ) -> Optional[dict[str, str]]:
+    ) -> dict[str, str] | None:
         """Get logs from a session[s].
 
         Args:
@@ -534,8 +539,8 @@ class AsyncSession(SkahaClient):
         if verbose:
             for key, value in results.items():
                 log.info("Session ID: %s\n", key)
-                logs.stdout(value)
-                return None
+                log.info(value)
+            return None
         return results
 
     async def create(
@@ -545,10 +550,10 @@ class AsyncSession(SkahaClient):
         cores: int = 2,
         ram: int = 4,
         kind: KINDS = "headless",
-        gpu: Optional[int] = None,
-        cmd: Optional[str] = None,
-        args: Optional[str] = None,
-        env: Optional[dict[str, Any]] = None,
+        gpu: int | None = None,
+        cmd: str | None = None,
+        args: str | None = None,
+        env: dict[str, Any] | None = None,
         replicas: int = 1,
     ) -> list[str]:
         """Launch a skaha session.
@@ -626,9 +631,9 @@ class AsyncSession(SkahaClient):
 
     async def events(
         self,
-        ids: Union[str, list[str]],
+        ids: str | list[str],
         verbose: bool = False,
-    ) -> Optional[list[dict[str, str]]]:
+    ) -> list[dict[str, str]] | None:
         """Get deployment events for a session[s].
 
         Args:
@@ -677,7 +682,7 @@ class AsyncSession(SkahaClient):
                     log.info(value)
         return results if not verbose else None
 
-    async def destroy(self, ids: Union[str, list[str]]) -> dict[str, bool]:
+    async def destroy(self, ids: str | list[str]) -> dict[str, bool]:
         """Destroy session[s].
 
         Args:
@@ -705,7 +710,7 @@ class AsyncSession(SkahaClient):
                     await self.asynclient.delete(url=f"session/{value}")
                     return value, True
                 except HTTPError as err:
-                    log.error(err)
+                    log.exception(err)
                     return value, False
 
         tasks = [bounded(value) for value in ids]

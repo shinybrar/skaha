@@ -4,14 +4,15 @@ import math
 import threading
 import time
 import webbrowser
-from typing import Any, Dict
+from typing import Any
 
 import httpx
 import segno
-from rich.console import Console
 from rich.progress import BarColumn, Progress, TextColumn, TimeRemainingColumn
 
-console = Console()
+from skaha import get_logger
+
+log = get_logger(__name__)
 
 
 class AuthPendingError(Exception):
@@ -22,7 +23,7 @@ class SlowDownError(Exception):
     """Exception raised when the client should slow down its requests."""
 
 
-def discover(url: str) -> dict[str, str]:
+def discover(url: str) -> Any:
     """Discover OIDC provider configuration.
 
     Args:
@@ -36,7 +37,7 @@ def discover(url: str) -> dict[str, str]:
     return response.json()
 
 
-def register(url: str) -> dict[str, str]:
+def register(url: str) -> Any:
     """Register a new client with the OIDC provider.
 
     Args:
@@ -57,11 +58,10 @@ def register(url: str) -> dict[str, str]:
     }
     response = httpx.post(url, json=payload)
     response.raise_for_status()
-    client = response.json()
-    return client
+    return response.json()
 
 
-def _poll_token(url: str, identity: str, secret: str, code: str):
+def _poll_token(url: str, identity: str, secret: str, code: str) -> Any:
     resp = httpx.post(
         url,
         data={
@@ -80,14 +80,16 @@ def _poll_token(url: str, identity: str, secret: str, code: str):
         raise AuthPendingError
     if err == "slow_down":
         raise SlowDownError
-    resp.raise_for_status()
+    msg = "unkown error in polling for tokens"
+    raise ValueError(msg)
 
 
-def authflow(device_auth_url: str, token_url: str, identity: str, secret: str):
+def authflow(device_auth_url: str, token_url: str, identity: str, secret: str) -> Any:
     """OIDC Authorization Flow.
 
     Args:
-        url (str): device authorization endpoint.
+        device_auth_url (str): device authorization endpoint.
+        token_url (str): token endpoint
         identity (str): client identity
         secret (str): client secret
 
@@ -109,17 +111,9 @@ def authflow(device_auth_url: str, token_url: str, identity: str, secret: str):
     code: str = str(verification["device_code"])
     done: threading.Event = threading.Event()
 
-    print("\nOIDC Device Verification Flow")
-
-    try:
-        opened: bool = webbrowser.get().open(uri, new=2)
-        if not opened:
-            raise webbrowser.Error("failure to open web browser.")
-    except webbrowser.Error:
-        print(f"\n\t{uri}\n")
-        # Generate QR Code for the verification URL
-        qr = segno.make(uri, error="H")
-        qr.terminal(compact=True)
+    webbrowser.get().open(uri, new=2)
+    qr = segno.make(uri, error="H")
+    qr.terminal(compact=True)
 
     progress = Progress(
         TextColumn("[bold blue]{task.description}"),
@@ -128,7 +122,7 @@ def authflow(device_auth_url: str, token_url: str, identity: str, secret: str):
     )
     task_id = progress.add_task("Waiting for approval", total=expires)
 
-    def bar_worker():
+    def bar_worker() -> None:
         """Advance the bar once per second until done."""
         while not done.is_set() and not progress.finished:
             time.sleep(1)
@@ -136,7 +130,7 @@ def authflow(device_auth_url: str, token_url: str, identity: str, secret: str):
 
     bar_thread = threading.Thread(target=bar_worker, daemon=True)
 
-    def poll_loop():
+    def poll_loop() -> Any:
         nonlocal interval
         count: int = 0
         start: float = time.time()
@@ -154,7 +148,6 @@ def authflow(device_auth_url: str, token_url: str, identity: str, secret: str):
             except SlowDownError:
                 # bump the slow_count and recompute interval
                 count += 1
-                # new_interval = base * (1 + log(slow_count+1))
                 interval = max(
                     interval,
                     int(interval * (1 + math.log(count + 1))),
@@ -162,7 +155,8 @@ def authflow(device_auth_url: str, token_url: str, identity: str, secret: str):
                 time.sleep(interval)
             # check timeout
             if time.time() - start > expires:
-                raise TimeoutError("Device flow timed out")
+                msg = "Device flow timed out"
+                raise TimeoutError(msg)
 
     # 5) Run bar & poll in parallel
     with progress:
@@ -173,39 +167,36 @@ def authflow(device_auth_url: str, token_url: str, identity: str, secret: str):
             done.set()
             bar_thread.join()
 
-    print("\n✅ Authentication complete. Tokens:")
     return tokens
 
 
 if __name__ == "__main__":
-    console.print("Starting OIDC Device Authorization Flow...")
+    log.info("Starting OIDC Device Authorization Flow...")
     discovery_url: str = "https://ska-iam.stfc.ac.uk/.well-known/openid-configuration"
     config: dict[str, str] = discover(discovery_url)
 
-    console.print("\n")
+    log.info("\n")
     device_auth_endpoint = config["device_authorization_endpoint"]
     register_url: str = str(config.get("registration_endpoint"))
-    token_url: str = str(config["token_endpoint"])
-    console.print("Discovered OIDC configuration:")
-    console.print("Device Registration Endpoint:", register_url)
-    console.print("Device Authorization Endpoint:", device_auth_endpoint)
-    console.print("Token Endpoint:", token_url)
-    console.print("\n")
-    console.print("Registering client with OIDC provider...")
+    token_endpoint: str = str(config["token_endpoint"])
+    log.info("Discovered OIDC configuration:")
+    log.info("Device Registration Endpoint: %s", register_url)
+    log.info("Device Authorization Endpoint: %s", device_auth_endpoint)
+    log.info("Token Endpoint: %s", token_endpoint)
+    log.info("Registering client with OIDC provider...")
 
     client_info: dict[str, str] = register(register_url)
-    identity = client_info["client_id"]
-    secret = client_info["client_secret"]
-    console.print("Client registered successfully.")
-    console.print("Client ID:", identity)
-    console.print("Client Secret:", secret)
+    client_id = client_info["client_id"]
+    client_secret = client_info["client_secret"]
+    log.info("Client registered successfully.")
+    log.info("Client ID: %s", client_id)
+    log.info("Client Secret: %s", client_secret)
 
-    console.print("\n")
-    console.print("Starting OIDC Device Authorization Flow...")
-    TOKENS = authflow(device_auth_endpoint, token_url, identity, secret)
-    console.print("\nOIDC Tokens:")
-    console.print(TOKENS)
-    console.print("\nOIDC Device Authorization Flow completed successfully.")
+    log.info("Starting OIDC Device Authorization Flow...")
+    TOKENS = authflow(device_auth_endpoint, token_endpoint, client_id, client_secret)
+    log.info("OIDC Tokens:")
+    log.info(TOKENS)
+    log.info("OIDC Device Authorization Flow completed successfully.")
 
     # Lets use access token to get user info
     userinfo_url: str = config["userinfo_endpoint"]
@@ -215,6 +206,6 @@ if __name__ == "__main__":
     userinfo_response = httpx.get(userinfo_url, headers=headers)
     userinfo_response.raise_for_status()
     userinfo = userinfo_response.json()
-    console.print("\nUser Info:")
-    console.print(userinfo)
-    console.print("\nOIDC Tokens Valid.")
+    log.info("\nUser Info:")
+    log.info(userinfo)
+    log.info("\nOIDC Tokens Valid.")

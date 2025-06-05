@@ -19,7 +19,9 @@ This is because:
 
 import httpx
 
-from skaha.utils.logs import get_logger
+from skaha import get_logger
+
+log = get_logger(__name__)
 
 
 def catch(response: httpx.Response) -> None:
@@ -28,13 +30,13 @@ def catch(response: httpx.Response) -> None:
     Args:
         response: An httpx.Response object.
     """
-    logger = get_logger(__name__)
     response.read()
     try:
         response.raise_for_status()
-    except httpx.HTTPStatusError as error:
-        logger.error(response.text)  # Use logger.error
-        raise error
+    except httpx.HTTPError:
+        msg = f"{response.status_code} {response.reason_phrase}: {response.text}"
+        log.exception(msg)
+        raise
 
 
 async def acatch(response: httpx.Response) -> None:  # Renamed function
@@ -43,10 +45,10 @@ async def acatch(response: httpx.Response) -> None:  # Renamed function
     Args:
         response: An httpx.Response object.
     """
-    logger = get_logger(__name__)
     await response.aread()
     try:
         response.raise_for_status()
-    except httpx.HTTPStatusError as error:
-        logger.error(response.text)  # Use logger.error
-        raise error
+    except httpx.HTTPError:
+        msg = f"{response.status_code} {response.reason_phrase}: {response.text}"
+        log.exception(msg)
+        raise

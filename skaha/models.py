@@ -16,9 +16,9 @@ from pydantic import (
 )
 from typing_extensions import Self
 
-from skaha.utils import logs
+from skaha import get_logger
 
-log = logs.get_logger(__name__)
+log = get_logger(__name__)
 
 KINDS = Literal["desktop", "notebook", "carta", "headless", "firefly"]
 STATUS = Literal["Pending", "Running", "Terminating", "Succeeded", "Error"]

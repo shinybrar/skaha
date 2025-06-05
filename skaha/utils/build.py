@@ -1,15 +1,17 @@
 """Utility functions for building parameters skaha client."""
 
-from typing import Any, Dict, List, Optional, Tuple
+from __future__ import annotations
+
+from typing import Any
 
 from skaha.models import KINDS, STATUS, VIEW, CreateSpec, FetchSpec
 from skaha.utils import convert
 
 
 def fetch_parameters(
-    kind: Optional[KINDS] = None,
-    status: Optional[STATUS] = None,
-    view: Optional[VIEW] = None,
+    kind: KINDS | None = None,
+    status: STATUS | None = None,
+    view: VIEW | None = None,
 ) -> dict[str, Any]:
     """Build parameters for fetching sessions."""
     values: dict[str, Any] = {}
@@ -28,10 +30,10 @@ def create_parameters(
     cores: int = 2,
     ram: int = 4,
     kind: KINDS = "headless",
-    gpu: Optional[int] = None,
-    cmd: Optional[str] = None,
-    args: Optional[str] = None,
-    env: Optional[dict[str, Any]] = None,
+    gpu: int | None = None,
+    cmd: str | None = None,
+    args: str | None = None,
+    env: dict[str, Any] | None = None,
     replicas: int = 1,
 ) -> list[list[tuple[str, Any]]]:
     """Build parameters for creating sessions."""
