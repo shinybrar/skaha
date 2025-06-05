@@ -1,16 +1,15 @@
 """Skaha Client."""
 
-import asyncio
+from __future__ import annotations
+
 import logging
 import ssl
-from collections.abc import AsyncIterator, Iterator
 from contextlib import asynccontextmanager, contextmanager
 from datetime import datetime, timezone
 from os import R_OK, access
 from pathlib import Path
 from time import asctime, gmtime
-from types import TracebackType
-from typing import Annotated, Any, Dict, Optional
+from typing import TYPE_CHECKING, Annotated, Any
 
 from cryptography import x509
 from cryptography.hazmat.backends import default_backend
@@ -22,14 +21,17 @@ from pydantic import (
     SecretStr,
     ValidationInfo,
     field_validator,
-    model_validator,
 )
 from pydantic_settings import BaseSettings, SettingsConfigDict
 from typing_extensions import Self
 
 from skaha import __version__
 from skaha.hooks.httpx import errors
-from skaha.models import ContainerRegistry
+from skaha.models import ContainerRegistry  #noqa: TC001
+
+if TYPE_CHECKING:
+    from collections.abc import AsyncIterator, Iterator
+    from types import TracebackType
 
 # Setup logging format
 logging.basicConfig(format="%(asctime)s %(levelname)s %(message)s", level=logging.INFO)
@@ -75,7 +77,7 @@ class SkahaClient(BaseSettings):
     )
 
     server: AnyHttpUrl = Field(
-        default="https://ws-uv.canfar.net/skaha",
+        default=AnyHttpUrl("https://ws-uv.canfar.net/skaha"),
         title="API Server URL",
         description="API Server URL.",
     )
@@ -103,7 +105,7 @@ class SkahaClient(BaseSettings):
         deprecated=True,
     )
     registry: Annotated[
-        Optional[ContainerRegistry],
+        ContainerRegistry | None,
         Field(
             default=None,
             title="Container Registry",
@@ -111,7 +113,7 @@ class SkahaClient(BaseSettings):
         ),
     ] = None
 
-    token: Optional[SecretStr] = Field(
+    token: SecretStr | None = Field(
         default=None,
         title="Authentication Token",
         description="Authentication token for the server.",
@@ -119,7 +121,7 @@ class SkahaClient(BaseSettings):
     )
 
     concurrency: int = Field(
-        32,
+        default=32,
         title="Concurrency",
         description="Maximum concurrent requests.",
         le=256,
@@ -134,12 +136,12 @@ class SkahaClient(BaseSettings):
         ge=10,
     )
 
-    _client: Optional[Client] = PrivateAttr(
+    _client: Client | None = PrivateAttr(
         default=None,
         init=False,
     )
 
-    _asynclient: Optional[AsyncClient] = PrivateAttr(
+    _asynclient: AsyncClient | None = PrivateAttr(
         default=None,
         init=False,
     )
@@ -176,17 +178,16 @@ class SkahaClient(BaseSettings):
         if info.data.get("token"):
             return value
 
-        if value is None:
-            raise ValueError("X509 cert path required when not using token auth.")
-
         # Certificate Validation
         destination = value.resolve(strict=True)
 
         if not destination.is_file():
-            raise FileNotFoundError(f"cert file {value} does not exist.")
+            msg = f"cert file {value} does not exist."
+            raise FileNotFoundError(msg)
 
         if not access(destination, R_OK):
-            raise PermissionError(f"cert file {value} is not readable.")
+            msg = f"cert file {value} is not readable."
+            raise PermissionError(msg)
 
         # Certifcation Date Validation
         data = destination.read_bytes()
@@ -194,24 +195,12 @@ class SkahaClient(BaseSettings):
         now_utc = datetime.now(timezone.utc)
 
         if cert.not_valid_after_utc <= now_utc:
-            raise ValueError(f"cert {value} expired.")
+            msg = f"cert {value} expired."
+            raise ValueError(msg)
         if cert.not_valid_before_utc >= now_utc:
-            raise ValueError(f"cert {value} not valid yet.")
+            msg = f"cert {value} not valid yet."
+            raise ValueError(msg)
         return value
-
-    @model_validator(mode="after")
-    def _check_authentication(self) -> Self:
-        """Check that exactly one authentication method is configured.
-
-        Returns:
-            Self: Updated object.
-        """
-        has_token = self.token is not None
-        has_cert = self.certificate is not None
-
-        if not has_token and not has_cert:
-            raise ValueError("either token or certificate must be provided")
-        return self
 
     # Model Properties
     @property
@@ -282,7 +271,7 @@ class SkahaClient(BaseSettings):
         Return:
             ssl.SSLContext: SSL Context.
         """
-        certfile: str = self.certificate.absolute().as_posix()
+        certfile: str = self.certificate.as_posix()
         ctx = ssl.create_default_context(ssl.Purpose.SERVER_AUTH)
         ctx.minimum_version = ssl.TLSVersion.TLSv1_2
         ctx.load_cert_chain(certfile=certfile)
@@ -338,9 +327,9 @@ class SkahaClient(BaseSettings):
 
     def __exit__(
         self,
-        exc_type: Optional[type[BaseException]],
-        exc_val: Optional[BaseException],
-        exc_tb: Optional[TracebackType],
+        exc_type: type[BaseException] | None,
+        exc_val: BaseException | None,
+        exc_tb: TracebackType | None,
     ) -> None:
         """Sync context manager exit."""
         self._close()
@@ -365,9 +354,9 @@ class SkahaClient(BaseSettings):
 
     async def __aexit__(
         self,
-        exc_type: Optional[type[BaseException]],
-        exc_val: Optional[BaseException],
-        exc_tb: Optional[TracebackType],
+        exc_type: type[BaseException] | None,
+        exc_val: BaseException | None,
+        exc_tb: TracebackType | None,
     ) -> None:
         """Async context manager exit."""
         await self._aclose()
@@ -378,28 +367,9 @@ class SkahaClient(BaseSettings):
             await self._asynclient.aclose()
             self._asynclient = None
 
-    def _force_aclose(self) -> None:
-        """Force close async client."""
-        if not self._asynclient:
-            return
-        try:
-            tasks = set()
-            loop = asyncio.get_running_loop()
-            task = loop.create_task(self._aclose())
-            tasks.add(task)
-            task.add_done_callback(tasks.discard)
-        except RuntimeError:
-            if hasattr(self._asynclient, "_transport"):
-                if self._asynclient._transport:
-                    self._asynclient._transport.close()
-        except Exception as error:
-            raise error
-        finally:
-            self._asynclient = None
-
     def __del__(self) -> None:
         """Cleanup on deletion."""
         # Sync session cleanup
-        self._close()
+        self._client = None
         # Async session cleanup
-        self._force_aclose()
+        self._asynclient = None
