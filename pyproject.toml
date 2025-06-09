@@ -242,7 +242,7 @@ disallow_untyped_defs = true
 ignore_missing_imports = false
 implicit_reexport = false
 no_implicit_optional = true
-strict_concatenate = true
+extra_checks = true
 strict_equality = true
 strict_optional = true
 
