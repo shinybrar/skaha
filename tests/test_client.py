@@ -1,7 +1,7 @@
 """Test Skaha Client API."""
 
 import tempfile
-from os import chmod
+from pathlib import Path
 
 import httpx
 import pytest
@@ -13,7 +13,6 @@ from skaha.client import SkahaClient
 def test_client_has_session_attribute():
     """Test if it SkahaClient object contains requests.Session attribute."""
     client = SkahaClient()
-    client.client.base_url
     assert hasattr(client, "client")
     assert isinstance(client.client, httpx.Client)
 
@@ -30,7 +29,7 @@ def test_client_session():
         "x-skaha-registry-auth",
     ]
     skaha = SkahaClient(registry={"username": "test", "secret": "test"}, loglevel=30)
-    assert any(header in skaha.client.headers.keys() for header in headers)
+    assert any(header in skaha.client.headers for header in headers)
 
 
 def test_bad_server_no_schema():
@@ -43,8 +42,8 @@ def test_default_certificate():
     """Test validation with default certificate value."""
     try:
         SkahaClient()
-    except ValidationError:
-        raise AssertionError
+    except ValidationError as err:
+        raise AssertionError from err
     assert True
 
 
@@ -69,10 +68,10 @@ def test_token_setup():
 
 
 def test_non_readible_certfile():
-    # Create a temporary file
-    temp = tempfile.NamedTemporaryFile(delete=False)
-    temp.close()
+    """Test non-readable certificate file."""
+    with tempfile.NamedTemporaryFile(delete=False) as temp:
+        temp_path = temp.name
     # Change the permissions
-    chmod(temp.name, 0o000)
+    Path(temp_path).chmod(0o000)
     with pytest.raises(PermissionError):
-        SkahaClient(certificate=temp.name)
+        SkahaClient(certificate=temp_path)

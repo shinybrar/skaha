@@ -14,10 +14,11 @@ def fetch_parameters(
     view: VIEW | None = None,
 ) -> dict[str, Any]:
     """Build parameters for fetching sessions."""
-    values: dict[str, Any] = {}
-    for key, value in {"kind": kind, "status": status, "view": view}.items():
-        if value:
-            values[key] = value
+    values: dict[str, Any] = {
+        key: value
+        for key, value in {"kind": kind, "status": status, "view": view}.items()
+        if value
+    }
     # Kind is an alias for type in the API.
     # It is renamed as kind to avoid conflicts with the built-in type function.
     # by_alias=true, returns, {"type": "headless"} instead of {"kind": "headless"}

@@ -124,7 +124,8 @@ class Session(SkahaClient):
                     params=parameters,
                 )
                 results.append(response.json())
-            except HTTPError as err:
+            except HTTPError:
+                err = f"failed to fetch session info for {value}"
                 log.exception(err)
         return results
 
@@ -158,7 +159,8 @@ class Session(SkahaClient):
                     params=parameters,
                 )
                 results[value] = response.text
-            except HTTPError as err:
+            except HTTPError:
+                err = f"failed to fetch logs for session {value}"
                 log.exception(err)
 
         if verbose:
@@ -240,7 +242,8 @@ class Session(SkahaClient):
             try:
                 response: Response = self.client.post(url="session", params=payload)
                 results.append(response.text.rstrip("\r\n"))
-            except HTTPError as err:
+            except HTTPError:
+                err = f"Failed to create session with payload: {payload}"
                 log.exception(err)
         return results
 
@@ -278,7 +281,8 @@ class Session(SkahaClient):
                     params=parameters,
                 )
                 results.append({value: response.text})
-            except HTTPError as err:
+            except HTTPError:
+                err = f"Failed to fetch events for session {value}"
                 log.exception(err)
         if verbose and results:
             for result in results:
@@ -310,8 +314,9 @@ class Session(SkahaClient):
             try:
                 self.client.delete(url=f"session/{value}")
                 results[value] = True
-            except HTTPError as err:
-                log.exception(err)
+            except HTTPError:
+                msg = f"Failed to destroy session {value}"
+                log.exception(msg)
                 results[value] = False
         return results
 
@@ -346,10 +351,9 @@ class Session(SkahaClient):
 
         """
         sessions = self.fetch(kind=kind, status=status)
-        ids: list[str] = []
-        for session in sessions:
-            if session["name"].startswith(prefix):
-                ids.append(session["id"])
+        ids: list[str] = [
+            session["id"] for session in sessions if session["name"].startswith(prefix)
+        ]
         return self.destroy(ids)
 
 
@@ -617,8 +621,7 @@ class AsyncSession(SkahaClient):
                 response = await self.asynclient.post(url="session", params=parameters)
                 return response.text.rstrip("\r\n")
 
-        for payload in payloads:
-            tasks.append(bounded(payload))
+        tasks = [bounded(payload) for payload in payloads]
 
         log.info("Creating {replicas} {kind} session[s].")
         responses = await asyncio.gather(*tasks, return_exceptions=True)
@@ -673,7 +676,7 @@ class AsyncSession(SkahaClient):
             if isinstance(reply, Exception):
                 log.error(reply)
             elif isinstance(reply, dict):
-                results.append(dict(reply))  # type: ignore
+                results.append(dict(reply))
 
         if verbose and results:
             for result in results:
@@ -708,10 +711,12 @@ class AsyncSession(SkahaClient):
             async with semaphore:
                 try:
                     await self.asynclient.delete(url=f"session/{value}")
-                    return value, True
                 except HTTPError as err:
-                    log.exception(err)
+                    msg = f"Failed to destroy session {value}: {err}"
+                    log.exception(msg)
                     return value, False
+                else:
+                    return value, True
 
         tasks = [bounded(value) for value in ids]
         responses = await asyncio.gather(*tasks, return_exceptions=True)
@@ -750,8 +755,9 @@ class AsyncSession(SkahaClient):
             >>> await session.destroy_with(prefix="car", kind="carta", status="Running")
 
         """
-        ids: list[str] = []
-        for session in await self.fetch(kind=kind, status=status):
-            if session["name"].startswith(prefix):
-                ids.append(session["id"])
+        ids: list[str] = [
+            session["id"]
+            for session in await self.fetch(kind=kind, status=status)
+            if session["name"].startswith(prefix)
+        ]
         return await self.destroy(ids)

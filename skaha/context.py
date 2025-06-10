@@ -45,4 +45,4 @@ class Context(SkahaClient):
             }
         """
         response: Response = self.client.get(url="context")
-        return response.json()
+        return dict(response.json())

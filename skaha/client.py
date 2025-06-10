@@ -25,7 +25,7 @@ from pydantic import (
 from pydantic_settings import BaseSettings, SettingsConfigDict
 from typing_extensions import Self
 
-from skaha import __version__, get_logger, set_level
+from skaha import __version__, get_logger, set_log_level
 from skaha.hooks.httpx import errors
 from skaha.models import ContainerRegistry  # noqa: TC001
 
@@ -156,7 +156,7 @@ class SkahaClient(BaseSettings):
         Returns:
             int: Logging level.
         """
-        set_level(value)
+        set_log_level(value)
         return value
 
     @field_validator("certificate")

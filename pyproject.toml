@@ -190,6 +190,7 @@ ignore = [
     "S101",    # Use of assert detected (allow in tests)
     "TRY003",  # Avoid specifying long messages outside the exception class
     "COM812",  # missing-trailing-comma
+    "PERF203", # try-except inside loop
 ]
 
 [tool.ruff.lint.per-file-ignores]
@@ -213,7 +214,7 @@ known-first-party = ["skaha"]
 convention = "google"
 
 [tool.ruff.lint.pylint]
-max-args = 6
+max-args = 8
 
 [tool.ruff.format]
 quote-style = "double"
@@ -245,12 +246,11 @@ no_implicit_optional = true
 extra_checks = true
 strict_equality = true
 strict_optional = true
+plugins = ["pydantic.mypy"]
 
 [[tool.mypy.overrides]]
 module = ["tests.*"]
-disallow_untyped_defs = false
-disallow_incomplete_defs = false
-disallow_untyped_calls = false
+ignore_errors = true
 
 # Pytest configuration
 [tool.pytest.ini_options]

@@ -60,9 +60,9 @@ class SkahaLogger:
 
     def __init__(self) -> None:
         """Constructor."""
-        self._logger = None
+        self._logger: logging.Logger | None = None
         self._console = Console()
-        self._file_handler = None
+        self._file_handler: logging.handlers.RotatingFileHandler | None = None
 
     @property
     def logger(self) -> logging.Logger:
@@ -228,7 +228,7 @@ def get_logger(name: str | None = None) -> logging.Logger:
     return _skaha_logger.get_child_logger(name)
 
 
-def set_level(level: int | str) -> None:
+def set_log_level(level: int | str) -> None:
     """Set logging level for all Skaha loggers."""
     _skaha_logger.set_level(level)
 
