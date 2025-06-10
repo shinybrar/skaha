@@ -10,6 +10,9 @@ repos:
           - httpx
           - authlib
           - pydantic
+          - pydantic_settings
+          - rich
+          - segno
         args: [--config-file=pyproject.toml]
 
   - repo: https://github.com/pre-commit/pre-commit-hooks

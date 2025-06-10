@@ -1,5 +1,7 @@
 """Skaha Overview."""
 
+from __future__ import annotations
+
 from typing import TYPE_CHECKING
 
 from defusedxml import ElementTree
@@ -41,13 +43,22 @@ class Overview(SkahaClient):
             bool: True if the server is available, False otherwise.
         """
         response: Response = self.client.get("availability")
-        # Parse the XML string
-        root = ElementTree.fromstring(response.text)  # type: ignore[arg-type]
+        data: str = response.text
+        if not data:
+            log.error("No data returned from availability endpoint.")
+            return False
+        root = ElementTree.fromstring(data)
         available = root.find(
             ".//{http://www.ivoa.net/xml/VOSIAvailability/v1.0}available",
-        ).text  # type: ignore[attr-defined]
+        )
+        availaibility: str | None = available.text if available is not None else None
+
         note = root.find(
             ".//{http://www.ivoa.net/xml/VOSIAvailability/v1.0}note",
-        ).text  # type: ignore[attr-defined]
-        log.info(note)
-        return available == "true"
+        )
+        notify: str | None = note.text if note is not None else None
+        if availaibility is None:
+            log.error("No availability information found in the response.")
+            return False
+        log.info(notify if notify else "No additional information provided.")
+        return availaibility == "true"

@@ -42,19 +42,15 @@ class Session(SkahaClient):
         status: STATUS | None = None,
         view: VIEW | None = None,
     ) -> list[dict[str, str]]:
-        """List open sessions for the user.
+        """Fetch open sessions for the user.
 
         Args:
-            kind (Optional[KINDS], optional): Session kind. Defaults to None.
-            status (Optional[STATUS], optional): Session status. Defaults to None.
-            view (Optional[VIEW], optional): Session view level. Defaults to None.
-
-        Notes:
-            By default, only the calling user's sessions are listed. If views is
-            set to 'all', all user sessions are listed (with limited information).
+            kind (KINDS | None, optional): Session kind. Defaults to None.
+            status (STATUS | None, optional): Session status. Defaults to None.
+            view (VIEW | None, optional): View leve. Defaults to None.
 
         Returns:
-            List[Dict[str, str]]: Sessions information.
+            list[dict[str, str]]: Session[s] information.
 
         Examples:
             >>> from skaha.session import Session
@@ -76,7 +72,8 @@ class Session(SkahaClient):
         """
         parameters: dict[str, Any] = build.fetch_parameters(kind, status, view)
         response: Response = self.client.get(url="session", params=parameters)
-        return response.json()
+        data: list[dict[str, str]] = response.json()
+        return data
 
     def stats(self) -> dict[str, Any]:
         """Get statistics for the entire platform.
@@ -97,7 +94,8 @@ class Session(SkahaClient):
         """
         parameters = {"view": "stats"}
         response: Response = self.client.get("session", params=parameters)
-        return response.json()
+        data: dict[str, Any] = response.json()
+        return data
 
     def info(self, ids: list[str] | str) -> list[dict[str, Any]]:
         """Get information about session[s].
@@ -432,7 +430,8 @@ class AsyncSession(SkahaClient):
         """
         parameters: dict[str, Any] = build.fetch_parameters(kind, status, view)
         response: Response = await self.asynclient.get(url="session", params=parameters)
-        return response.json()
+        data: list[dict[str, str]] = response.json()
+        return data
 
     async def stats(self) -> dict[str, Any]:
         """Get statistics for the entire skaha cluster.
@@ -453,7 +452,8 @@ class AsyncSession(SkahaClient):
         """
         parameters = {"view": "stats"}
         response: Response = await self.asynclient.get("session", params=parameters)
-        return response.json()
+        data: dict[str, Any] = response.json()
+        return data
 
     async def info(self, ids: list[str] | str) -> list[dict[str, Any]]:
         """Get information about session[s].
@@ -484,7 +484,8 @@ class AsyncSession(SkahaClient):
                     url=f"session/{value}",
                     params=parameters,
                 )
-                return response.json()
+                data: dict[str, Any] = response.json()
+                return data
 
         tasks = [bounded(value) for value in ids]
         responses = await asyncio.gather(*tasks, return_exceptions=True)

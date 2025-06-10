@@ -1,5 +1,7 @@
 """Get available resources from the skaha server."""
 
+from __future__ import annotations
+
 from typing import TYPE_CHECKING, Any
 
 from skaha.client import SkahaClient
