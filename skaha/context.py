@@ -1,10 +1,13 @@
 """Get available resources from the skaha server."""
 
-from typing import Any, Dict
+from __future__ import annotations
 
-from httpx import Response
+from typing import TYPE_CHECKING, Any
 
 from skaha.client import SkahaClient
+
+if TYPE_CHECKING:
+    from httpx import Response
 
 
 class Context(SkahaClient):
@@ -14,7 +17,7 @@ class Context(SkahaClient):
         SkahaClient (skaha.client.SkahaClient): Configured Skaha Client.
     """
 
-    def resources(self) -> Dict[str, Any]:
+    def resources(self) -> dict[str, Any]:
         """Get available resources from the skaha server.
 
         Returns:
@@ -44,4 +47,4 @@ class Context(SkahaClient):
             }
         """
         response: Response = self.client.get(url="context")
-        return response.json()
+        return dict(response.json())

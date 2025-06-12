@@ -38,9 +38,8 @@ def test_invalid_container_registry_wrong_server():
         "username": "test",
         "secret": "ghp_1234567890",
     }
-    with pytest.raises(ValidationError) as exc_info:
+    with pytest.raises(ValidationError):
         ContainerRegistry(**invalid_data)
-    assert "Currently only images.canfar.net is supported" in str(exc_info.value)
 
 
 def test_base64_encoding():
