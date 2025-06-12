@@ -9,6 +9,7 @@ from .logging import configure_logging, get_logger, set_log_level
 
 # Root path to the Skaha Project
 BASE_PATH: Path = Path(__file__).absolute().parent.parent
+CONFIG_PATH: Path = Path.home() / ".skaha" / "config.yaml"
 LOG_LEVEL: str = "INFO"
 
 configure_logging(loglevel=LOG_LEVEL, filelog=False)
@@ -26,6 +27,6 @@ except metadata.PackageNotFoundError as error:  # pragma: no cover
 except FileNotFoundError as error:  # pragma: no cover
     log.warning(error)
 finally:
-    log.info("Client Version: %s", __version__)
+    log.debug("Client Version: %s", __version__)
 
 __all__ = ["__version__", "configure_logging", "get_logger", "set_log_level"]
