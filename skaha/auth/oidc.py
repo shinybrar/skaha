@@ -34,7 +34,9 @@ def discover(url: str) -> Any:
     """
     response = httpx.get(url)
     response.raise_for_status()
-    return response.json()
+    data = response.json()
+    log.debug("OIDC Discovery Data: %s", data)
+    return data
 
 
 def register(url: str) -> Any:
@@ -58,7 +60,9 @@ def register(url: str) -> Any:
     }
     response = httpx.post(url, json=payload)
     response.raise_for_status()
-    return response.json()
+    data = response.json()
+    log.debug("OIDC Client Registration Data: %s", data)
+    return data
 
 
 def _poll_token(url: str, identity: str, secret: str, code: str) -> Any:
@@ -73,6 +77,7 @@ def _poll_token(url: str, identity: str, secret: str, code: str) -> Any:
         auth=(identity, secret),
     )
     data = resp.json()
+    log.debug("OIDC Token Response: %s", data)
     if resp.status_code == 200:
         return data
     err = data.get("error")
@@ -103,6 +108,7 @@ def authflow(device_auth_url: str, token_url: str, identity: str, secret: str) -
     response = httpx.post(device_auth_url, data=payload, auth=(identity, secret))
     response.raise_for_status()
     verification = response.json()
+    log.debug("OIDC Device Authorization Response: %s", verification)
 
     # Verification Details
     uri: str = str(verification["verification_uri_complete"])
@@ -174,8 +180,6 @@ if __name__ == "__main__":
     log.info("Starting OIDC Device Authorization Flow...")
     discovery_url: str = "https://ska-iam.stfc.ac.uk/.well-known/openid-configuration"
     config: dict[str, str] = discover(discovery_url)
-
-    log.info("\n")
     device_auth_endpoint = config["device_authorization_endpoint"]
     register_url: str = str(config.get("registration_endpoint"))
     token_endpoint: str = str(config["token_endpoint"])
@@ -190,12 +194,11 @@ if __name__ == "__main__":
     client_secret = client_info["client_secret"]
     log.info("Client registered successfully.")
     log.info("Client ID: %s", client_id)
-    log.info("Client Secret: %s", client_secret)
 
     log.info("Starting OIDC Device Authorization Flow...")
     TOKENS = authflow(device_auth_endpoint, token_endpoint, client_id, client_secret)
-    log.info("OIDC Tokens:")
-    log.info(TOKENS)
+    if TOKENS:
+        log.info("OIDC Tokens successfully obtained.")
     log.info("OIDC Device Authorization Flow completed successfully.")
 
     # Lets use access token to get user info
