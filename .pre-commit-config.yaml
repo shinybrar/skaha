@@ -7,12 +7,14 @@ repos:
           - types-toml
           - types-requests
           - types-defusedxml
+          - types-PyYAML
           - httpx
           - authlib
           - pydantic
           - pydantic_settings
           - rich
           - segno
+          - typer
         args: [--config-file=pyproject.toml]
 
   - repo: https://github.com/pre-commit/pre-commit-hooks
