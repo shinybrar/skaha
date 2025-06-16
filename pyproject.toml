@@ -5,7 +5,7 @@ build-backend = "hatchling.build"
 [project]
 name = "skaha"
 version = "1.6.1"
-requires-python = ">=3.9"
+requires-python = ">=3.10"
 description = "Python Client for CANFAR Science Platform"
 license = { file = "LICENSE" }
 readme = "README.md"
