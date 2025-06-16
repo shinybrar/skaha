@@ -3,7 +3,7 @@ from unittest.mock import AsyncMock, Mock, patch
 import httpx
 import pytest
 
-from .errors import acatch, catch
+from skaha.hooks.httpx.errors import acatch, catch
 
 """Tests for httpx error hooks."""
 
