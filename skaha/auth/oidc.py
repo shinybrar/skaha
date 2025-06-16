@@ -8,10 +8,12 @@ from typing import Any
 
 import httpx
 import segno
+from rich.console import Console
 from rich.progress import BarColumn, Progress, TextColumn, TimeRemainingColumn
 
 from skaha import get_logger
 
+console = Console()
 log = get_logger(__name__)
 
 
@@ -99,7 +101,7 @@ def authflow(device_auth_url: str, token_url: str, identity: str, secret: str) -
         secret (str): client secret
 
     Returns:
-        _type_: _description_
+        Any: OIDC tokens including access and refresh tokens.
     """
     payload: dict[str, Any] = {
         "client_id": identity,
@@ -116,8 +118,9 @@ def authflow(device_auth_url: str, token_url: str, identity: str, secret: str) -
     interval: int = int(verification.get("interval", 5))
     code: str = str(verification["device_code"])
     done: threading.Event = threading.Event()
-
     webbrowser.get().open(uri, new=2)
+    console.print("[green]✓[/green] Follow the link below to authorize:")
+    console.print(f"\n  {uri}\n")
     qr = segno.make(uri, error="H")
     qr.terminal(compact=True)
 
@@ -193,14 +196,11 @@ if __name__ == "__main__":
     client_id = client_info["client_id"]
     client_secret = client_info["client_secret"]
     log.info("Client registered successfully.")
-    log.info("Client ID: %s", client_id)
 
     log.info("Starting OIDC Device Authorization Flow...")
     TOKENS = authflow(device_auth_endpoint, token_endpoint, client_id, client_secret)
-    if TOKENS:
-        log.info("OIDC Tokens successfully obtained.")
+    log.info("OIDC Tokens successfully obtained.")
     log.info("OIDC Device Authorization Flow completed successfully.")
-
     # Lets use access token to get user info
     userinfo_url: str = config["userinfo_endpoint"]
     headers = {

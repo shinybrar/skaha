@@ -13,7 +13,7 @@ from typing import TYPE_CHECKING, Annotated, Any
 
 from cryptography import x509
 from cryptography.hazmat.backends import default_backend
-from httpx import AsyncClient, Client, Limits
+from httpx import URL, AsyncClient, Client, Limits
 from pydantic import (
     AnyHttpUrl,
     Field,
@@ -85,7 +85,7 @@ class SkahaClient(BaseSettings):
         pattern=r"^v\d+$",
     )
     certificate: Path = Field(
-        default_factory=lambda: Path.home() / ".ssl" / "cadcproxy.pem",
+        default=Path.home() / ".ssl" / "cadcproxy.pem",
         title="X509 Certificate",
         description="Path to the X509 certificate used for authentication.",
         validate_default=False,
@@ -237,7 +237,7 @@ class SkahaClient(BaseSettings):
             kwargs.update({"verify": self._get_ssl_context()})
         client: Client = Client(**kwargs)
         client.headers.update(self._get_headers())
-        client.base_url = f"{self.server}/{self.version}"
+        client.base_url = URL(f"{self.server}/{self.version}")
         return client
 
     def _create_asynclient(self) -> AsyncClient:
@@ -259,7 +259,7 @@ class SkahaClient(BaseSettings):
             kwargs.update({"verify": self._get_ssl_context()})
         asynclient: AsyncClient = AsyncClient(**kwargs)
         asynclient.headers.update(self._get_headers())
-        asynclient.base_url = f"{self.server}/{self.version}"
+        asynclient.base_url = URL(f"{self.server}/{self.version}")
         return asynclient
 
     def _get_ssl_context(self) -> ssl.SSLContext:
