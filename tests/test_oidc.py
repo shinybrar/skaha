@@ -5,7 +5,6 @@ from unittest.mock import AsyncMock, MagicMock, patch
 
 import httpx
 import pytest
-import respx
 
 from skaha.auth.oidc import (
     AuthPendingError,
@@ -49,17 +48,21 @@ class TestDiscoverFunction:
         }
         mock_client.get.return_value = mock_response
 
-        result = await discover("https://example.com/.well-known/openid-configuration", mock_client)
+        result = await discover(
+            "https://example.com/.well-known/openid-configuration", mock_client
+        )
 
         assert result["device_authorization_endpoint"] == "https://example.com/device"
         assert result["token_endpoint"] == "https://example.com/token"
-        mock_client.get.assert_called_once_with("https://example.com/.well-known/openid-configuration")
+        mock_client.get.assert_called_once_with(
+            "https://example.com/.well-known/openid-configuration"
+        )
         mock_response.raise_for_status.assert_called_once()
 
     @pytest.mark.asyncio
     async def test_discover_without_client(self) -> None:
         """Test discover function without provided client."""
-        with patch('httpx.AsyncClient') as mock_client_class:
+        with patch("httpx.AsyncClient") as mock_client_class:
             mock_client = AsyncMock()
             mock_response = MagicMock()
             mock_response.json.return_value = {
@@ -69,9 +72,13 @@ class TestDiscoverFunction:
             mock_client.get.return_value = mock_response
             mock_client_class.return_value.__aenter__.return_value = mock_client
 
-            result = await discover("https://example.com/.well-known/openid-configuration")
+            result = await discover(
+                "https://example.com/.well-known/openid-configuration"
+            )
 
-            assert result["device_authorization_endpoint"] == "https://example.com/device"
+            assert (
+                result["device_authorization_endpoint"] == "https://example.com/device"
+            )
             mock_client.get.assert_called_once()
 
     @pytest.mark.asyncio
@@ -85,7 +92,9 @@ class TestDiscoverFunction:
         mock_client.get.return_value = mock_response
 
         with pytest.raises(httpx.HTTPStatusError):
-            await discover("https://example.com/.well-known/openid-configuration", mock_client)
+            await discover(
+                "https://example.com/.well-known/openid-configuration", mock_client
+            )
 
 
 class TestRegisterFunction:
@@ -115,7 +124,7 @@ class TestRegisterFunction:
     @pytest.mark.asyncio
     async def test_register_without_client(self) -> None:
         """Test register function without provided client."""
-        with patch('httpx.AsyncClient') as mock_client_class:
+        with patch("httpx.AsyncClient") as mock_client_class:
             mock_client = AsyncMock()
             mock_response = MagicMock()
             mock_response.json.return_value = {
@@ -152,7 +161,7 @@ class TestPollTokenFunction:
             "client_id",
             "client_secret",
             "device_code",
-            mock_client
+            mock_client,
         )
 
         assert result["access_token"] == "test_access_token"
@@ -174,7 +183,7 @@ class TestPollTokenFunction:
                 "client_id",
                 "client_secret",
                 "device_code",
-                mock_client
+                mock_client,
             )
 
     @pytest.mark.asyncio
@@ -192,7 +201,7 @@ class TestPollTokenFunction:
                 "client_id",
                 "client_secret",
                 "device_code",
-                mock_client
+                mock_client,
             )
 
     @pytest.mark.asyncio
@@ -204,13 +213,15 @@ class TestPollTokenFunction:
         mock_response.json.return_value = {"error": "invalid_grant"}
         mock_client.post.return_value = mock_response
 
-        with pytest.raises(ValueError, match="Unknown error in polling for tokens: invalid_grant"):
+        with pytest.raises(
+            ValueError, match="Unknown error in polling for tokens: invalid_grant"
+        ):
             await _poll_token(
                 "https://example.com/token",
                 "client_id",
                 "client_secret",
                 "device_code",
-                mock_client
+                mock_client,
             )
 
 
@@ -220,6 +231,7 @@ class TestCancelPendingTasks:
     @pytest.mark.asyncio
     async def test_cancel_pending_tasks(self) -> None:
         """Test cancelling pending tasks."""
+
         # Create real async tasks that we can cancel
         async def dummy_task():
             await asyncio.sleep(10)  # Long sleep to ensure cancellation
@@ -244,10 +256,10 @@ class TestPollWithBackoff:
     async def test_poll_with_backoff_success(self) -> None:
         """Test successful polling with backoff."""
         mock_client = AsyncMock(spec=httpx.AsyncClient)
-        
-        with patch('skaha.auth.oidc._poll_token') as mock_poll:
+
+        with patch("skaha.auth.oidc._poll_token") as mock_poll:
             mock_poll.return_value = {"access_token": "test_token"}
-            
+
             result = await _poll_with_backoff(
                 "https://example.com/token",
                 "client_id",
@@ -255,9 +267,9 @@ class TestPollWithBackoff:
                 "device_code",
                 mock_client,
                 5,  # initial_interval
-                600  # expires
+                600,  # expires
             )
-            
+
             assert result["access_token"] == "test_token"
             mock_poll.assert_called_once()
 
@@ -265,13 +277,18 @@ class TestPollWithBackoff:
     async def test_poll_with_backoff_timeout(self) -> None:
         """Test polling with backoff timeout."""
         mock_client = AsyncMock(spec=httpx.AsyncClient)
-        
-        with patch('skaha.auth.oidc._poll_token') as mock_poll:
+
+        with patch("skaha.auth.oidc._poll_token") as mock_poll:
             mock_poll.side_effect = AuthPendingError()
-            with patch('time.time') as mock_time:
+            with patch("time.time") as mock_time:
                 # Simulate time progression to trigger timeout
-                mock_time.side_effect = [0, 0, 0, 700]  # Start, first check, second check, timeout
-                
+                mock_time.side_effect = [
+                    0,
+                    0,
+                    0,
+                    700,
+                ]  # Start, first check, second check, timeout
+
                 with pytest.raises(TimeoutError, match="Device flow timed out"):
                     await _poll_with_backoff(
                         "https://example.com/token",
@@ -280,33 +297,38 @@ class TestPollWithBackoff:
                         "device_code",
                         mock_client,
                         5,  # initial_interval
-                        600  # expires
+                        600,  # expires
                     )
 
     @pytest.mark.asyncio
     async def test_poll_with_backoff_slow_down(self) -> None:
         """Test polling with backoff and slow down."""
         mock_client = AsyncMock(spec=httpx.AsyncClient)
-        
-        with patch('skaha.auth.oidc._poll_token') as mock_poll:
-            with patch('asyncio.sleep') as mock_sleep:
-                # First call raises SlowDownError, second succeeds
-                mock_poll.side_effect = [SlowDownError(), {"access_token": "test_token"}]
-                
-                result = await _poll_with_backoff(
-                    "https://example.com/token",
-                    "client_id",
-                    "client_secret",
-                    "device_code",
-                    mock_client,
-                    5,  # initial_interval
-                    600  # expires
-                )
-                
-                assert result["access_token"] == "test_token"
-                assert mock_poll.call_count == 2
-                # Should have slept with increased interval due to slow down
-                mock_sleep.assert_called()
+
+        with (
+            patch("skaha.auth.oidc._poll_token") as mock_poll,
+            patch("asyncio.sleep") as mock_sleep,
+        ):
+            # First call raises SlowDownError, second succeeds
+            mock_poll.side_effect = [
+                SlowDownError(),
+                {"access_token": "test_token"},
+            ]
+
+            result = await _poll_with_backoff(
+                "https://example.com/token",
+                "client_id",
+                "client_secret",
+                "device_code",
+                mock_client,
+                5,  # initial_interval
+                600,  # expires
+            )
+
+            assert result["access_token"] == "test_token"
+            assert mock_poll.call_count == 2
+            # Should have slept with increased interval due to slow down
+            mock_sleep.assert_called()
 
 
 class TestAuthflowFunction:
@@ -323,39 +345,41 @@ class TestAuthflowFunction:
             "verification_uri_complete": "https://example.com/device?code=ABC123",
             "expires_in": 600,
             "interval": 5,
-            "device_code": "device_code_123"
+            "device_code": "device_code_123",
         }
         mock_client.post.return_value = device_response
 
-        with patch('skaha.auth.oidc._poll_with_backoff') as mock_poll:
-            with patch('webbrowser.get') as mock_browser:
-                with patch('segno.make') as mock_qr:
-                    with patch('rich.progress.Progress') as mock_progress:
-                        mock_poll.return_value = {"access_token": "test_token"}
-                        mock_browser.return_value.open = MagicMock()
-                        mock_qr.return_value.terminal = MagicMock()
+        with (
+            patch("skaha.auth.oidc._poll_with_backoff") as mock_poll,
+            patch("webbrowser.get") as mock_browser,
+            patch("segno.make") as mock_qr,
+            patch("rich.progress.Progress") as mock_progress,
+        ):
+            mock_poll.return_value = {"access_token": "test_token"}
+            mock_browser.return_value.open = MagicMock()
+            mock_qr.return_value.terminal = MagicMock()
 
-                        # Mock progress context manager
-                        mock_progress_instance = MagicMock()
-                        mock_progress.return_value.__enter__.return_value = mock_progress_instance
-                        mock_progress.return_value.__exit__.return_value = None
+            # Mock progress context manager
+            mock_progress_instance = MagicMock()
+            mock_progress.return_value.__enter__.return_value = mock_progress_instance
+            mock_progress.return_value.__exit__.return_value = None
 
-                        result = await authflow(
-                            "https://example.com/device",
-                            "https://example.com/token",
-                            "client_id",
-                            "client_secret",
-                            mock_client
-                        )
+            result = await authflow(
+                "https://example.com/device",
+                "https://example.com/token",
+                "client_id",
+                "client_secret",
+                mock_client,
+            )
 
-                        assert result["access_token"] == "test_token"
-                        mock_client.post.assert_called_once()
-                        mock_browser.return_value.open.assert_called_once()
+            assert result["access_token"] == "test_token"
+            mock_client.post.assert_called_once()
+            mock_browser.return_value.open.assert_called_once()
 
     @pytest.mark.asyncio
     async def test_authflow_without_client(self) -> None:
         """Test authflow function without provided client."""
-        with patch('httpx.AsyncClient') as mock_client_class:
+        with patch("httpx.AsyncClient") as mock_client_class:
             mock_client = AsyncMock()
             mock_client_class.return_value.__aenter__.return_value = mock_client
 
@@ -365,31 +389,35 @@ class TestAuthflowFunction:
                 "verification_uri_complete": "https://example.com/device?code=ABC123",
                 "expires_in": 600,
                 "interval": 5,
-                "device_code": "device_code_123"
+                "device_code": "device_code_123",
             }
             mock_client.post.return_value = device_response
 
-            with patch('skaha.auth.oidc._poll_with_backoff') as mock_poll:
-                with patch('webbrowser.get') as mock_browser:
-                    with patch('segno.make') as mock_qr:
-                        with patch('rich.progress.Progress') as mock_progress:
-                            mock_poll.return_value = {"access_token": "test_token"}
-                            mock_browser.return_value.open = MagicMock()
-                            mock_qr.return_value.terminal = MagicMock()
+            with (
+                patch("skaha.auth.oidc._poll_with_backoff") as mock_poll,
+                patch("webbrowser.get") as mock_browser,
+                patch("segno.make") as mock_qr,
+                patch("rich.progress.Progress") as mock_progress,
+            ):
+                mock_poll.return_value = {"access_token": "test_token"}
+                mock_browser.return_value.open = MagicMock()
+                mock_qr.return_value.terminal = MagicMock()
 
-                            # Mock progress context manager
-                            mock_progress_instance = MagicMock()
-                            mock_progress.return_value.__enter__.return_value = mock_progress_instance
-                            mock_progress.return_value.__exit__.return_value = None
+                # Mock progress context manager
+                mock_progress_instance = MagicMock()
+                mock_progress.return_value.__enter__.return_value = (
+                    mock_progress_instance
+                )
+                mock_progress.return_value.__exit__.return_value = None
 
-                            result = await authflow(
-                                "https://example.com/device",
-                                "https://example.com/token",
-                                "client_id",
-                                "client_secret"
-                            )
+                result = await authflow(
+                    "https://example.com/device",
+                    "https://example.com/token",
+                    "client_id",
+                    "client_secret",
+                )
 
-                            assert result["access_token"] == "test_token"
+                assert result["access_token"] == "test_token"
 
 
 class TestMainFunction:
@@ -398,7 +426,7 @@ class TestMainFunction:
     @pytest.mark.asyncio
     async def test_main_function(self) -> None:
         """Test the main function integration."""
-        with patch('httpx.AsyncClient') as mock_client_class:
+        with patch("httpx.AsyncClient") as mock_client_class:
             mock_client = AsyncMock()
             mock_client_class.return_value.__aenter__.return_value = mock_client
 
@@ -408,14 +436,14 @@ class TestMainFunction:
                 "device_authorization_endpoint": "https://example.com/device",
                 "registration_endpoint": "https://example.com/register",
                 "token_endpoint": "https://example.com/token",
-                "userinfo_endpoint": "https://example.com/userinfo"
+                "userinfo_endpoint": "https://example.com/userinfo",
             }
 
             # Mock registration response
             register_response = MagicMock()
             register_response.json.return_value = {
                 "client_id": "test_client_id",
-                "client_secret": "test_client_secret"
+                "client_secret": "test_client_secret",
             }
 
             # Mock userinfo response
@@ -423,17 +451,17 @@ class TestMainFunction:
             userinfo_response.json.return_value = {
                 "sub": "user123",
                 "name": "Test User",
-                "email": "test@example.com"
+                "email": "test@example.com",
             }
 
             # Configure mock client responses
             mock_client.get.side_effect = [discovery_response, userinfo_response]
             mock_client.post.side_effect = [register_response]
 
-            with patch('skaha.auth.oidc.authflow') as mock_authflow:
+            with patch("skaha.auth.oidc.authflow") as mock_authflow:
                 mock_authflow.return_value = {
                     "access_token": "test_access_token",
-                    "refresh_token": "test_refresh_token"
+                    "refresh_token": "test_refresh_token",
                 }
 
                 # Should complete without errors
@@ -451,7 +479,7 @@ class TestIntegration:
     @pytest.mark.asyncio
     async def test_full_flow_integration(self) -> None:
         """Test the complete OIDC flow integration."""
-        with patch('httpx.AsyncClient') as mock_client_class:
+        with patch("httpx.AsyncClient") as mock_client_class:
             mock_client = AsyncMock()
             mock_client_class.return_value.__aenter__.return_value = mock_client
 
@@ -461,13 +489,13 @@ class TestIntegration:
                 "device_authorization_endpoint": "https://example.com/device",
                 "registration_endpoint": "https://example.com/register",
                 "token_endpoint": "https://example.com/token",
-                "userinfo_endpoint": "https://example.com/userinfo"
+                "userinfo_endpoint": "https://example.com/userinfo",
             }
 
             registration_resp = MagicMock()
             registration_resp.json.return_value = {
                 "client_id": "test_client_id",
-                "client_secret": "test_client_secret"
+                "client_secret": "test_client_secret",
             }
 
             device_auth_resp = MagicMock()
@@ -475,60 +503,79 @@ class TestIntegration:
                 "verification_uri_complete": "https://example.com/device?code=ABC123",
                 "expires_in": 600,
                 "interval": 5,
-                "device_code": "device_code_123"
+                "device_code": "device_code_123",
             }
 
             token_resp = MagicMock()
             token_resp.json.return_value = {
                 "access_token": "test_access_token",
                 "refresh_token": "test_refresh_token",
-                "token_type": "Bearer"
+                "token_type": "Bearer",
             }
 
             userinfo_resp = MagicMock()
             userinfo_resp.json.return_value = {
                 "sub": "user123",
                 "name": "Test User",
-                "email": "test@example.com"
+                "email": "test@example.com",
             }
 
             # Configure responses
-            mock_client.get.side_effect = [discovery_resp, userinfo_resp]  # discovery, userinfo
-            mock_client.post.side_effect = [registration_resp, device_auth_resp, token_resp]  # register, device auth, token
+            mock_client.get.side_effect = [
+                discovery_resp,
+                userinfo_resp,
+            ]  # discovery, userinfo
+            mock_client.post.side_effect = [
+                registration_resp,
+                device_auth_resp,
+                token_resp,
+            ]  # register, device auth, token
 
             # Mock UI components
-            with patch('webbrowser.get') as mock_browser:
-                with patch('segno.make') as mock_qr:
-                    with patch('rich.progress.Progress') as mock_progress:
-                        with patch('asyncio.sleep'):  # Speed up the test
-                            mock_browser.return_value.open = MagicMock()
-                            mock_qr.return_value.terminal = MagicMock()
+            with (
+                patch("webbrowser.get") as mock_browser,
+                patch("segno.make") as mock_qr,
+                patch("rich.progress.Progress") as mock_progress,
+                patch("asyncio.sleep"),  # Speed up the test
+            ):
+                mock_browser.return_value.open = MagicMock()
+                mock_qr.return_value.terminal = MagicMock()
 
-                            # Mock progress context manager
-                            mock_progress_instance = MagicMock()
-                            mock_progress.return_value.__enter__.return_value = mock_progress_instance
-                            mock_progress.return_value.__exit__.return_value = None
+                # Mock progress context manager
+                mock_progress_instance = MagicMock()
+                mock_progress.return_value.__enter__.return_value = (
+                    mock_progress_instance
+                )
+                mock_progress.return_value.__exit__.return_value = None
 
-                            # Test the complete flow
-                            config = await discover("https://example.com/.well-known/openid-configuration", mock_client)
-                            client_info = await register(config["registration_endpoint"], mock_client)
+                # Test the complete flow
+                config = await discover(
+                    "https://example.com/.well-known/openid-configuration",
+                    mock_client,
+                )
+                client_info = await register(
+                    config["registration_endpoint"], mock_client
+                )
 
-                            # For the authflow test, we need to mock the polling to succeed immediately
-                            with patch('skaha.auth.oidc._poll_token') as mock_poll_token:
-                                mock_poll_token.return_value = {
-                                    "access_token": "test_access_token",
-                                    "refresh_token": "test_refresh_token"
-                                }
+                # For the authflow, mock the polling to succeed immediately
+                with patch("skaha.auth.oidc._poll_token") as mock_poll_token:
+                    mock_poll_token.return_value = {
+                        "access_token": "test_access_token",
+                        "refresh_token": "test_refresh_token",
+                    }
 
-                                tokens = await authflow(
-                                    config["device_authorization_endpoint"],
-                                    config["token_endpoint"],
-                                    client_info["client_id"],
-                                    client_info["client_secret"],
-                                    mock_client
-                                )
+                    tokens = await authflow(
+                        config["device_authorization_endpoint"],
+                        config["token_endpoint"],
+                        client_info["client_id"],
+                        client_info["client_secret"],
+                        mock_client,
+                    )
 
-                            # Verify results
-                            assert config["device_authorization_endpoint"] == "https://example.com/device"
-                            assert client_info["client_id"] == "test_client_id"
-                            assert tokens["access_token"] == "test_access_token"
+                # Verify results
+                assert (
+                    config["device_authorization_endpoint"]
+                    == "https://example.com/device"
+                )
+                assert client_info["client_id"] == "test_client_id"
+                assert tokens["access_token"] == "test_access_token"

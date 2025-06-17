@@ -49,8 +49,6 @@ class OIDC(BaseModel):
 class X509(BaseModel):
     """X.509 certificate configuration."""
 
-    username: str | None = Field(default=None, description="Username for certificate")
-    days: int | None = Field(default=None, description="Days certificate is valid for")
     path: str | None = Field(default=None, description="Path to PEM certificate file")
     expiry: float | None = Field(default=None, description="Certificate expiry ctime")
 
