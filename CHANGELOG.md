@@ -1,5 +1,26 @@
 # Changelog
 
+## [1.7.0](https://github.com/shinybrar/skaha/compare/v1.6.1...v1.7.0) (2025-05-28)
+
+
+### Features
+
+* **session:** added session.events to show deployment events on the cluster, e.g. loading container image etc ([58e9bca](https://github.com/shinybrar/skaha/commit/58e9bca90652ffcbcca8eeaecf351123254d62c0))
+
+
+### Bug Fixes
+
+* **security:** improvements to assertion checks ([2ea1108](https://github.com/shinybrar/skaha/commit/2ea11088d2879918d653dd1c7bd8eaf2ceff24d6))
+* **security:** X509 certs are checked if valid before first conn. to server ([08327a9](https://github.com/shinybrar/skaha/commit/08327a9ea233ed67084f5a1fd6347f919111aea5))
+* **session:** events now returns None, when verbose=True ([1b01dd6](https://github.com/shinybrar/skaha/commit/1b01dd6cfb5972d6476a297679f341e6b00e1bd2))
+* **session:** improved docs, better testing logic to await async sleep ([e54b9af](https://github.com/shinybrar/skaha/commit/e54b9af2e011692250e11efb1abf0be6ce53e40b))
+
+
+### Documentation
+
+* **events:** added session.events docs ([7540062](https://github.com/shinybrar/skaha/commit/7540062a53f480555c8e38253a34d2dd6c8484db))
+* **session:** docstring ([7189052](https://github.com/shinybrar/skaha/commit/7189052f0727ed5937072bb56d6942bf54583fd3))
+
 ## [1.6.1](https://github.com/shinybrar/skaha/compare/v1.6.0...v1.6.1) (2025-05-22)
 
 
