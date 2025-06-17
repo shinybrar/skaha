@@ -8,7 +8,7 @@ Contributions are not limited to just code. You can help us by:
 
 - Answering questions on the [Discussions board](https://github.com/shinybrar/skaha/discussions)
 - Improving the [Documentation](https://github.com/shinybrar/skaha/tree/main/docs)
-- Reporting bugs and suggesting features via [GitHub Issues](https://github.com/shinybrar/skaha/issues)
+- Reporting bugs and suggesting features via [GitHub Issues](https://github.com/shinybrar/skaha/issues) (see our [Bug Reporting Guide](https://shinybrar.github.io/skaha/bug-reports/) for detailed instructions)
 - Spreading the word about Skaha
 
 ## How to Contribute Code

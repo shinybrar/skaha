@@ -109,6 +109,7 @@ nav:
   - Change Log: changelog.md
   - Code of Conduct: conduct.md
   - Contributing: contributing.md
+  - Bug Reports: bug-reports.md
   - Security: security.md
   - License: license.md
   - OpenSSF Report: https://scorecard.dev/viewer/?uri=github.com/shinybrar/skaha
