@@ -63,7 +63,7 @@ class OIDC(BaseModel):
         Returns:
             bool: True if all required OIDC information is present, False otherwise.
         """
-        required: list[str|float|None] = [
+        required: list[str | float | None] = [
             self.endpoints.discovery,
             self.endpoints.token,
             self.client.identity,

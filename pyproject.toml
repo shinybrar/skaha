@@ -91,7 +91,7 @@ Changelog = "https://shinybrar.github.io/skaha/changelog/"
 Issues = "https://github.com/shinybrar/skaha/issues"
 
 [project.scripts]
-skaha = "skaha.cli.main:cli"
+skaha = "skaha.cli.main:main"
 
 # Ruff configuration - handles formatting, linting, and import sorting
 [tool.ruff]
