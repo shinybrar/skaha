@@ -3,12 +3,13 @@
 from __future__ import annotations
 
 import asyncio
+import sys
 import time
 
 import httpx
+import questionary
 from pydantic import BaseModel, Field
 from rich.console import Console
-from rich.table import Table
 from typing_extensions import Self
 
 
@@ -259,106 +260,126 @@ class Discover:
         return results
 
 
-def display(
-    console: Console,
+async def display(
     results: DiscoveryResults,
     dead: bool = False,
     details: bool = False,
-) -> None:
-    """Display discovery results in a formatted table.
-
-    Presents the discovered Skaha servers in a rich table format with status indicators
-    and summary statistics. Active servers are shown with a green circle, while inactive
-    servers are shown with a red circle (if the 'dead' parameter is True).
+) -> ServerInfo:
+    """Display discovery results and require interactive selection.
 
     Args:
-        console: Rich console instance for output display
         results: Discovery results containing endpoint information
-        dead: Whether to display inactive endpoints (default: False)
+        dead: Whether to show inactive endpoints. (default: False)
         details: Whether to display detailed URI and URL information (default: False)
+
+    Returns:
+        ServerInfo: The selected server info
+
+    Raises:
+        SystemExit: If no endpoints are available for selection
     """
-    table = Table(title="Skaha Servers (All Registries)")
-    table.add_column("Origin", style="dim", justify="center")
-    if details:
-        table.add_column("URI", style="green")
-        table.add_column("URL", style="cyan", overflow="fold")
-    table.add_column("Status", style="bold", justify="center")
-    table.add_column("Name", style="magenta")
+    console = Console()
 
-    grouped_results = results.get_by_registry()
+    vivos: list[ServerInfo] = []
+    morte: list[ServerInfo] = []
 
-    for registry in grouped_results:
-        endpoints = grouped_results[registry]
-        if not endpoints:
-            row_data = [registry]
-            if details:
-                row_data.extend(["-", "-"])
-            row_data.extend(["[bold red]No endpoints found[/bold red]", "-"])
-            table.add_row(*row_data)
+    for endpoint in results.endpoints:
+        if endpoint.status == 200:
+            vivos.append(endpoint)
         else:
-            for endpoint in endpoints:
-                if endpoint.status == 200:
-                    row_data = [registry]
-                    if details:
-                        row_data.extend([endpoint.uri, endpoint.url])
-                    row_data.extend(["🟢", endpoint.name or "Unknown"])
-                    table.add_row(*row_data)
-                elif dead:
-                    row_data = [registry]
-                    if details:
-                        row_data.extend([endpoint.uri, endpoint.url])
-                    row_data.extend(["🔴", endpoint.name or "Unknown"])
-                    table.add_row(*row_data)
+            morte.append(endpoint)
 
-    console.print(table)
+    # Check if endpoints are available
+    if not vivos and not (dead and morte):
+        console.print("\n[bold red]No servers available.[/bold red]")
+        sys.exit(1)
 
-    # Display summary statistics
-    console.print("\n[bold]Summary:[/bold]")
-    console.print(f"• Total registries: {len(grouped_results)}")
-    console.print(f"• Total endpoints found: {results.found}")
-    console.print(f"• Total endpoints checked: {results.checked}")
-    console.print(f"• Active endpoints: {results.successful}")
-    console.print(f"• Registry fetch time: {results.registry_fetch_time:.2f}s")
-    console.print(f"• Endpoint check time: {results.endpoint_check_time:.2f}s")
-    console.print(f"• Total time: {results.total_time:.2f}s")
+    # Create choices for questionary with equal length formatting
+    choices: list[questionary.Choice] = []
+    available: list[ServerInfo] = vivos
+    if dead:
+        available.extend(morte)
+
+    # Calculate maximum widths for alignment
+    max_name_width = max(len(endpoint.name or "Unknown") for endpoint in available)
+    max_registry_width = max(len(endpoint.registry) for endpoint in available)
+
+    max_uri_width = 0
+    if details:
+        max_uri_width = max(len(endpoint.uri) for endpoint in available)
+
+    for endpoint in available:
+        # Determine status indicator
+        indicator = "🔴" if endpoint.status is None else "🟢"
+
+        # Format name and registry with padding for alignment
+        name = (endpoint.name or "Unknown").ljust(max_name_width)
+        registry = endpoint.registry.ljust(max_registry_width)
+
+        # Create choice text with consistent spacing
+        choice = f"{indicator} {name} {registry}"
+
+        # Add detailed info if requested with alignment
+        if details:
+            uri = endpoint.uri.ljust(max_uri_width)
+            choice += f" {uri} {endpoint.url}"
+
+        choices.append(questionary.Choice(title=choice, value=endpoint))
+
+    # Use questionary to select an endpoint
+    try:
+        selection: ServerInfo | None = await questionary.select(
+            "Select a Skaha Server:",
+            choices=choices,
+            style=questionary.Style(
+                [
+                    ("question", "bold"),
+                    ("answer", "fg:#ff9d00 bold"),
+                    ("pointer", "fg:#ff9d00 bold"),
+                    ("highlighted", "fg:#ff9d00 bold"),
+                    ("selected", "fg:#cc5454"),
+                    ("separator", "fg:#cc5454"),
+                    ("instruction", ""),
+                    ("text", ""),
+                    ("disabled", "fg:#858585 italic"),
+                ]
+            ),
+        ).ask_async()
+    except KeyboardInterrupt:
+        sys.exit(0)
+    else:
+        if selection is None:
+            # User cancelled with Ctrl+C
+            sys.exit(0)
+        return selection
 
 
 async def find(
     dev: bool = False,
     dead: bool = False,
-    timeout: int = 2,
     details: bool = False,
-    connections: int = 100,
-    show: bool = True,
-    config: SearchConfig | None = None,
-) -> DiscoveryResults:
-    """Find Skaha Servers.
+    timeout: int = 2,
+) -> ServerInfo:
+    """Find and select a Skaha Server.
 
     Args:
-        dev (bool, optional): Include development servers. Defaults to False.
-        dead (bool, optional): Include dead servers. Defaults to False.
-        timeout (int, optional): HTTP request timeout. Defaults to 2.
-        details (bool, optional): Detailed display output. Defaults to False.
-        connections (int, optional): Max concurrent connections. Defaults to 100.
-        show (bool, optional): Show results. Defaults to True.
-        config (ServerConfig | None, optional): Server configuration. Defaults to None.
+        dev: Include development servers. Defaults to False.
+        dead: Show only inactive endpoints (status=None). Defaults to False.
+        details: Show detailed URI and URL information. Defaults to False.
+        timeout: HTTP request timeout. Defaults to 2.
 
     Returns:
-        Results: Discovery results.
+        ServerInfo: The selected server info.
     """
-    if config is None:
-        config = SearchConfig()
-
-    console = Console()
+    config = SearchConfig()
 
     async with Discover(
-        config, timeout=timeout, max_connections=connections
+        config, timeout=timeout, max_connections=100
     ) as discovery:
         results = await discovery.servers(dev=dev)
-        if show:
-            display(console, results, dead=dead, details=details)
-        return results
+        return await display(results, dead=dead, details=details)
 
 
 if __name__ == "__main__":
-    asyncio.run(find(dev=False, dead=False, timeout=2, details=False))
+    # Test with active endpoints and details
+    server = asyncio.run(find())
