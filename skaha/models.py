@@ -1,8 +1,10 @@
 """Models for Skaha API."""
 
+from __future__ import annotations
+
 import warnings
 from base64 import b64encode
-from typing import Any, Dict, Literal, Optional, Tuple, get_args
+from typing import Any, Literal, get_args
 
 from pydantic import (
     BaseModel,
@@ -14,9 +16,9 @@ from pydantic import (
 )
 from typing_extensions import Self
 
-from skaha.utils import logs
+from skaha import get_logger
 
-log = logs.get_logger(__name__)
+log = get_logger(__name__)
 
 KINDS = Literal["desktop", "notebook", "carta", "headless", "firefly"]
 STATUS = Literal["Pending", "Running", "Terminating", "Succeeded", "Error"]
@@ -34,7 +36,9 @@ class CreateSpec(BaseModel):
     """
 
     name: str = Field(
-        ..., description="A unique name for the session.", examples=["skaha-test"]
+        ...,
+        description="A unique name for the session.",
+        examples=["skaha-test"],
     )
     image: str = Field(
         ...,
@@ -49,16 +53,24 @@ class CreateSpec(BaseModel):
         examples=["headless", "notebook"],
         serialization_alias="type",
     )
-    gpus: Optional[int] = Field(None, description="Number of GPUs.", ge=1, le=28)
-    cmd: Optional[str] = Field(None, description="Command to run.", examples=["ls"])
-    args: Optional[str] = Field(
-        None, description="Arguments to the command.", examples=["-la"]
+    gpus: int | None = Field(None, description="Number of GPUs.", ge=1, le=28)
+    cmd: str | None = Field(None, description="Command to run.", examples=["ls"])
+    args: str | None = Field(
+        None,
+        description="Arguments to the command.",
+        examples=["-la"],
     )
-    env: Optional[Dict[str, Any]] = Field(
-        None, description="Environment variables.", examples=[{"FOO": "BAR"}]
+    env: dict[str, Any] | None = Field(
+        None,
+        description="Environment variables.",
+        examples=[{"FOO": "BAR"}],
     )
     replicas: int = Field(
-        1, description="Number of sessions to launch.", ge=1, le=512, exclude=True
+        1,
+        description="Number of sessions to launch.",
+        ge=1,
+        le=512,
+        exclude=True,
     )
 
     model_config = ConfigDict(validate_assignment=True, populate_by_name=True)
@@ -66,7 +78,7 @@ class CreateSpec(BaseModel):
     # Validate that cmd, args and env are only used with headless sessions.
     @model_validator(mode="after")
     def validate_headless(self) -> Self:
-        """Validate that cmd, args and env are only used with headless sessions.
+        """Validate that cmd, args and env are only used for headless sessions.
 
         Args:
             values (Dict[str, Any]): Values to validate.
@@ -74,53 +86,57 @@ class CreateSpec(BaseModel):
         Returns:
             Dict[str, Any]: Validated values.
         """
-        if self.cmd or self.args or self.env:
-            assert (
-                self.kind == "headless"
-            ), "cmd, args and env are only supported for headless sessions."
+        if (self.cmd or self.args or self.env) and self.kind != "headless":
+            msg = "cmd, args, env only allowed for headless sessions."
+            raise ValueError(msg)
         return self
 
     @field_validator("kind", mode="after")
     @classmethod
-    def validate_kind(cls, value: KINDS, context: ValidationInfo) -> KINDS:
+    def _validate_kind(cls, value: KINDS, context: ValidationInfo) -> KINDS:
         """Validate kind.
 
         Args:
             value (KINDS): Value to validate.
+            context(ValidationInfo): Class validation context.
 
         Returns:
             KINDS: Validated value.
         """
-        valid: Tuple[str] = get_args(KINDS)
+        valid: tuple[str] = get_args(KINDS)
         if value not in valid:
-            raise ValueError(f"invalid session kind: {value}")
+            msg = f"invalid session kind: {value}"
+            raise ValueError(msg)
 
-        if value == "firefly" or value == "desktop":
-            if (
-                context.data.get("cmd")
-                or context.data.get("args")
-                or context.data.get("cores")
-                or context.data.get("ram")
-            ):
-                warnings.warn(f"cmd, args, cores and ram ignored for {value} sessions.")
+        if value in {"firefly", "desktop"} and (
+            context.data.get("cmd")
+            or context.data.get("args")
+            or context.data.get("cores")
+            or context.data.get("ram")
+        ):
+            warnings.warn(
+                f"cmd, args, cores and ram ignored for {value} sessions.",
+                stacklevel=2,
+            )
 
         return value
 
     @field_validator("replicas")
     @classmethod
-    def validate_replicas(cls, value: int, context: ValidationInfo) -> int:
+    def _validate_replicas(cls, value: int, context: ValidationInfo) -> int:
         """Validate replicas.
 
         Args:
             value (int): Value to validate.
+            context(ValidationInfo): Class validation context.
 
         Returns:
             int: Validated value.
         """
         kind: str = context.data.get("kind", "")
-        if kind == "firefly" or kind == "desktop":
-            if value > 1:
-                raise ValueError(f"multiple replicas invalid for {kind} sessions.")
+        if kind in {"firefly", "desktop"} and value > 1:
+            msg = f"multiple replicas invalid for {kind} sessions."
+            raise ValueError(msg)
         return value
 
 
@@ -134,13 +150,18 @@ class FetchSpec(BaseModel):
         object: Pydantic BaseModel object.
     """
 
-    kind: Optional[KINDS] = Field(
-        None, description="Type of skaha session.", examples=["headless"], alias="type"
+    kind: KINDS | None = Field(
+        None,
+        description="Type of skaha session.",
+        examples=["headless"],
+        alias="type",
     )
-    status: Optional[STATUS] = Field(
-        None, description="Status of the session.", examples=["Running"]
+    status: STATUS | None = Field(
+        None,
+        description="Status of the session.",
+        examples=["Running"],
     )
-    view: Optional[VIEW] = Field(None, description="Number of views.", examples=["all"])
+    view: VIEW | None = Field(None, description="Number of views.", examples=["all"])
 
     model_config = ConfigDict(validate_assignment=True, populate_by_name=True)
 
@@ -187,9 +208,9 @@ class ContainerRegistry(BaseModel):
         Returns:
             str: Validated value.
         """
-        assert (
-            value == "images.canfar.net"
-        ), "Currently only images.canfar.net is supported"
+        if value != "images.canfar.net":
+            msg = "only images.canfar.net is supported."
+            raise ValueError(msg)
         return value
 
     def encoded(self) -> str:
