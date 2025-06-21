@@ -135,12 +135,10 @@ class SkahaClient(BaseSettings):
 
     _client: Client | None = PrivateAttr(
         default=None,
-        init=False,
     )
 
     _asynclient: AsyncClient | None = PrivateAttr(
         default=None,
-        init=False,
     )
 
     # Model Validation Methods
