@@ -48,7 +48,7 @@ class Configuration(BaseSettings):
             ValueError: If the config file is empty.
         """
         if not CONFIG_PATH.exists():
-            msg = f"config {CONFIG_PATH} does not exist."
+            msg = f"{CONFIG_PATH} does not exist."
             raise FileNotFoundError(msg)
 
         try:

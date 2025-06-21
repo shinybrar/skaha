@@ -373,9 +373,7 @@ async def find(
     """
     config = SearchConfig()
 
-    async with Discover(
-        config, timeout=timeout, max_connections=100
-    ) as discovery:
+    async with Discover(config, timeout=timeout, max_connections=100) as discovery:
         results = await discovery.servers(dev=dev)
         return await display(results, dead=dead, details=details)
 
