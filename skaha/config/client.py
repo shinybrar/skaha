@@ -34,5 +34,5 @@ class RegistryConfig(BaseModel):
         description="Secret for the container registry",
         min_length=1,
         max_length=255,
-        examples=["supersecret"],
+        examples=["sup3rs3cr3t"],
     )
