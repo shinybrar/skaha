@@ -1,103 +1,26 @@
-"""Skaha Server Configuration and Discovery Script - Pydantic Optimized Version."""
-
 from __future__ import annotations
 
 import asyncio
-import sys
 import time
 
 import httpx
-import questionary
-from pydantic import BaseModel, Field
 from rich.console import Console
 from typing_extensions import Self
 
-
-class SearchConfig(BaseModel):
-    """Configuration model for server discovery settings."""
-
-    registries: dict[str, str] = Field(
-        default={
-            "https://spsrc27.iaa.csic.es/reg/resource-caps": "SRCnet",
-            "https://ws.cadc-ccda.hia-iha.nrc-cnrc.gc.ca/reg/resource-caps": "CADC",
-        }
-    )
-
-    names: dict[str, str] = Field(
-        default={
-            "ivo://canfar.net/src/skaha": "Canada",
-            "ivo://canfar.cam.uksrc.org/skaha": "UK-Cambridge",
-            "ivo://canfar.ral.uksrc.org/skaha": "UK-RAL",
-            "ivo://src.skach.org/skaha": "Switzerland",
-            "ivo://espsrc.iaa.csic.es/skaha": "Spain",
-            "ivo://canfar.itsrc.oact.inaf.it/skaha": "Italy",
-            "ivo://shion-sp.mtk.nao.ac.jp/skaha": "Japan",
-            "ivo://canfar.krsrc.kr/skaha": "Korea",
-            "ivo://canfar.ska.zverse.space/skaha": "China",
-            "ivo://cadc.nrc.ca/skaha": "CANFAR",
-        }
-    )
-
-    omit: list[tuple[str, str]] = Field(
-        default=[("CADC", "ivo://canfar.net/src/skaha")]
-    )
-
-    excluded: tuple[str, ...] = Field(
-        default=("dev", "development", "test", "demo", "stage", "staging")
-    )
-
-
-class ServerInfo(BaseModel):
-    """Model to store Skaha Server endpoint information."""
-
-    registry: str
-    uri: str
-    url: str
-    status: int | None = None
-    name: str | None = None
-
-
-class RegistryInfo(BaseModel):
-    """Model for registry contents."""
-
-    name: str
-    content: str
-    success: bool = True
-    error: str | None = None
-
-
-class DiscoveryResults(BaseModel):
-    """Model for complete discovery results."""
-
-    endpoints: list[ServerInfo] = Field(default_factory=list)
-    total_time: float = 0.0
-    registry_fetch_time: float = 0.0
-    endpoint_check_time: float = 0.0
-    found: int = 0
-    checked: int = 0
-    successful: int = 0
-
-    def add(self, endpoint: ServerInfo) -> None:
-        """Add an endpoint to results."""
-        self.endpoints.append(endpoint)
-        if endpoint.status == 200:
-            self.successful += 1
-
-    def get_by_registry(self) -> dict[str, list[ServerInfo]]:
-        """Group endpoints by registry."""
-        results: dict[str, list[ServerInfo]] = {}
-        for endpoint in self.endpoints:
-            if endpoint.registry not in results:
-                results[endpoint.registry] = []
-            results[endpoint.registry].append(endpoint)
-        return results
+from skaha.config.registry import (
+    RegistryInfo,
+    RegistrySearchConfig,
+    SkahaServer,
+    SkahaServerResults,
+)
+from skaha.utils import display
 
 
 class Discover:
     """Optimized server discovery with single HTTP client and Pydantic models."""
 
     def __init__(
-        self, config: SearchConfig, timeout: int = 2, max_connections: int = 100
+        self, config: RegistrySearchConfig, timeout: int = 2, max_connections: int = 100
     ) -> None:
         """Initialize with configuration and connection limits."""
         self.config = config
@@ -165,12 +88,12 @@ class Discover:
 
     async def extract(
         self, registry: RegistryInfo, dev: bool = False
-    ) -> list[ServerInfo]:
+    ) -> list[SkahaServer]:
         """Extract skaha/capabilities endpoints from registry content asynchronously."""
         if not registry.success or not registry.content:
             return []
 
-        endpoints: list[ServerInfo] = []
+        endpoints: list[SkahaServer] = []
 
         for entry in registry.content.splitlines():
             line = entry.strip()
@@ -194,7 +117,7 @@ class Discover:
                 if (registry.name, uri) in self.config.omit:
                     continue
 
-                endpoint = ServerInfo(
+                endpoint = SkahaServer(
                     registry=registry.name,
                     uri=uri,
                     url=url,
@@ -204,7 +127,7 @@ class Discover:
 
         return endpoints
 
-    async def check(self, endpoint: ServerInfo) -> ServerInfo:
+    async def check(self, endpoint: SkahaServer) -> SkahaServer:
         """Check endpoint status using HEAD request."""
         try:
             response = await self.client.head(endpoint.url)
@@ -213,9 +136,9 @@ class Discover:
             endpoint.status = None
         return endpoint
 
-    async def servers(self, dev: bool = False) -> DiscoveryResults:
+    async def servers(self, dev: bool = False) -> SkahaServerResults:
         """Discover all servers with maximum parallelization."""
-        results = DiscoveryResults()
+        results = SkahaServerResults()
         start_time = time.time()
 
         # Step 1: Fetch all registries in parallel
@@ -227,7 +150,7 @@ class Discover:
         results.registry_fetch_time = time.time() - registry_start
 
         # Step 2: Extract all endpoints from all registries
-        all_endpoints: list[ServerInfo] = []
+        all_endpoints: list[SkahaServer] = []
         for registry_result in registry_results:
             endpoints = await self.extract(registry_result, dev)
             all_endpoints.extend(endpoints)
@@ -260,106 +183,12 @@ class Discover:
         return results
 
 
-async def display(
-    results: DiscoveryResults,
-    dead: bool = False,
-    details: bool = False,
-) -> ServerInfo:
-    """Display discovery results and require interactive selection.
-
-    Args:
-        results: Discovery results containing endpoint information
-        dead: Whether to show inactive endpoints. (default: False)
-        details: Whether to display detailed URI and URL information (default: False)
-
-    Returns:
-        ServerInfo: The selected server info
-
-    Raises:
-        SystemExit: If no endpoints are available for selection
-    """
-    console = Console()
-
-    vivos: list[ServerInfo] = []
-    morte: list[ServerInfo] = []
-
-    for endpoint in results.endpoints:
-        if endpoint.status == 200:
-            vivos.append(endpoint)
-        else:
-            morte.append(endpoint)
-
-    # Check if endpoints are available
-    if not vivos and not (dead and morte):
-        console.print("\n[bold red]No servers available.[/bold red]")
-        sys.exit(1)
-
-    # Create choices for questionary with equal length formatting
-    choices: list[questionary.Choice] = []
-    available: list[ServerInfo] = vivos
-    if dead:
-        available.extend(morte)
-
-    # Calculate maximum widths for alignment
-    max_name_width = max(len(endpoint.name or "Unknown") for endpoint in available)
-    max_registry_width = max(len(endpoint.registry) for endpoint in available)
-
-    max_uri_width = 0
-    if details:
-        max_uri_width = max(len(endpoint.uri) for endpoint in available)
-
-    for endpoint in available:
-        # Determine status indicator
-        indicator = "🔴" if endpoint.status is None else "🟢"
-
-        # Format name and registry with padding for alignment
-        name = (endpoint.name or "Unknown").ljust(max_name_width)
-        registry = endpoint.registry.ljust(max_registry_width)
-
-        # Create choice text with consistent spacing
-        choice = f"{indicator} {name} {registry}"
-
-        # Add detailed info if requested with alignment
-        if details:
-            uri = endpoint.uri.ljust(max_uri_width)
-            choice += f" {uri} {endpoint.url}"
-
-        choices.append(questionary.Choice(title=choice, value=endpoint))
-
-    # Use questionary to select an endpoint
-    try:
-        selection: ServerInfo | None = await questionary.select(
-            "Select a Skaha Server:",
-            choices=choices,
-            style=questionary.Style(
-                [
-                    ("question", "bold"),
-                    ("answer", "fg:#ff9d00 bold"),
-                    ("pointer", "fg:#ff9d00 bold"),
-                    ("highlighted", "fg:#ff9d00 bold"),
-                    ("selected", "fg:#cc5454"),
-                    ("separator", "fg:#cc5454"),
-                    ("instruction", ""),
-                    ("text", ""),
-                    ("disabled", "fg:#858585 italic"),
-                ]
-            ),
-        ).ask_async()
-    except KeyboardInterrupt:
-        sys.exit(0)
-    else:
-        if selection is None:
-            # User cancelled with Ctrl+C
-            sys.exit(0)
-        return selection
-
-
-async def find(
+async def servers(
     dev: bool = False,
     dead: bool = False,
     details: bool = False,
     timeout: int = 2,
-) -> ServerInfo:
+) -> SkahaServer:
     """Find and select a Skaha Server.
 
     Args:
@@ -371,13 +200,13 @@ async def find(
     Returns:
         ServerInfo: The selected server info.
     """
-    config = SearchConfig()
+    config = RegistrySearchConfig()
 
     async with Discover(config, timeout=timeout, max_connections=100) as discovery:
         results = await discovery.servers(dev=dev)
-        return await display(results, dead=dead, details=details)
+        return await display.servers(results, show_dead=dead, show_details=details)
 
 
 if __name__ == "__main__":
     # Test with active endpoints and details
-    server = asyncio.run(find())
+    server = asyncio.run(servers())
