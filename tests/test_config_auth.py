@@ -3,8 +3,6 @@
 import time
 from tempfile import NamedTemporaryFile
 
-import pytest
-
 from skaha.config.auth import (
     OIDC,
     X509,
@@ -147,7 +145,7 @@ class TestOIDC:
         """Test expired property when token is still valid."""
         future_time = time.time() + 3600
         config = OIDC()
-        config.token.access = "test_access_token"
+        config.token.refresh = "test_refresh_token"
         config.token.expiry = future_time
         assert config.expired is False
 
@@ -216,9 +214,11 @@ class TestAuthConfig:
     """Test authentication configuration."""
 
     def test_default_values(self) -> None:
-        """Test that AuthConfig requires mode to be set."""
-        with pytest.raises(ValueError, match="Field required"):
-            AuthConfig()
+        """Test that AuthConfig can be instantiated with default values."""
+        config = AuthConfig()
+        assert config.mode is None
+        assert isinstance(config.oidc, OIDC)
+        assert isinstance(config.x509, X509)
 
     def test_with_oidc_mode(self) -> None:
         """Test AuthConfig with OIDC mode."""
@@ -237,18 +237,12 @@ class TestAuthConfig:
     def test_valid_oidc_mode_invalid_config(self) -> None:
         """Test valid method with OIDC mode but invalid OIDC configuration."""
         config = AuthConfig(mode="oidc")
-        with pytest.raises(
-            ValueError, match="OIDC mode selected but OIDC configuration is invalid"
-        ):
-            config.valid()
+        assert config.valid() is False
 
     def test_valid_x509_mode_invalid_config(self) -> None:
         """Test valid method with X.509 mode but invalid X.509 configuration."""
         config = AuthConfig(mode="x509")
-        with pytest.raises(
-            ValueError, match="X509 mode selected but X509 configuration is invalid"
-        ):
-            config.valid()
+        assert config.valid() is False
 
     def test_valid_oidc_mode_valid_config(self) -> None:
         """Test valid method with OIDC mode and valid OIDC configuration."""
@@ -276,12 +270,12 @@ class TestAuthConfig:
     def test_expired_oidc_mode(self) -> None:
         """Test expired method with OIDC mode."""
         config = AuthConfig(mode="oidc")
-        # OIDC config is expired by default (no access token)
+        # OIDC config is expired by default (no refresh token)
         assert config.expired() is True
 
-        # Set valid access token
+        # Set valid refresh token
         future_time = time.time() + 3600
-        config.oidc.token.access = "test_access_token"
+        config.oidc.token.refresh = "test_refresh_token"
         config.oidc.token.expiry = future_time
         assert config.expired() is False
 

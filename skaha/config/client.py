@@ -8,10 +8,10 @@ from pydantic import AnyHttpUrl, BaseModel, Field
 class ClientConfig(BaseModel):
     """Client Configuration Model."""
 
-    url: AnyHttpUrl | None = Field(default=None, description="Server URL")
+    url: str | None = Field(default=None, description="Server URL")
     version: str | None = Field(default=None, description="Server API version")
     concurrency: int | None = Field(
-        default=10, description="Number of concurrent requests to the server"
+        default=32, description="Number of concurrent requests to the server"
     )
     timeout: int | None = Field(
         default=30, description="Timeout for server requests in seconds", gt=0, le=300
@@ -21,7 +21,7 @@ class ClientConfig(BaseModel):
 class RegistryConfig(BaseModel):
     """Container Registry Configuration Model."""
 
-    url: AnyHttpUrl | None = Field(default=None, description="Container registry URL")
+    url: AnyHttpUrl | None = Field(default=None, description="Container Registry URL")
     username: str | None = Field(
         default=None,
         description="Username for the container registry",

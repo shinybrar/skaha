@@ -267,6 +267,8 @@ addopts = [
     "--cov-report=html",
     "--cov-report=xml",
     "--cov-fail-under=80",
+    "-n=auto",  # Enable parallel execution with pytest-xdist
+    "--dist=loadfile",  # Use loadfile distribution to ensure tests in same file run in same worker (required for pytest-order)
 ]
 testpaths = ["tests"]
 asyncio_mode = "auto"
@@ -274,6 +276,7 @@ markers = [
     "integration: marks tests as integration tests (deselect with '-m \"not integration\"')",
     "unit: marks tests as unit tests",
     "slow: marks tests as slow (deselect with '-m \"not slow\"')",
+    "order: marks tests that need to run in a specific order (will run sequentially)",
 ]
 filterwarnings = [
     "error",

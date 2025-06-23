@@ -5,16 +5,19 @@ from __future__ import annotations
 import asyncio
 import contextlib
 import math
+import socket
 import time
 import webbrowser
 from typing import Any
 
 import httpx
+import jwt
 import segno
 from rich.console import Console
 from rich.progress import BarColumn, Progress, TextColumn, TimeRemainingColumn
 
 from skaha import get_logger
+from skaha.config.auth import OIDC, OIDCClientConfig, OIDCTokenConfig, OIDCURLConfig
 
 console = Console()
 log = get_logger(__name__)
@@ -64,8 +67,10 @@ async def register(url: str, client: httpx.AsyncClient | None = None) -> dict[st
     Returns:
         dict[str, Any]: Client registration details.
     """
+    hostname = socket.gethostname()
+    date = time.strftime("%Y-%m-%d %H:%M", time.gmtime())
     payload: dict[str, Any] = {
-        "client_name": "Science Platform CLI",
+        "client_name": f"Science Platform CLI @ {hostname} {date}",
         "grant_types": [
             "urn:ietf:params:oauth:grant-type:device_code",
             "refresh_token",
@@ -76,8 +81,8 @@ async def register(url: str, client: httpx.AsyncClient | None = None) -> dict[st
     }
 
     if client is None:
-        async with httpx.AsyncClient() as http_client:
-            response = await http_client.post(url, json=payload)
+        async with httpx.AsyncClient() as http:
+            response = await http.post(url, json=payload)
             response.raise_for_status()
             data: dict[str, Any] = response.json()
     else:
@@ -323,54 +328,72 @@ async def _authflow_impl(
             raise TimeoutError(msg) from exc
 
 
-async def main() -> None:
-    """Main async function for OIDC Device Authorization Flow.
+async def authenticate(oidc: OIDC) -> OIDC:
+    """Authenticate using OIDC Device Authorization Flow.
 
-    Demonstrates the complete OIDC device authorization flow including:
-    - Discovery of OIDC provider configuration
-    - Client registration
-    - Device authorization flow
-    - Token acquisition
-    - User info retrieval
+    Args:
+        oidc (OIDC): OIDC configuration.
+        console (Console): Rich console for output.
+
+    Returns:
+        OIDC: Updated OIDC configuration with tokens.
     """
-    log.info("Starting OIDC Device Authorization Flow...")
-    discovery_url: str = "https://ska-iam.stfc.ac.uk/.well-known/openid-configuration"
-
+    console.print("[bold blue]Starting OIDC Device Authentication[/bold blue]")
     async with httpx.AsyncClient() as client:
-        config: dict[str, Any] = await discover(discovery_url, client)
-        device_auth_endpoint = config["device_authorization_endpoint"]
-        register_url: str = str(config.get("registration_endpoint"))
-        token_endpoint: str = str(config["token_endpoint"])
-        log.info("Discovered OIDC configuration:")
-        log.info("Device Registration Endpoint: %s", register_url)
-        log.info("Device Authorization Endpoint: %s", device_auth_endpoint)
-        log.info("Token Endpoint: %s", token_endpoint)
-        log.info("Registering client with OIDC provider...")
+        response: dict[str, Any] = await discover(str(oidc.endpoints.discovery), client)
+        oidc.endpoints.device = response["device_authorization_endpoint"]
+        oidc.endpoints.registration = response["registration_endpoint"]
+        oidc.endpoints.token = response["token_endpoint"]
 
-        client_info: dict[str, Any] = await register(register_url, client)
-        client_id = client_info["client_id"]
-        client_secret = client_info["client_secret"]
-        log.info("Client registered successfully.")
+        log.debug("Discovered OIDC configuration:")
+        log.debug("Device Registration Endpoint: %s", oidc.endpoints.registration)
+        log.debug("Device Authorization Endpoint: %s", oidc.endpoints.device)
+        log.debug("Token Endpoint: %s", oidc.endpoints.token)
 
-        log.info("Starting OIDC Device Authorization Flow...")
-        tokens = await authflow(
-            device_auth_endpoint, token_endpoint, client_id, client_secret, client
+        console.print("[green]✓[/green] OIDC Configuration discovered successfully")
+
+        device: dict[str, Any] = await register(
+            str(oidc.endpoints.registration), client
         )
-        log.info("OIDC Tokens successfully obtained.")
-        log.info("OIDC Device Authorization Flow completed successfully.")
+        oidc.client.identity = device["client_id"]
+        oidc.client.secret = device["client_secret"]
 
-        # Use access token to get user info
-        userinfo_url: str = config["userinfo_endpoint"]
+        console.print("[green]✓[/green] OIDC device registered successfully")
+
+        tokens = await authflow(
+            str(oidc.endpoints.device),
+            str(oidc.endpoints.token),
+            str(oidc.client.identity),
+            str(oidc.client.secret),
+            client,
+        )
+
+        oidc.token.access = tokens["access_token"]
+        oidc.token.refresh = tokens["refresh_token"]
+        oidc.token.expiry = jwt.decode(  # type: ignore [attr-defined]
+            str(oidc.token.refresh), options={"verify_signature": False}
+        ).get("exp")
+
+        console.print("[green]✓[/green] OIDC device authenticated successfully")
+
+        url: str = response["userinfo_endpoint"]
         headers = {
-            "Authorization": f"Bearer {tokens.get('access_token')}",
+            "Authorization": f"Bearer {oidc.token.access}",
         }
-        userinfo_response = await client.get(userinfo_url, headers=headers)
-        userinfo_response.raise_for_status()
-        userinfo = userinfo_response.json()
-        log.info("\nUser Info:")
-        log.info(userinfo)
-        log.info("\nOIDC Tokens Valid.")
+        user = await client.get(url, headers=headers)
+        user.raise_for_status()
+        username = user.json().get("preferred_username")
+
+        console.print(f"[green]✓[/green] Successfully authenticated as {username}")
+        return oidc
 
 
 if __name__ == "__main__":
-    asyncio.run(main())
+    config = OIDC(
+        endpoints=OIDCURLConfig(
+            discovery="https://ska-iam.stfc.ac.uk/.well-known/openid-configuration"
+        ),
+        client=OIDCClientConfig(),
+        token=OIDCTokenConfig(),
+    )
+    asyncio.run(authenticate(config))

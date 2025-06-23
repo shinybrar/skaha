@@ -7,11 +7,14 @@ using the cadcutils.net.auth library as the backbone for X509 authentication.
 from __future__ import annotations
 
 from pathlib import Path
-from typing import Any
+from typing import TYPE_CHECKING, Any
 
 from cadcutils.net.auth import Subject, get_cert  # type: ignore[import-untyped]
 from cryptography import x509
 from cryptography.hazmat.backends import default_backend
+
+if TYPE_CHECKING:
+    from skaha.config import auth
 
 
 def gather(
@@ -118,3 +121,26 @@ def inspect(path: Path | None = None) -> dict[str, Any]:
     except Exception as err:
         msg = f"Failed to inspect certificate: {err}"
         raise ValueError(msg) from err
+
+
+def authenticate(config: auth.X509) -> auth.X509:
+    """Authenticate using X509 certificate.
+
+    Args:
+        config (X509Config): X509 configuration.
+
+    Returns:
+        X509Config: X509 configuration.
+
+    Raises:
+        ValueError: If certificate cannot be read or parsed.
+    """
+    try:
+        data = gather()
+        config.path = data["path"]
+        config.expiry = data["expiry"]
+    except Exception as err:
+        msg = f"Failed to authenticate with X509 certificate: {err}"
+        raise ValueError(msg) from err
+    else:
+        return config

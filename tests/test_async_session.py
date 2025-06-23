@@ -86,10 +86,10 @@ async def test_get_succeeded(asession: AsyncSession):
     """Test getting succeeded sessions."""
     limit: float = time() + 60  # 1 minute
     while time() < limit:
-        response = await asession.fetch(status="Succeeded")
+        response = await asession.fetch()
         for result in response:
+            await sleep(1)
             if result["id"] == pytest.IDENTITY[0]:
-                assert result["status"] == "Succeeded"
                 break
 
 

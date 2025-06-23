@@ -12,11 +12,12 @@ from skaha.auth.oidc import (
     _cancel_pending_tasks,
     _poll_token,
     _poll_with_backoff,
+    authenticate,
     authflow,
     discover,
-    main,
     register,
 )
+from skaha.config.auth import OIDC, OIDCClientConfig, OIDCTokenConfig, OIDCURLConfig
 
 
 class TestOIDCExceptions:
@@ -119,7 +120,9 @@ class TestRegisterFunction:
         call_args = mock_client.post.call_args
         assert call_args[0][0] == "https://example.com/register"
         assert "client_name" in call_args[1]["json"]
-        assert call_args[1]["json"]["client_name"] == "Science Platform CLI"
+        # Check that client_name starts with "Science Platform CLI @"
+        client_name = call_args[1]["json"]["client_name"]
+        assert client_name.startswith("Science Platform CLI @")
 
     @pytest.mark.asyncio
     async def test_register_without_client(self) -> None:
@@ -420,12 +423,21 @@ class TestAuthflowFunction:
                 assert result["access_token"] == "test_token"
 
 
-class TestMainFunction:
-    """Test the main function."""
+class TestAuthenticateFunction:
+    """Test the authenticate function."""
 
     @pytest.mark.asyncio
-    async def test_main_function(self) -> None:
-        """Test the main function integration."""
+    async def test_authenticate_function(self) -> None:
+        """Test the authenticate function integration."""
+        # Create initial OIDC config
+        oidc_config = OIDC(
+            endpoints=OIDCURLConfig(
+                discovery="https://example.com/.well-known/openid-configuration"
+            ),
+            client=OIDCClientConfig(),
+            token=OIDCTokenConfig(),
+        )
+
         with patch("httpx.AsyncClient") as mock_client_class:
             mock_client = AsyncMock()
             mock_client_class.return_value.__aenter__.return_value = mock_client
@@ -452,25 +464,35 @@ class TestMainFunction:
                 "sub": "user123",
                 "name": "Test User",
                 "email": "test@example.com",
+                "preferred_username": "testuser",
             }
 
             # Configure mock client responses
             mock_client.get.side_effect = [discovery_response, userinfo_response]
             mock_client.post.side_effect = [register_response]
 
-            with patch("skaha.auth.oidc.authflow") as mock_authflow:
+            with (
+                patch("skaha.auth.oidc.authflow") as mock_authflow,
+                patch("jwt.decode") as mock_jwt_decode,
+            ):
                 mock_authflow.return_value = {
                     "access_token": "test_access_token",
                     "refresh_token": "test_refresh_token",
                 }
+                mock_jwt_decode.return_value = {"exp": 1234567890}
 
-                # Should complete without errors
-                await main()
+                # Should complete without errors and return updated config
+                result = await authenticate(oidc_config)
 
                 # Verify the flow was called correctly
                 mock_authflow.assert_called_once()
                 assert mock_client.get.call_count == 2  # discovery + userinfo
                 assert mock_client.post.call_count == 1  # registration
+
+                # Verify the result has updated tokens
+                assert result.token.access == "test_access_token"
+                assert result.token.refresh == "test_refresh_token"
+                assert result.token.expiry == 1234567890
 
 
 class TestIntegration:

@@ -16,7 +16,7 @@ def test_client_config_instantiation() -> None:
     config = ClientConfig()
     assert config.url is None
     assert config.version is None
-    assert config.concurrency == 10
+    assert config.concurrency == 32
     assert config.timeout == 30
 
 
@@ -25,7 +25,7 @@ def test_client_config_with_values() -> None:
     config = ClientConfig(
         url="https://example.com", version="v1", concurrency=5, timeout=60
     )
-    assert str(config.url) == "https://example.com/"
+    assert config.url == "https://example.com"
     assert config.version == "v1"
     assert config.concurrency == 5
     assert config.timeout == 60
@@ -68,7 +68,7 @@ def test_configuration_with_custom_values() -> None:
         "registry": {"username": "testuser"},
     }
     config = Configuration.model_validate(config_data)
-    assert str(config.client.url) == "https://example.com/"
+    assert config.client.url == "https://example.com"
     assert config.client.timeout == 45
     assert config.registry.username == "testuser"
 
@@ -128,7 +128,7 @@ def test_configuration_assemble() -> None:
         config = Configuration.assemble()
 
         assert config.auth.mode == "x509"
-        assert str(config.client.url) == "https://test.example.com/"
+        assert config.client.url == "https://test.example.com"
         assert config.client.timeout == 60
         assert config.registry.username == "assembleuser"
 

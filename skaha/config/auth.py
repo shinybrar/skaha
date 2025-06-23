@@ -39,7 +39,7 @@ class OIDCTokenConfig(BaseModel):
 
     access: str | None = Field(default=None, description="Access token")
     refresh: str | None = Field(default=None, description="Refresh token")
-    expiry: float | None = Field(default=None, description="Token expiry ctime")
+    expiry: float | None = Field(default=None, description="Refresh Token expiry ctime")
 
 
 class OIDC(BaseModel):
@@ -86,7 +86,7 @@ class OIDC(BaseModel):
         Returns:
             bool: True if the access token is active, False otherwise.
         """
-        if self.token.access is None:
+        if self.token.refresh is None:
             return True
         if self.token.expiry is None:
             return True
@@ -126,7 +126,7 @@ class X509(BaseModel):
 class AuthConfig(BaseSettings):
     """Authentication configuration."""
 
-    mode: Annotated[str, Field(description="Authentication mode")]
+    mode: Annotated[str | None, Field(default=None, description="Authentication mode")]
     oidc: Annotated[
         OIDC,
         Field(
@@ -151,13 +151,11 @@ class AuthConfig(BaseSettings):
         Raises:
             ValueError: If the selected mode's configuration is invalid.
         """
-        if self.mode == "oidc" and not self.oidc.valid():
-            msg = "OIDC mode selected but OIDC configuration is invalid."
-            raise ValueError(msg)
-        if self.mode == "x509" and not self.x509.valid():
-            msg = "X509 mode selected but X509 configuration is invalid."
-            raise ValueError(msg)
-        return True
+        if self.mode == "oidc":
+            return self.oidc.valid()
+        if self.mode == "x509":
+            return self.x509.valid()
+        return False
 
     def expired(self) -> bool:
         """Check if the authentication configuration is expired.
