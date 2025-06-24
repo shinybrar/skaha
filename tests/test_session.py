@@ -51,6 +51,7 @@ def test_fetch_with_malformed_status(session: Session):
         session.fetch(status="invalid")
 
 
+@pytest.mark.slow
 def test_session_stats(session: Session):
     """Test fetching images with kind."""
     assert "instances" in session.stats()
@@ -110,7 +111,7 @@ def test_get_session_info(session: Session):
             break
     assert success, "Session info not found."
 
-
+@pytest.mark.slow
 def test_session_logs(session: Session):
     """Test getting session logs."""
     limit = time() + 60  # 1 minute
@@ -144,6 +145,7 @@ def test_session_events(session: Session):
 def test_delete_session(session: Session, name: str):
     """Test deleting a session."""
     # Delete the session
+    sleep(10)
     deletion = session.destroy_with(prefix=name)
     assert deletion == {pytest.IDENTITY[0]: True}
 

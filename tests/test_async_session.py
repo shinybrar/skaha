@@ -44,6 +44,7 @@ async def test_fetch_with_malformed_view(asession: AsyncSession):
 
 
 @pytest.mark.asyncio
+@pytest.mark.slow
 async def test_get_session_stats(asession: AsyncSession):
     """Test fetching images with kind."""
     response = await asession.stats()
@@ -63,6 +64,7 @@ async def test_create_session_invalid(asession: AsyncSession, name: str):
 
 @pytest.mark.asyncio
 @pytest.mark.order(1)
+@pytest.mark.slow
 async def test_create_session(asession: AsyncSession, name: str):
     """Test creating a session."""
     identity: list[str] = await asession.create(
@@ -82,6 +84,7 @@ async def test_create_session(asession: AsyncSession, name: str):
 
 @pytest.mark.asyncio
 @pytest.mark.order(2)
+@pytest.mark.slow
 async def test_get_succeeded(asession: AsyncSession):
     """Test getting succeeded sessions."""
     limit: float = time() + 60  # 1 minute
@@ -95,6 +98,7 @@ async def test_get_succeeded(asession: AsyncSession):
 
 @pytest.mark.asyncio
 @pytest.mark.order(3)
+@pytest.mark.slow
 async def test_get_logs(asession: AsyncSession):
     """Test getting logs for a session."""
     logs = await asession.logs(ids=pytest.IDENTITY)
@@ -106,6 +110,7 @@ async def test_get_logs(asession: AsyncSession):
 
 @pytest.mark.asyncio
 @pytest.mark.order(4)
+@pytest.mark.slow
 async def test_session_events(asession: AsyncSession):
     """Test getting session events."""
     done = False
@@ -121,6 +126,7 @@ async def test_session_events(asession: AsyncSession):
 
 @pytest.mark.asyncio
 @pytest.mark.order(5)
+@pytest.mark.slow
 async def test_delete_session(asession: AsyncSession, name: str):
     """Test deleting a session."""
     # Delete the session
