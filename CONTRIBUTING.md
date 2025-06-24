@@ -59,6 +59,33 @@ To run tests for Skaha, you need to have a valid CANFAR account and access to th
 uv run pytest
 ```
 
+#### Running Tests Efficiently
+
+Some tests in the Skaha test suite are marked as "slow" because they involve network operations, waiting for session states, or other time-consuming operations. These tests can take several minutes to complete.
+
+**Run all tests (including slow ones):**
+```bash
+uv run pytest
+```
+
+**Skip slow tests for faster development:**
+```bash
+uv run pytest -m "not slow"
+```
+
+**Run only slow tests:**
+```bash
+uv run pytest -m "slow"
+```
+
+The slow tests are primarily integration tests that interact with the CANFAR Science Platform and include:
+- Session creation and management tests
+- Log retrieval tests
+- Authentication timeout tests
+- Session statistics tests
+
+For rapid development and testing, it's recommended to use `-m "not slow"` to skip these time-consuming tests during your development cycle, and run the full test suite before submitting your pull request.
+
 ### 6. Commit Your Changes
 
 Skaha uses the [conventional commit messages](https://www.conventionalcommits.org/en/v1.0.0/) standard to ensure the commit history human and machine readable. Skaha ships with a tool called `commitizen` that helps you craft commit messages in the correct format.
