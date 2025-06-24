@@ -5,7 +5,7 @@ from pathlib import Path
 
 import toml
 
-from .logging import configure_logging, get_logger, set_log_level
+from .utils.logging import configure_logging, get_logger, set_log_level
 
 # Root path to the Skaha Project
 BASE_PATH: Path = Path(__file__).absolute().parent.parent

@@ -12,10 +12,7 @@ from unittest.mock import Mock, patch
 import pytest
 from rich.logging import RichHandler
 
-if TYPE_CHECKING:
-    from collections.abc import Generator
-
-from skaha.logging import (
+from skaha.utils.logging import (
     CONFIG_DIR,
     CONFIG_PATH,
     FORMAT,
@@ -31,6 +28,9 @@ from skaha.logging import (
     get_logger,
     set_log_level,
 )
+
+if TYPE_CHECKING:
+    from collections.abc import Generator
 
 
 class TestSkahaLogger:
@@ -102,7 +102,7 @@ class TestSkahaLogger:
         """Test configuration with file logging enabled."""
         log_file = temp_log_dir / "test.log"
 
-        with patch("skaha.logging.LOGFILE_PATH", log_file):
+        with patch("skaha.utils.logging.LOGFILE_PATH", log_file):
             skaha_logger.configure(filelog=True)
 
         logger = skaha_logger.logger
@@ -250,7 +250,7 @@ class TestSkahaLogger:
         """Test file handler is configured correctly."""
         log_file = temp_log_dir / "test.log"
 
-        with patch("skaha.logging.LOGFILE_PATH", log_file):
+        with patch("skaha.utils.logging.LOGFILE_PATH", log_file):
             skaha_logger.configure(filelog=True)
 
         file_handler = skaha_logger._file_handler  # noqa: SLF001
@@ -271,7 +271,7 @@ class TestConvenienceFunctions:
 
     def test_configure_logging_calls_global_logger(self) -> None:
         """Test that configure_logging calls the global logger."""
-        with patch("skaha.logging._skaha_logger.configure") as mock_configure:
+        with patch("skaha.utils.logging._skaha_logger.configure") as mock_configure:
             configure_logging(loglevel=logging.DEBUG, filelog=True)
             mock_configure.assert_called_once_with(loglevel=logging.DEBUG, filelog=True)
 
@@ -285,20 +285,22 @@ class TestConvenienceFunctions:
 
     def test_get_logger_with_name(self) -> None:
         """Test get_logger with name returns child logger."""
-        with patch("skaha.logging._skaha_logger.get_child_logger") as mock_get_child:
+        with patch(
+            "skaha.utils.logging._skaha_logger.get_child_logger"
+        ) as mock_get_child:
             get_logger("test.module")
             mock_get_child.assert_called_once_with("test.module")
 
     def test_set_log_level_calls_global_logger(self) -> None:
         """Test that set_log_level calls the global logger."""
-        with patch("skaha.logging._skaha_logger.set_level") as mock_set_level:
+        with patch("skaha.utils.logging._skaha_logger.set_level") as mock_set_level:
             set_log_level(logging.WARNING)
             mock_set_level.assert_called_once_with(logging.WARNING)
 
     def test_enable_debug_calls_global_logger(self) -> None:
         """Test that enable_debug calls the global logger."""
         with patch(
-            "skaha.logging._skaha_logger.enable_debug_mode"
+            "skaha.utils.logging._skaha_logger.enable_debug_mode"
         ) as mock_enable_debug:
             enable_debug()
             mock_enable_debug.assert_called_once()
@@ -354,7 +356,7 @@ class TestLoggingIntegration:
         logger = SkahaLogger()
 
         try:
-            with patch("skaha.logging.LOGFILE_PATH", log_file):
+            with patch("skaha.utils.logging.LOGFILE_PATH", log_file):
                 logger.configure(loglevel=logging.DEBUG, filelog=True)
 
             # Log some messages
@@ -402,7 +404,7 @@ class TestLoggingIntegration:
         logger = SkahaLogger()
 
         try:
-            with patch("skaha.logging.LOGFILE_PATH", log_file):
+            with patch("skaha.utils.logging.LOGFILE_PATH", log_file):
                 logger.configure(loglevel=logging.WARNING, filelog=True)
 
             test_logger = logger.logger
@@ -431,7 +433,7 @@ class TestLoggingIntegration:
         logger = SkahaLogger()
 
         try:
-            with patch("skaha.logging.LOGFILE_PATH", log_file):
+            with patch("skaha.utils.logging.LOGFILE_PATH", log_file):
                 logger.configure(loglevel=logging.DEBUG, filelog=True)
 
             test_logger = logger.logger
@@ -464,7 +466,7 @@ class TestLoggingIntegration:
         logger = SkahaLogger()
 
         try:
-            with patch("skaha.logging.LOGFILE_PATH", log_file):
+            with patch("skaha.utils.logging.LOGFILE_PATH", log_file):
                 logger.configure(loglevel=logging.INFO, filelog=True)
 
             test_logger = logger.logger
@@ -533,7 +535,7 @@ class TestErrorHandling:
 
         try:
             with (
-                patch("skaha.logging.LOGFILE_PATH", log_file),
+                patch("skaha.utils.logging.LOGFILE_PATH", log_file),
                 pytest.raises(PermissionError),
             ):
                 # Currently the logging module raises PermissionError

@@ -18,9 +18,10 @@ class RegistrySearchConfig(BaseModel):
     names: dict[str, str] = Field(
         default={
             "ivo://canfar.net/src/skaha": "Canada",
-            "ivo://canfar.cam.uksrc.org/skaha": "UK-Cambridge",
+            "ivo://swesrc.chalmers.se/skaha": "Sweden",
+            "ivo://canfar.cam.uksrc.org/skaha": "UK-CAM",
             "ivo://canfar.ral.uksrc.org/skaha": "UK-RAL",
-            "ivo://src.skach.org/skaha": "Switzerland",
+            "ivo://src.skach.org/skaha": "Swiss",
             "ivo://espsrc.iaa.csic.es/skaha": "Spain",
             "ivo://canfar.itsrc.oact.inaf.it/skaha": "Italy",
             "ivo://shion-sp.mtk.nao.ac.jp/skaha": "Japan",

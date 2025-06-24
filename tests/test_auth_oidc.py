@@ -277,6 +277,7 @@ class TestPollWithBackoff:
             mock_poll.assert_called_once()
 
     @pytest.mark.asyncio
+    @pytest.mark.slow
     async def test_poll_with_backoff_timeout(self) -> None:
         """Test polling with backoff timeout."""
         mock_client = AsyncMock(spec=httpx.AsyncClient)
