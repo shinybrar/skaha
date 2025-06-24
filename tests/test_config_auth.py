@@ -10,6 +10,7 @@ from skaha.config.auth import (
     OIDCClientConfig,
     OIDCTokenConfig,
     OIDCURLConfig,
+    ServerInfo,
 )
 
 
@@ -294,3 +295,167 @@ class TestAuthConfig:
         """Test expired method with unknown mode."""
         config = AuthConfig(mode="unknown")
         assert config.expired() is True
+
+
+class TestServerInfo:
+    """Test server information configuration."""
+
+    def test_default_values(self) -> None:
+        """Test default values for ServerInfo."""
+        server = ServerInfo()
+        assert server.name is None
+        assert server.uri is None
+        assert server.url is None
+
+    def test_with_values(self) -> None:
+        """Test ServerInfo with custom values."""
+        server = ServerInfo(
+            name="Test Server",
+            uri="ivo://test.example.com/skaha",
+            url="https://test.example.com/skaha",
+        )
+        assert server.name == "Test Server"
+        assert server.uri == "ivo://test.example.com/skaha"
+        assert server.url == "https://test.example.com/skaha"
+
+    def test_partial_values(self) -> None:
+        """Test ServerInfo with partial values."""
+        server = ServerInfo(name="Test Server")
+        assert server.name == "Test Server"
+        assert server.uri is None
+        assert server.url is None
+
+
+class TestOIDCWithServer:
+    """Test OIDC configuration with server information."""
+
+    def test_default_server_field(self) -> None:
+        """Test that OIDC has a default server field."""
+        oidc = OIDC()
+        assert isinstance(oidc.server, ServerInfo)
+        assert oidc.server.name is None
+        assert oidc.server.uri is None
+        assert oidc.server.url is None
+
+    def test_with_server_info(self) -> None:
+        """Test OIDC with server information."""
+        server_info = ServerInfo(
+            name="Canada",
+            uri="ivo://canfar.net/src/skaha",
+            url="https://ws-uv.canfar.net/skaha",
+        )
+        oidc = OIDC(server=server_info)
+        assert oidc.server.name == "Canada"
+        assert oidc.server.uri == "ivo://canfar.net/src/skaha"
+        assert oidc.server.url == "https://ws-uv.canfar.net/skaha"
+
+    def test_server_field_serialization(self) -> None:
+        """Test that OIDC server field is properly serialized."""
+        server_info = ServerInfo(
+            name="Test Server",
+            uri="ivo://test.example.com/skaha",
+            url="https://test.example.com/skaha",
+        )
+        oidc = OIDC(server=server_info)
+
+        # Test model dump includes server field
+        data = oidc.model_dump()
+        assert "server" in data
+        assert data["server"]["name"] == "Test Server"
+        assert data["server"]["uri"] == "ivo://test.example.com/skaha"
+        assert data["server"]["url"] == "https://test.example.com/skaha"
+
+
+class TestX509WithServer:
+    """Test X509 configuration with server information."""
+
+    def test_default_server_field(self) -> None:
+        """Test that X509 has a default server field."""
+        x509 = X509()
+        assert isinstance(x509.server, ServerInfo)
+        assert x509.server.name is None
+        assert x509.server.uri is None
+        assert x509.server.url is None
+
+    def test_with_server_info(self) -> None:
+        """Test X509 with server information."""
+        server_info = ServerInfo(
+            name="CANFAR",
+            uri="ivo://cadc.nrc.ca/skaha",
+            url="https://ws-uv.canfar.net/skaha",
+        )
+        x509 = X509(server=server_info)
+        assert x509.server.name == "CANFAR"
+        assert x509.server.uri == "ivo://cadc.nrc.ca/skaha"
+        assert x509.server.url == "https://ws-uv.canfar.net/skaha"
+
+    def test_server_field_serialization(self) -> None:
+        """Test that X509 server field is properly serialized."""
+        server_info = ServerInfo(
+            name="Test Server",
+            uri="ivo://test.example.com/skaha",
+            url="https://test.example.com/skaha",
+        )
+        x509 = X509(server=server_info)
+
+        # Test model dump includes server field
+        data = x509.model_dump()
+        assert "server" in data
+        assert data["server"]["name"] == "Test Server"
+        assert data["server"]["uri"] == "ivo://test.example.com/skaha"
+        assert data["server"]["url"] == "https://test.example.com/skaha"
+
+
+class TestAuthConfigWithMethodSpecificServers:
+    """Test authentication configuration with method-specific server information."""
+
+    def test_oidc_server_access(self) -> None:
+        """Test accessing server info through OIDC method."""
+        server_info = ServerInfo(
+            name="Test OIDC Server",
+            uri="ivo://test.example.com/skaha",
+            url="https://test.example.com/skaha",
+        )
+        config = AuthConfig(mode="oidc")
+        config.oidc.server = server_info
+
+        assert config.oidc.server.name == "Test OIDC Server"
+        assert config.oidc.server.uri == "ivo://test.example.com/skaha"
+        assert config.oidc.server.url == "https://test.example.com/skaha"
+
+    def test_x509_server_access(self) -> None:
+        """Test accessing server info through X509 method."""
+        server_info = ServerInfo(
+            name="Test X509 Server",
+            uri="ivo://cadc.nrc.ca/skaha",
+            url="https://ws-uv.canfar.net/skaha",
+        )
+        config = AuthConfig(mode="x509")
+        config.x509.server = server_info
+
+        assert config.x509.server.name == "Test X509 Server"
+        assert config.x509.server.uri == "ivo://cadc.nrc.ca/skaha"
+        assert config.x509.server.url == "https://ws-uv.canfar.net/skaha"
+
+    def test_both_methods_with_different_servers(self) -> None:
+        """Test that both auth methods can have different server info."""
+        oidc_server = ServerInfo(
+            name="OIDC Server",
+            uri="ivo://oidc.example.com/skaha",
+            url="https://oidc.example.com/skaha",
+        )
+        x509_server = ServerInfo(
+            name="X509 Server",
+            uri="ivo://x509.example.com/skaha",
+            url="https://x509.example.com/skaha",
+        )
+
+        config = AuthConfig()
+        config.oidc.server = oidc_server
+        config.x509.server = x509_server
+
+        # Verify both servers are stored independently
+        assert config.oidc.server.name == "OIDC Server"
+        assert config.oidc.server.url == "https://oidc.example.com/skaha"
+        assert config.x509.server.name == "X509 Server"
+        assert config.x509.server.url == "https://x509.example.com/skaha"

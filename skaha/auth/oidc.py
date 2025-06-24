@@ -17,7 +17,13 @@ from rich.console import Console
 from rich.progress import BarColumn, Progress, TextColumn, TimeRemainingColumn
 
 from skaha import get_logger
-from skaha.config.auth import OIDC, OIDCClientConfig, OIDCTokenConfig, OIDCURLConfig
+from skaha.config.auth import (
+    OIDC,
+    OIDCClientConfig,
+    OIDCTokenConfig,
+    OIDCURLConfig,
+    ServerInfo,
+)
 
 console = Console()
 log = get_logger(__name__)
@@ -395,5 +401,6 @@ if __name__ == "__main__":
         ),
         client=OIDCClientConfig(),
         token=OIDCTokenConfig(),
+        server=ServerInfo(),
     )
     asyncio.run(authenticate(config))

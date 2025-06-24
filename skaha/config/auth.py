@@ -14,6 +14,14 @@ from skaha import get_logger
 log = get_logger(__name__)
 
 
+class ServerInfo(BaseModel):
+    """Server information for authentication configuration."""
+
+    name: str | None = Field(default=None, description="Server display name")
+    uri: str | None = Field(default=None, description="Server URI identifier")
+    url: str | None = Field(default=None, description="Server URL endpoint")
+
+
 class OIDCURLConfig(BaseModel):
     """OIDC URL configuration."""
 
@@ -55,6 +63,10 @@ class OIDC(BaseModel):
     token: Annotated[
         OIDCTokenConfig,
         Field(default_factory=OIDCTokenConfig, description="OIDC tokens"),
+    ]
+    server: Annotated[
+        ServerInfo,
+        Field(default_factory=ServerInfo, description="OIDC server information"),
     ]
 
     def valid(self) -> bool:
@@ -98,6 +110,10 @@ class X509(BaseModel):
 
     path: str | None = Field(default=None, description="Path to PEM certificate file")
     expiry: float | None = Field(default=None, description="Certificate expiry ctime")
+    server: Annotated[
+        ServerInfo,
+        Field(default_factory=ServerInfo, description="X509 server information"),
+    ]
 
     def valid(self) -> bool:
         """Check if the certificate filepath is defined and expiry is in the future.
