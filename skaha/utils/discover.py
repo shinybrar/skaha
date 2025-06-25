@@ -7,9 +7,9 @@ import httpx
 from rich.console import Console
 from typing_extensions import Self
 
-from skaha.config.registry import (
+from skaha.models.registry import (
+    IVOASearchConfig,
     RegistryInfo,
-    RegistrySearchConfig,
     SkahaServer,
     SkahaServerResults,
 )
@@ -20,7 +20,7 @@ class Discover:
     """Optimized server discovery with single HTTP client and Pydantic models."""
 
     def __init__(
-        self, config: RegistrySearchConfig, timeout: int = 2, max_connections: int = 100
+        self, config: IVOASearchConfig, timeout: int = 2, max_connections: int = 100
     ) -> None:
         """Initialize with configuration and connection limits."""
         self.config = config
@@ -200,7 +200,7 @@ async def servers(
     Returns:
         ServerInfo: The selected server info.
     """
-    config = RegistrySearchConfig()
+    config = IVOASearchConfig()
 
     async with Discover(config, timeout=timeout, max_connections=100) as discovery:
         results = await discovery.servers(dev=dev)

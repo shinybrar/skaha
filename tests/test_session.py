@@ -81,6 +81,7 @@ def test_create_session_cmd_without_headless(session: Session, name: str):
         )
 
 
+@pytest.mark.slow
 def test_create_session(session: Session, name: str):
     """Test creating a session."""
     identity: list[str] = session.create(
@@ -98,6 +99,7 @@ def test_create_session(session: Session, name: str):
     pytest.IDENTITY = identity
 
 
+@pytest.mark.slow
 def test_get_session_info(session: Session):
     """Test getting session info."""
     info: list[dict[str, Any]] = [{}]
@@ -110,6 +112,7 @@ def test_get_session_info(session: Session):
             success = True
             break
     assert success, "Session info not found."
+
 
 @pytest.mark.slow
 def test_session_logs(session: Session):
@@ -130,6 +133,7 @@ def test_session_logs(session: Session):
     assert success
 
 
+@pytest.mark.slow
 def test_session_events(session: Session):
     """Test getting session events."""
     limit = time() + 60  # 1 minute
@@ -142,6 +146,7 @@ def test_session_events(session: Session):
     assert pytest.IDENTITY[0] in events[0]
 
 
+@pytest.mark.slow
 def test_delete_session(session: Session, name: str):
     """Test deleting a session."""
     # Delete the session

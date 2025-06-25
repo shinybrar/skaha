@@ -12,7 +12,7 @@ from skaha.client import SkahaClient
 from skaha.utils import build
 
 if TYPE_CHECKING:
-    from skaha.models import KINDS, STATUS, VIEW
+    from skaha.models import KINDS, STATUS, VIEW  # type: ignore[attr-defined]
 
 log = get_logger(__name__)
 

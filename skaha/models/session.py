@@ -1,10 +1,13 @@
-"""Models for Skaha API."""
+"""Session-related models for Skaha API.
+
+This module contains Pydantic models related to session management,
+including specifications for creating and fetching sessions.
+"""
 
 from __future__ import annotations
 
 import warnings
-from base64 import b64encode
-from typing import Any, Literal, get_args
+from typing import Any, get_args
 
 from pydantic import (
     BaseModel,
@@ -16,13 +19,7 @@ from pydantic import (
 )
 from typing_extensions import Self
 
-from skaha import get_logger
-
-log = get_logger(__name__)
-
-KINDS = Literal["desktop", "notebook", "carta", "headless", "firefly"]
-STATUS = Literal["Pending", "Running", "Terminating", "Succeeded", "Error"]
-VIEW = Literal["all"]
+from skaha.models.types import Kind, Status, View
 
 
 class CreateSpec(BaseModel):
@@ -47,7 +44,7 @@ class CreateSpec(BaseModel):
     )
     cores: int = Field(1, description="Number of cores.", ge=1, le=256)
     ram: int = Field(4, description="Amount of RAM (GB).", ge=1, le=512)
-    kind: KINDS = Field(
+    kind: Kind = Field(
         ...,
         description="Type of skaha session.",
         examples=["headless", "notebook"],
@@ -93,7 +90,7 @@ class CreateSpec(BaseModel):
 
     @field_validator("kind", mode="after")
     @classmethod
-    def _validate_kind(cls, value: KINDS, context: ValidationInfo) -> KINDS:
+    def _validate_kind(cls, value: Kind, context: ValidationInfo) -> Kind:
         """Validate kind.
 
         Args:
@@ -103,7 +100,7 @@ class CreateSpec(BaseModel):
         Returns:
             KINDS: Validated value.
         """
-        valid: tuple[str] = get_args(KINDS)
+        valid: tuple[str] = get_args(Kind)
         if value not in valid:
             msg = f"invalid session kind: {value}"
             raise ValueError(msg)
@@ -150,73 +147,17 @@ class FetchSpec(BaseModel):
         object: Pydantic BaseModel object.
     """
 
-    kind: KINDS | None = Field(
+    kind: Kind | None = Field(
         None,
         description="Type of skaha session.",
         examples=["headless"],
         alias="type",
     )
-    status: STATUS | None = Field(
+    status: Status | None = Field(
         None,
         description="Status of the session.",
         examples=["Running"],
     )
-    view: VIEW | None = Field(None, description="Number of views.", examples=["all"])
+    view: View | None = Field(None, description="Number of views.", examples=["all"])
 
     model_config = ConfigDict(validate_assignment=True, populate_by_name=True)
-
-
-class ContainerRegistry(BaseModel):
-    """Authentication details for private container registry.
-
-    Args:
-        BaseModel (pydantic.BaseModel): Pydantic BaseModel.
-
-    Returns:
-        object: Pydantic BaseModel object.
-    """
-
-    url: str = Field(
-        default="images.canfar.net",
-        description="Server for the container registry.",
-        examples=["ghcr.io"],
-        validate_default=True,
-    )
-    username: str = Field(
-        ...,
-        description="Username for the container registry.",
-        examples=["shiny"],
-        min_length=1,
-        validate_default=True,
-    )
-    secret: str = Field(
-        ...,
-        description="Personal Access Token (PAT) for the container registry.",
-        examples=["ghp_1234567890"],
-        min_length=1,
-        validate_default=True,
-    )
-
-    @field_validator("url")
-    @classmethod
-    def _check_url(cls, value: str) -> str:
-        """Validate url.
-
-        Args:
-            value (str): Value to validate.
-
-        Returns:
-            str: Validated value.
-        """
-        if value != "images.canfar.net":
-            msg = "only images.canfar.net is supported."
-            raise ValueError(msg)
-        return value
-
-    def encoded(self) -> str:
-        """Return the encoded username:secret.
-
-        Returns:
-            str: String encoded in base64 format.
-        """
-        return b64encode(f"{self.username}:{self.secret}".encode()).decode()

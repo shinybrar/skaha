@@ -5,7 +5,7 @@ import sys
 import questionary
 from rich.console import Console
 
-from skaha.config.registry import SkahaServer, SkahaServerResults
+from skaha.models.registry import SkahaServer, SkahaServerResults
 
 
 async def servers(

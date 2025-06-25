@@ -7,7 +7,7 @@ from unittest.mock import AsyncMock, patch
 import pytest
 import questionary
 
-from skaha.config.registry import SkahaServer, SkahaServerResults
+from skaha.models import SkahaServer, SkahaServerResults
 from skaha.utils.convert import dict_to_tuples
 from skaha.utils.display import configure_server_choices, servers
 

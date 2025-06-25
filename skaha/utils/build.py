@@ -2,16 +2,19 @@
 
 from __future__ import annotations
 
-from typing import Any
+from typing import TYPE_CHECKING, Any
 
-from skaha.models import KINDS, STATUS, VIEW, CreateSpec, FetchSpec
+from skaha.models.session import CreateSpec, FetchSpec
 from skaha.utils import convert
+
+if TYPE_CHECKING:
+    from skaha.models.types import Kind, Status, View
 
 
 def fetch_parameters(
-    kind: KINDS | None = None,
-    status: STATUS | None = None,
-    view: VIEW | None = None,
+    kind: Kind | None = None,
+    status: Status | None = None,
+    view: View | None = None,
 ) -> dict[str, Any]:
     """Build parameters for fetching sessions."""
     values: dict[str, Any] = {
@@ -30,7 +33,7 @@ def create_parameters(
     image: str,
     cores: int = 2,
     ram: int = 4,
-    kind: KINDS = "headless",
+    kind: Kind = "headless",
     gpu: int | None = None,
     cmd: str | None = None,
     args: str | None = None,
