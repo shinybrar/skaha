@@ -1,7 +1,9 @@
+"""Test ContainerRegistry model."""
+
 import pytest
 from pydantic import ValidationError
 
-from skaha.models import ContainerRegistry
+from skaha.models.container import ContainerRegistry
 
 
 def test_valid_container_registry():

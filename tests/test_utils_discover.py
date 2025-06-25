@@ -2,7 +2,7 @@
 
 import pytest
 
-from skaha.models import IVOASearchConfig
+from skaha.models.registry import IVOASearchConfig
 from skaha.utils.discover import Discover
 
 

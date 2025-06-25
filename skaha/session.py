@@ -12,8 +12,7 @@ from skaha.client import SkahaClient
 from skaha.utils import build
 
 if TYPE_CHECKING:
-    from skaha.models import KINDS, STATUS, VIEW  # type: ignore[attr-defined]
-
+    from skaha.models.types import Kind, Status, View
 log = get_logger(__name__)
 
 
@@ -38,16 +37,16 @@ class Session(SkahaClient):
 
     def fetch(
         self,
-        kind: KINDS | None = None,
-        status: STATUS | None = None,
-        view: VIEW | None = None,
+        kind: Kind | None = None,
+        status: Status | None = None,
+        view: View | None = None,
     ) -> list[dict[str, str]]:
         """Fetch open sessions for the user.
 
         Args:
-            kind (KINDS | None, optional): Session kind. Defaults to None.
-            status (STATUS | None, optional): Session status. Defaults to None.
-            view (VIEW | None, optional): View leve. Defaults to None.
+            kind (Kind | None, optional): Session kind. Defaults to None.
+            status (Status | None, optional): Session status. Defaults to None.
+            view (View | None, optional): View leve. Defaults to None.
 
         Returns:
             list[dict[str, str]]: Session[s] information.
@@ -175,7 +174,7 @@ class Session(SkahaClient):
         image: str,
         cores: int = 2,
         ram: int = 4,
-        kind: KINDS = "headless",
+        kind: Kind = "headless",
         gpu: int | None = None,
         cmd: str | None = None,
         args: str | None = None,
@@ -321,15 +320,15 @@ class Session(SkahaClient):
     def destroy_with(
         self,
         prefix: str,
-        kind: KINDS = "headless",
-        status: STATUS = "Succeeded",
+        kind: Kind = "headless",
+        status: Status = "Succeeded",
     ) -> dict[str, bool]:
         """Destroy session[s] matching search criteria.
 
         Args:
             prefix (str): Prefix to match in the session name.
-            kind (KINDS): Type of session. Defaults to "headless".
-            status (STATUS): Status of the session. Defaults to "Succeeded".
+            kind (Kind): Type of session. Defaults to "headless".
+            status (Status): Status of the session. Defaults to "Succeeded".
 
 
         Returns:
@@ -379,16 +378,16 @@ class AsyncSession(SkahaClient):
 
     async def fetch(
         self,
-        kind: KINDS | None = None,
-        status: STATUS | None = None,
-        view: VIEW | None = None,
+        kind: Kind | None = None,
+        status: Status | None = None,
+        view: View | None = None,
     ) -> list[dict[str, str]]:
         """List open sessions for the user.
 
         Args:
-            kind (Optional[KINDS], optional): Session kind. Defaults to None.
-            status (Optional[STATUS], optional): Session status. Defaults to None.
-            view (Optional[VIEW], optional): Session view level. Defaults to None.
+            kind (Kind | None, optional): Session kind. Defaults to None.
+            status (Status | None, optional): Session status. Defaults to None.
+            view (View | None, optional): Session view level. Defaults to None.
 
         Notes:
             By default, only the calling user's sessions are listed. If views is
@@ -554,7 +553,7 @@ class AsyncSession(SkahaClient):
         image: str,
         cores: int = 2,
         ram: int = 4,
-        kind: KINDS = "headless",
+        kind: Kind = "headless",
         gpu: int | None = None,
         cmd: str | None = None,
         args: str | None = None,
@@ -729,15 +728,15 @@ class AsyncSession(SkahaClient):
     async def destroy_with(
         self,
         prefix: str,
-        kind: KINDS = "headless",
-        status: STATUS = "Succeeded",
+        kind: Kind = "headless",
+        status: Status = "Succeeded",
     ) -> dict[str, bool]:
         """Destroy session[s] matching search criteria.
 
         Args:
             prefix (str): Prefix to match in the session name.
-            kind (KINDS): Type of session. Defaults to "headless".
-            status (STATUS): Status of the session. Defaults to "Succeeded".
+            kind (Kind): Type of session. Defaults to "headless".
+            status (Status): Status of the session. Defaults to "Succeeded".
 
 
         Returns:

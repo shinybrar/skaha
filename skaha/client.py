@@ -27,12 +27,11 @@ from typing_extensions import Self
 
 from skaha import __version__, get_logger, set_log_level
 from skaha.hooks.httpx import errors
+from skaha.models.container import ContainerRegistry  # noqa: TC001
 
 if TYPE_CHECKING:
     from collections.abc import AsyncIterator, Iterator
     from types import TracebackType
-
-    from skaha.models.container import ContainerRegistry
 
 log = get_logger(__name__)
 

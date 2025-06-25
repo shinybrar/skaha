@@ -8,7 +8,7 @@ import pytest
 from httpx import HTTPError
 from pydantic import ValidationError
 
-from skaha.models import CreateSpec
+from skaha.models.session import CreateSpec
 from skaha.session import Session
 
 pytest.IDENTITY: list[str] = []
