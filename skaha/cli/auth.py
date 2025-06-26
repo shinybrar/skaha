@@ -11,15 +11,15 @@ from rich.prompt import Confirm
 
 from skaha import get_logger, set_log_level
 from skaha.auth import oidc, x509
-from skaha.config.auth import (
+from skaha.models.auth import (
     OIDC,
     X509,
-    OIDCClientConfig,
-    OIDCTokenConfig,
-    OIDCURLConfig,
-    ServerInfo,
+    OIDCClient,
+    OIDCTokens,
+    OIDCUrls,
+    Server,
 )
-from skaha.config.config import Configuration
+from skaha.models.types import Configuration
 from skaha.utils.discover import servers
 
 console = Console()
@@ -112,7 +112,7 @@ def login(
         config.client.version = "v0"
 
         # Create server info for auth method
-        server_info = ServerInfo(
+        server_info = Server(
             name=server.name,
             uri=server.uri,
             url=server.url,
@@ -129,9 +129,9 @@ def login(
                 f"[bold blue]OIDC Authentication for {server.url}[/bold blue]"
             )
             config.auth.oidc = OIDC(
-                endpoints=OIDCURLConfig(discovery=discovery_url),
-                client=OIDCClientConfig(),
-                token=OIDCTokenConfig(),
+                endpoints=OIDCUrls(discovery=discovery_url),
+                client=OIDCClient(),
+                token=OIDCTokens(),
                 server=server_info,
             )
             config.auth.oidc = asyncio.run(oidc.authenticate(config.auth.oidc))
@@ -173,12 +173,12 @@ def logout(
         # Clear authentication credentials
         config.auth.mode = None
         config.auth.oidc = OIDC(
-            endpoints=OIDCURLConfig(),
-            client=OIDCClientConfig(),
-            token=OIDCTokenConfig(),
-            server=ServerInfo(),
+            endpoints=OIDCUrls(),
+            client=OIDCClient(),
+            token=OIDCTokens(),
+            server=Server(),
         )
-        config.auth.x509 = X509(server=ServerInfo())
+        config.auth.x509 = X509(server=Server())
 
         # Save updated configuration
         config.save()

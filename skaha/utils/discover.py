@@ -1,3 +1,5 @@
+"""Discover Skaha Server endpoints from IVOA registries."""
+
 from __future__ import annotations
 
 import asyncio
@@ -8,10 +10,10 @@ from rich.console import Console
 from typing_extensions import Self
 
 from skaha.models.registry import (
-    IVOASearchConfig,
-    RegistryInfo,
-    SkahaServer,
-    SkahaServerResults,
+    IVOARegistry,
+    IVOARegistrySearch,
+    Server,
+    ServerResults,
 )
 from skaha.utils import display
 
@@ -20,7 +22,7 @@ class Discover:
     """Optimized server discovery with single HTTP client and Pydantic models."""
 
     def __init__(
-        self, config: IVOASearchConfig, timeout: int = 2, max_connections: int = 100
+        self, config: IVOARegistrySearch, timeout: int = 2, max_connections: int = 100
     ) -> None:
         """Initialize with configuration and connection limits."""
         self.config = config
@@ -63,7 +65,7 @@ class Discover:
         """
         await self.client.aclose()
 
-    async def fetch(self, url: str, name: str) -> RegistryInfo:
+    async def fetch(self, url: str, name: str) -> IVOARegistry:
         """Fetch registry contents.
 
         Args:
@@ -80,20 +82,18 @@ class Discover:
             elapsed = time.time() - start_time
             self.console.print(f"[dim]Fetched {name} in {elapsed:.2f}s[/dim]")
 
-            return RegistryInfo(name=name, content=response.text, success=True)
+            return IVOARegistry(name=name, content=response.text, success=True)
         except (httpx.HTTPError, httpx.TimeoutException, httpx.RequestError) as error:
             error_msg = str(error)
             self.console.print(f"[red]Failed to fetch {name}: {error_msg}[/red]")
-            return RegistryInfo(name=name, content="", success=False, error=error_msg)
+            return IVOARegistry(name=name, content="", success=False, error=error_msg)
 
-    async def extract(
-        self, registry: RegistryInfo, dev: bool = False
-    ) -> list[SkahaServer]:
+    async def extract(self, registry: IVOARegistry, dev: bool = False) -> list[Server]:
         """Extract skaha/capabilities endpoints from registry content asynchronously."""
         if not registry.success or not registry.content:
             return []
 
-        endpoints: list[SkahaServer] = []
+        endpoints: list[Server] = []
 
         for entry in registry.content.splitlines():
             line = entry.strip()
@@ -117,7 +117,7 @@ class Discover:
                 if (registry.name, uri) in self.config.omit:
                     continue
 
-                endpoint = SkahaServer(
+                endpoint = Server(
                     registry=registry.name,
                     uri=uri,
                     url=url,
@@ -127,7 +127,7 @@ class Discover:
 
         return endpoints
 
-    async def check(self, endpoint: SkahaServer) -> SkahaServer:
+    async def check(self, endpoint: Server) -> Server:
         """Check endpoint status using HEAD request."""
         try:
             response = await self.client.head(endpoint.url)
@@ -136,9 +136,9 @@ class Discover:
             endpoint.status = None
         return endpoint
 
-    async def servers(self, dev: bool = False) -> SkahaServerResults:
+    async def servers(self, dev: bool = False) -> ServerResults:
         """Discover all servers with maximum parallelization."""
-        results = SkahaServerResults()
+        results = ServerResults()
         start_time = time.time()
 
         # Step 1: Fetch all registries in parallel
@@ -150,7 +150,7 @@ class Discover:
         results.registry_fetch_time = time.time() - registry_start
 
         # Step 2: Extract all endpoints from all registries
-        all_endpoints: list[SkahaServer] = []
+        all_endpoints: list[Server] = []
         for registry_result in registry_results:
             endpoints = await self.extract(registry_result, dev)
             all_endpoints.extend(endpoints)
@@ -188,7 +188,7 @@ async def servers(
     dead: bool = False,
     details: bool = False,
     timeout: int = 2,
-) -> SkahaServer:
+) -> Server:
     """Find and select a Skaha Server.
 
     Args:
@@ -200,7 +200,7 @@ async def servers(
     Returns:
         ServerInfo: The selected server info.
     """
-    config = IVOASearchConfig()
+    config = IVOARegistrySearch()
 
     async with Discover(config, timeout=timeout, max_connections=100) as discovery:
         results = await discovery.servers(dev=dev)

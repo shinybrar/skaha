@@ -7,7 +7,7 @@ from unittest.mock import AsyncMock, patch
 import pytest
 import questionary
 
-from skaha.models.registry import SkahaServer, SkahaServerResults
+from skaha.models.registry import Server, ServerResults
 from skaha.utils.convert import dict_to_tuples
 from skaha.utils.display import configure_server_choices, servers
 
@@ -49,7 +49,7 @@ def create_test_server(
     url: str = "https://test.example.com/skaha",
     status: int | None = 200,
     name: str | None = "Test Server",
-) -> SkahaServer:
+) -> Server:
     """Create a test SkahaServer instance.
 
     Args:
@@ -62,7 +62,7 @@ def create_test_server(
     Returns:
         SkahaServer: Test server instance
     """
-    return SkahaServer(
+    return Server(
         registry=registry,
         uri=uri,
         url=url,
@@ -71,7 +71,7 @@ def create_test_server(
     )
 
 
-def create_test_results(endpoints: list[SkahaServer]) -> SkahaServerResults:
+def create_test_results(endpoints: list[Server]) -> ServerResults:
     """Create test SkahaServerResults instance.
 
     Args:
@@ -80,7 +80,7 @@ def create_test_results(endpoints: list[SkahaServer]) -> SkahaServerResults:
     Returns:
         SkahaServerResults: Test results instance
     """
-    results = SkahaServerResults()
+    results = ServerResults()
     for endpoint in endpoints:
         results.add(endpoint)
     return results

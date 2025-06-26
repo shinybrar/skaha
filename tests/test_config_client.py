@@ -7,33 +7,13 @@ from unittest.mock import patch
 import pytest
 import yaml
 
-from skaha.config.client import ClientConfig, RegistryConfig
-from skaha.config.config import Configuration
-
-
-def test_client_config_instantiation() -> None:
-    """Test that ClientConfig can be instantiated with defaults."""
-    config = ClientConfig()
-    assert config.url is None
-    assert config.version is None
-    assert config.concurrency == 32
-    assert config.timeout == 30
-
-
-def test_client_config_with_values() -> None:
-    """Test that ClientConfig can be instantiated with custom values."""
-    config = ClientConfig(
-        url="https://example.com", version="v1", concurrency=5, timeout=60
-    )
-    assert config.url == "https://example.com"
-    assert config.version == "v1"
-    assert config.concurrency == 5
-    assert config.timeout == 60
+from skaha.models.registry import ContainerRegistry
+from skaha.models.types import Configuration
 
 
 def test_registry_config_instantiation() -> None:
     """Test that RegistryConfig can be instantiated with defaults."""
-    config = RegistryConfig()
+    config = ContainerRegistry()
     assert config.url is None
     assert config.username is None
     assert config.secret is None
@@ -41,12 +21,12 @@ def test_registry_config_instantiation() -> None:
 
 def test_registry_config_with_values() -> None:
     """Test that RegistryConfig can be instantiated with custom values."""
-    config = RegistryConfig(
-        url="https://registry.example.com",
+    config = ContainerRegistry(
+        url="https://images.canfar.net",
         username="testuser",
         secret="testsecret",  # nosec B106
     )
-    assert str(config.url) == "https://registry.example.com/"
+    assert str(config.url) == "https://images.canfar.net/"
     assert config.username == "testuser"
     assert config.secret == "testsecret"  # nosec B105
 
@@ -65,7 +45,7 @@ def test_configuration_with_custom_values() -> None:
     config_data = {
         "auth": {"mode": "x509"},
         "client": {"url": "https://example.com", "timeout": 45},
-        "registry": {"username": "testuser"},
+        "registry": {"username": "testuser", "secret": "testsecret"},  # nosec B106
     }
     config = Configuration.model_validate(config_data)
     assert config.client.url == "https://example.com"
@@ -88,7 +68,7 @@ def test_configuration_save() -> None:
         temp_path = Path(temp_file.name)
 
     # Mock CONFIG_PATH to use our temp file
-    with patch("skaha.config.config.CONFIG_PATH", temp_path):
+    with patch("skaha.models.types.CONFIG_PATH", temp_path):
         config.save()
 
         # Verify the file was created and contains expected data
@@ -114,7 +94,7 @@ def test_configuration_assemble() -> None:
     config_data = {
         "auth": {"mode": "x509"},
         "client": {"url": "https://test.example.com", "timeout": 60},
-        "registry": {"username": "assembleuser"},
+        "registry": {"username": "assembleuser", "secret": "testsecret"},  # nosec B106
     }
 
     with tempfile.NamedTemporaryFile(
@@ -124,7 +104,7 @@ def test_configuration_assemble() -> None:
         temp_path = Path(temp_file.name)
 
     # Mock CONFIG_PATH to use our temp file
-    with patch("skaha.config.config.CONFIG_PATH", temp_path):
+    with patch("skaha.models.types.CONFIG_PATH", temp_path):
         config = Configuration.assemble()
 
         assert config.auth.mode == "x509"
@@ -151,9 +131,10 @@ def test_configuration_assemble_with_overrides() -> None:
         temp_path = Path(temp_file.name)
 
     # Mock CONFIG_PATH to use our temp file
-    with patch("skaha.config.config.CONFIG_PATH", temp_path):
+    with patch("skaha.models.types.CONFIG_PATH", temp_path):
         config = Configuration.assemble(
-            client={"timeout": 90}, registry={"username": "overrideuser"}
+            client={"timeout": 90},
+            registry={"username": "overrideuser", "secret": "testsecret"},  # nosec B106
         )
 
         assert config.auth.mode == "x509"
@@ -175,7 +156,7 @@ def test_configuration_assemble_file_not_found() -> None:
     non_existent_path = Path("/nonexistent/config.yaml")
 
     with (
-        patch("skaha.config.config.CONFIG_PATH", non_existent_path),
+        patch("skaha.models.types.CONFIG_PATH", non_existent_path),
         pytest.raises(FileNotFoundError, match="does not exist"),
     ):
         Configuration.assemble()
@@ -191,7 +172,7 @@ def test_configuration_assemble_empty_file() -> None:
         temp_path = Path(temp_file.name)
 
     with (
-        patch("skaha.config.config.CONFIG_PATH", temp_path),
+        patch("skaha.models.types.CONFIG_PATH", temp_path),
         pytest.raises(ValueError, match="is empty"),
     ):
         Configuration.assemble()

@@ -17,12 +17,12 @@ from rich.console import Console
 from rich.progress import BarColumn, Progress, TextColumn, TimeRemainingColumn
 
 from skaha import get_logger
-from skaha.config.auth import (
+from skaha.models.auth import (
     OIDC,
-    OIDCClientConfig,
-    OIDCTokenConfig,
-    OIDCURLConfig,
-    ServerInfo,
+    OIDCClient,
+    OIDCTokens,
+    OIDCUrls,
+    Server,
 )
 
 console = Console()
@@ -396,11 +396,11 @@ async def authenticate(oidc: OIDC) -> OIDC:
 
 if __name__ == "__main__":
     config = OIDC(
-        endpoints=OIDCURLConfig(
+        endpoints=OIDCUrls(
             discovery="https://ska-iam.stfc.ac.uk/.well-known/openid-configuration"
         ),
-        client=OIDCClientConfig(),
-        token=OIDCTokenConfig(),
-        server=ServerInfo(),
+        client=OIDCClient(),
+        token=OIDCTokens(),
+        server=Server(),
     )
     asyncio.run(authenticate(config))

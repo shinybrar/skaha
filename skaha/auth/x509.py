@@ -14,7 +14,7 @@ from cryptography import x509
 from cryptography.hazmat.backends import default_backend
 
 if TYPE_CHECKING:
-    from skaha.config import auth
+    from skaha.models import auth
 
 
 def gather(

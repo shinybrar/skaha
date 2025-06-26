@@ -3,18 +3,18 @@
 import pytest
 from pydantic import ValidationError
 
-from skaha.models.container import ContainerRegistry
+from skaha.models.registry import ContainerRegistry
 
 
 def test_valid_container_registry():
     """Test valid container registry."""
     valid = {
-        "url": "images.canfar.net",
+        "url": "https://images.canfar.net",
         "username": "test",
         "secret": "ghp_1234567890",
     }
     registry = ContainerRegistry(**valid)
-    assert registry.url == "images.canfar.net"
+    assert str(registry.url) == "https://images.canfar.net/"
     assert registry.username == "test"  # nosec
     assert registry.secret == "ghp_1234567890"  # nosec
 

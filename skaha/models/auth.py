@@ -14,7 +14,7 @@ from skaha import get_logger
 log = get_logger(__name__)
 
 
-class ServerInfo(BaseModel):
+class Server(BaseModel):
     """Server information for authentication configuration."""
 
     name: str | None = Field(default=None, description="Server display name")
@@ -22,7 +22,7 @@ class ServerInfo(BaseModel):
     url: str | None = Field(default=None, description="Server URL endpoint")
 
 
-class OIDCURLConfig(BaseModel):
+class OIDCUrls(BaseModel):
     """OIDC URL configuration."""
 
     discovery: str | None = Field(default=None, description="OIDC discovery URL")
@@ -35,14 +35,14 @@ class OIDCURLConfig(BaseModel):
     token: str | None = Field(default=None, description="OIDC token endpoint URL")
 
 
-class OIDCClientConfig(BaseModel):
+class OIDCClient(BaseModel):
     """OIDC client configuration."""
 
     identity: str | None = Field(default=None, description="OIDC client ID")
     secret: str | None = Field(default=None, description="OIDC client secret")
 
 
-class OIDCTokenConfig(BaseModel):
+class OIDCTokens(BaseModel):
     """OIDC token configuration."""
 
     access: str | None = Field(default=None, description="Access token")
@@ -54,19 +54,19 @@ class OIDC(BaseModel):
     """Complete OIDC configuration."""
 
     endpoints: Annotated[
-        OIDCURLConfig, Field(default_factory=OIDCURLConfig, description="OIDC URLs")
+        OIDCUrls, Field(default_factory=OIDCUrls, description="OIDC URLs")
     ]
     client: Annotated[
-        OIDCClientConfig,
-        Field(default_factory=OIDCClientConfig, description="OIDC client credentials"),
+        OIDCClient,
+        Field(default_factory=OIDCClient, description="OIDC client credentials"),
     ]
     token: Annotated[
-        OIDCTokenConfig,
-        Field(default_factory=OIDCTokenConfig, description="OIDC tokens"),
+        OIDCTokens,
+        Field(default_factory=OIDCTokens, description="OIDC tokens"),
     ]
     server: Annotated[
-        ServerInfo,
-        Field(default_factory=ServerInfo, description="OIDC server information"),
+        Server,
+        Field(default_factory=Server, description="OIDC server information"),
     ]
 
     def valid(self) -> bool:
@@ -111,8 +111,8 @@ class X509(BaseModel):
     path: str | None = Field(default=None, description="Path to PEM certificate file")
     expiry: float | None = Field(default=None, description="Certificate expiry ctime")
     server: Annotated[
-        ServerInfo,
-        Field(default_factory=ServerInfo, description="X509 server information"),
+        Server,
+        Field(default_factory=Server, description="X509 server information"),
     ]
 
     def valid(self) -> bool:
@@ -147,15 +147,20 @@ class AuthConfig(BaseSettings):
         OIDC,
         Field(
             default_factory=lambda: OIDC(
-                endpoints=OIDCURLConfig(),
-                client=OIDCClientConfig(),
-                token=OIDCTokenConfig(),
+                endpoints=OIDCUrls(),
+                client=OIDCClient(),
+                token=OIDCTokens(),
+                server=Server(),
             ),
             description="OIDC settings",
         ),
     ]
     x509: Annotated[
-        X509, Field(default_factory=X509, description="X.509 certificate settings")
+        X509,
+        Field(
+            default_factory=lambda: X509(server=Server()),
+            description="X.509 certificate settings",
+        ),
     ]
 
     def valid(self) -> bool:

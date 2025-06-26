@@ -1,0 +1,23 @@
+"""Test main CLI entrypoint."""
+
+from __future__ import annotations
+
+from typer.testing import CliRunner
+
+from skaha.cli.main import cli
+
+runner = CliRunner()
+
+
+def test_main_cli_no_subcommand():
+    """Test main CLI entrypoint with no subcommand."""
+    result = runner.invoke(cli)
+    assert result.exit_code == 0
+    assert "Usage: skaha" in result.stdout
+
+
+def test_main_cli_with_help_option():
+    """Test main CLI entrypoint with --help option."""
+    result = runner.invoke(cli, ["--help"])
+    assert result.exit_code == 0
+    assert "Usage: skaha" in result.stdout

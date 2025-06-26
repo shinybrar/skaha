@@ -17,7 +17,7 @@ from skaha.auth.oidc import (
     discover,
     register,
 )
-from skaha.config.auth import OIDC, OIDCClientConfig, OIDCTokenConfig, OIDCURLConfig
+from skaha.models.auth import OIDC, OIDCClient, OIDCTokens, OIDCUrls
 
 
 class TestOIDCExceptions:
@@ -432,11 +432,11 @@ class TestAuthenticateFunction:
         """Test the authenticate function integration."""
         # Create initial OIDC config
         oidc_config = OIDC(
-            endpoints=OIDCURLConfig(
+            endpoints=OIDCUrls(
                 discovery="https://example.com/.well-known/openid-configuration"
             ),
-            client=OIDCClientConfig(),
-            token=OIDCTokenConfig(),
+            client=OIDCClient(),
+            token=OIDCTokens(),
         )
 
         with patch("httpx.AsyncClient") as mock_client_class:

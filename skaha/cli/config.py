@@ -7,8 +7,8 @@ from rich.console import Console
 from yaml import dump
 
 from skaha import CONFIG_PATH
-from skaha.config.config import Configuration
 from skaha.hooks.typer.aliases import AliasGroup
+from skaha.models.types import Configuration
 
 config: typer.Typer = typer.Typer(
     cls=AliasGroup,

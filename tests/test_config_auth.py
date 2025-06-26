@@ -3,14 +3,14 @@
 import time
 from tempfile import NamedTemporaryFile
 
-from skaha.config.auth import (
+from skaha.models.auth import (
     OIDC,
     X509,
     AuthConfig,
-    OIDCClientConfig,
-    OIDCTokenConfig,
-    OIDCURLConfig,
-    ServerInfo,
+    OIDCClient,
+    OIDCTokens,
+    OIDCUrls,
+    Server,
 )
 
 
@@ -19,7 +19,7 @@ class TestOIDCURLConfig:
 
     def test_default_values(self) -> None:
         """Test default values for OIDC URL configuration."""
-        config = OIDCURLConfig()
+        config = OIDCUrls()
         assert config.discovery is None
         assert config.device is None
         assert config.registration is None
@@ -27,7 +27,7 @@ class TestOIDCURLConfig:
 
     def test_with_values(self) -> None:
         """Test OIDC URL configuration with values."""
-        config = OIDCURLConfig(
+        config = OIDCUrls(
             discovery="https://example.com/.well-known/openid-configuration",
             device="https://example.com/device",
             registration="https://example.com/register",
@@ -46,13 +46,13 @@ class TestOIDCClientConfig:
 
     def test_default_values(self) -> None:
         """Test default values for OIDC client configuration."""
-        config = OIDCClientConfig()
+        config = OIDCClient()
         assert config.identity is None
         assert config.secret is None
 
     def test_with_values(self) -> None:
         """Test OIDC client configuration with values."""
-        config = OIDCClientConfig(
+        config = OIDCClient(
             identity="test_client_id",
             secret="test_client_secret",  # nosec B106
         )
@@ -65,7 +65,7 @@ class TestOIDCTokenConfig:
 
     def test_default_values(self) -> None:
         """Test default values for OIDC token configuration."""
-        config = OIDCTokenConfig()
+        config = OIDCTokens()
         assert config.access is None
         assert config.refresh is None
         assert config.expiry is None
@@ -73,7 +73,7 @@ class TestOIDCTokenConfig:
     def test_with_values(self) -> None:
         """Test OIDC token configuration with values."""
         future_time = time.time() + 3600
-        config = OIDCTokenConfig(
+        config = OIDCTokens(
             access="test_access_token",
             refresh="test_refresh_token",
             expiry=future_time,
@@ -89,9 +89,9 @@ class TestOIDC:
     def test_default_values(self) -> None:
         """Test default values for OIDC configuration."""
         config = OIDC()
-        assert isinstance(config.endpoints, OIDCURLConfig)
-        assert isinstance(config.client, OIDCClientConfig)
-        assert isinstance(config.token, OIDCTokenConfig)
+        assert isinstance(config.endpoints, OIDCUrls)
+        assert isinstance(config.client, OIDCClient)
+        assert isinstance(config.token, OIDCTokens)
 
     def test_valid_with_missing_fields(self) -> None:
         """Test valid method with missing required fields."""
@@ -302,14 +302,14 @@ class TestServerInfo:
 
     def test_default_values(self) -> None:
         """Test default values for ServerInfo."""
-        server = ServerInfo()
+        server = Server()
         assert server.name is None
         assert server.uri is None
         assert server.url is None
 
     def test_with_values(self) -> None:
         """Test ServerInfo with custom values."""
-        server = ServerInfo(
+        server = Server(
             name="Test Server",
             uri="ivo://test.example.com/skaha",
             url="https://test.example.com/skaha",
@@ -320,7 +320,7 @@ class TestServerInfo:
 
     def test_partial_values(self) -> None:
         """Test ServerInfo with partial values."""
-        server = ServerInfo(name="Test Server")
+        server = Server(name="Test Server")
         assert server.name == "Test Server"
         assert server.uri is None
         assert server.url is None
@@ -332,14 +332,14 @@ class TestOIDCWithServer:
     def test_default_server_field(self) -> None:
         """Test that OIDC has a default server field."""
         oidc = OIDC()
-        assert isinstance(oidc.server, ServerInfo)
+        assert isinstance(oidc.server, Server)
         assert oidc.server.name is None
         assert oidc.server.uri is None
         assert oidc.server.url is None
 
     def test_with_server_info(self) -> None:
         """Test OIDC with server information."""
-        server_info = ServerInfo(
+        server_info = Server(
             name="Canada",
             uri="ivo://canfar.net/src/skaha",
             url="https://ws-uv.canfar.net/skaha",
@@ -351,7 +351,7 @@ class TestOIDCWithServer:
 
     def test_server_field_serialization(self) -> None:
         """Test that OIDC server field is properly serialized."""
-        server_info = ServerInfo(
+        server_info = Server(
             name="Test Server",
             uri="ivo://test.example.com/skaha",
             url="https://test.example.com/skaha",
@@ -372,14 +372,14 @@ class TestX509WithServer:
     def test_default_server_field(self) -> None:
         """Test that X509 has a default server field."""
         x509 = X509()
-        assert isinstance(x509.server, ServerInfo)
+        assert isinstance(x509.server, Server)
         assert x509.server.name is None
         assert x509.server.uri is None
         assert x509.server.url is None
 
     def test_with_server_info(self) -> None:
         """Test X509 with server information."""
-        server_info = ServerInfo(
+        server_info = Server(
             name="CANFAR",
             uri="ivo://cadc.nrc.ca/skaha",
             url="https://ws-uv.canfar.net/skaha",
@@ -391,7 +391,7 @@ class TestX509WithServer:
 
     def test_server_field_serialization(self) -> None:
         """Test that X509 server field is properly serialized."""
-        server_info = ServerInfo(
+        server_info = Server(
             name="Test Server",
             uri="ivo://test.example.com/skaha",
             url="https://test.example.com/skaha",
@@ -411,7 +411,7 @@ class TestAuthConfigWithMethodSpecificServers:
 
     def test_oidc_server_access(self) -> None:
         """Test accessing server info through OIDC method."""
-        server_info = ServerInfo(
+        server_info = Server(
             name="Test OIDC Server",
             uri="ivo://test.example.com/skaha",
             url="https://test.example.com/skaha",
@@ -425,7 +425,7 @@ class TestAuthConfigWithMethodSpecificServers:
 
     def test_x509_server_access(self) -> None:
         """Test accessing server info through X509 method."""
-        server_info = ServerInfo(
+        server_info = Server(
             name="Test X509 Server",
             uri="ivo://cadc.nrc.ca/skaha",
             url="https://ws-uv.canfar.net/skaha",
@@ -439,12 +439,12 @@ class TestAuthConfigWithMethodSpecificServers:
 
     def test_both_methods_with_different_servers(self) -> None:
         """Test that both auth methods can have different server info."""
-        oidc_server = ServerInfo(
+        oidc_server = Server(
             name="OIDC Server",
             uri="ivo://oidc.example.com/skaha",
             url="https://oidc.example.com/skaha",
         )
-        x509_server = ServerInfo(
+        x509_server = Server(
             name="X509 Server",
             uri="ivo://x509.example.com/skaha",
             url="https://x509.example.com/skaha",

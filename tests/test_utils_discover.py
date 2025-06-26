@@ -2,14 +2,14 @@
 
 import pytest
 
-from skaha.models.registry import IVOASearchConfig
+from skaha.models.registry import IVOARegistrySearch
 from skaha.utils.discover import Discover
 
 
 @pytest.fixture
 async def discover():
     """Test discover."""
-    config = IVOASearchConfig()
+    config = IVOARegistrySearch()
 
     async with Discover(config, timeout=2, max_connections=100) as discovery:
         yield discovery

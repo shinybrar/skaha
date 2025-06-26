@@ -6,10 +6,13 @@ registry search configuration, and server information.
 
 from __future__ import annotations
 
-from pydantic import BaseModel, Field
+from base64 import b64encode
+
+from pydantic import AnyHttpUrl, BaseModel, Field, model_validator
+from typing_extensions import Self
 
 
-class IVOASearchConfig(BaseModel):
+class IVOARegistrySearch(BaseModel):
     """Configuration model for server discovery settings."""
 
     registries: dict[str, str] = Field(
@@ -44,7 +47,16 @@ class IVOASearchConfig(BaseModel):
     )
 
 
-class SkahaServer(BaseModel):
+class IVOARegistry(BaseModel):
+    """Model for registry contents."""
+
+    name: str
+    content: str
+    success: bool = True
+    error: str | None = None
+
+
+class Server(BaseModel):
     """Model to store Skaha Server endpoint information."""
 
     registry: str
@@ -54,19 +66,10 @@ class SkahaServer(BaseModel):
     name: str | None = None
 
 
-class RegistryInfo(BaseModel):
-    """Model for registry contents."""
-
-    name: str
-    content: str
-    success: bool = True
-    error: str | None = None
-
-
-class SkahaServerResults(BaseModel):
+class ServerResults(BaseModel):
     """Model for complete discovery results."""
 
-    endpoints: list[SkahaServer] = Field(default_factory=list)
+    endpoints: list[Server] = Field(default_factory=list)
     total_time: float = 0.0
     registry_fetch_time: float = 0.0
     endpoint_check_time: float = 0.0
@@ -74,17 +77,73 @@ class SkahaServerResults(BaseModel):
     checked: int = 0
     successful: int = 0
 
-    def add(self, endpoint: SkahaServer) -> None:
+    def add(self, endpoint: Server) -> None:
         """Add an endpoint to results."""
         self.endpoints.append(endpoint)
         if endpoint.status == 200:
             self.successful += 1
 
-    def get_by_registry(self) -> dict[str, list[SkahaServer]]:
+    def get_by_registry(self) -> dict[str, list[Server]]:
         """Group endpoints by registry."""
-        results: dict[str, list[SkahaServer]] = {}
+        results: dict[str, list[Server]] = {}
         for endpoint in self.endpoints:
             if endpoint.registry not in results:
                 results[endpoint.registry] = []
             results[endpoint.registry].append(endpoint)
         return results
+
+
+class ContainerRegistry(BaseModel):
+    """Authentication details for private container registry.
+
+    Args:
+        BaseModel (pydantic.BaseModel): Pydantic BaseModel.
+
+    Returns:
+        object: Pydantic BaseModel object.
+    """
+
+    url: str | None = Field(default=None, description="Container Registry URL")
+    username: str | None = Field(
+        default=None,
+        description="Username for the container registry",
+        min_length=1,
+        max_length=255,
+        examples=["shinybrar"],
+    )
+    secret: str | None = Field(
+        default=None,
+        description="Secret for the container registry",
+        min_length=1,
+        max_length=255,
+        examples=["sup3rs3cr3t"],
+    )
+
+    @model_validator(mode="after")
+    def _check_container_registry(self) -> Self:
+        """Check if the container registry is configured correctly.
+
+        Raises:
+            ValueError: _description_
+            ValueError: _description_
+
+        Returns:
+            Self: _description_
+        """
+        if self.url:
+            self.url = AnyHttpUrl(self.url).encoded_string()
+        if self.username and not self.secret:
+            msg = "container registry secret is required."
+            raise ValueError(msg)
+        if self.secret and not self.username:
+            msg = "container registry username is required."
+            raise ValueError(msg)
+        return self
+
+    def encoded(self) -> str:
+        """Return the encoded username:secret.
+
+        Returns:
+            str: String encoded in base64 format.
+        """
+        return b64encode(f"{self.username}:{self.secret}".encode()).decode()

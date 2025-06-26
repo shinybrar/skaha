@@ -5,14 +5,14 @@ import sys
 import questionary
 from rich.console import Console
 
-from skaha.models.registry import SkahaServer, SkahaServerResults
+from skaha.models.registry import Server, ServerResults
 
 
 async def servers(
-    results: SkahaServerResults,
+    results: ServerResults,
     show_dead: bool = False,
     show_details: bool = False,
-) -> SkahaServer:
+) -> Server:
     """Display discovery results and require interactive selection.
 
     Args:
@@ -28,10 +28,10 @@ async def servers(
     """
     console = Console()
 
-    alive: list[SkahaServer] = [
+    alive: list[Server] = [
         endpoint for endpoint in results.endpoints if endpoint.status == 200
     ]
-    dead: list[SkahaServer] = [
+    dead: list[Server] = [
         endpoint for endpoint in results.endpoints if endpoint.status != 200
     ]
 
@@ -52,7 +52,7 @@ async def servers(
 
     # Use questionary to select an endpoint
     try:
-        selection: SkahaServer | None = await questionary.select(
+        selection: Server | None = await questionary.select(
             "Select a Skaha Server:",
             choices=choices,
             style=questionary.Style(
@@ -81,8 +81,8 @@ async def servers(
 def configure_server_choices(
     show_dead: bool,
     show_details: bool,
-    alive: list[SkahaServer],
-    dead: list[SkahaServer],
+    alive: list[Server],
+    dead: list[Server],
 ) -> list[questionary.Choice]:
     """Configure choices for questionary with equal length formatting.
 
@@ -96,7 +96,7 @@ def configure_server_choices(
         list[questionary.Choice]: List of choices for questionary.
     """
     choices: list[questionary.Choice] = []
-    available: list[SkahaServer] = alive
+    available: list[Server] = alive
     if show_dead:
         available.extend(dead)
 
