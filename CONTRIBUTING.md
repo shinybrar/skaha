@@ -8,7 +8,7 @@ Contributions are not limited to just code. You can help us by:
 
 - Answering questions on the [Discussions board](https://github.com/shinybrar/skaha/discussions)
 - Improving the [Documentation](https://github.com/shinybrar/skaha/tree/main/docs)
-- Reporting bugs and suggesting features via [GitHub Issues](https://github.com/shinybrar/skaha/issues)
+- Reporting bugs and suggesting features via [GitHub Issues](https://github.com/shinybrar/skaha/issues) (see our [Bug Reporting Guide](https://shinybrar.github.io/skaha/bug-reports/) for detailed instructions)
 - Spreading the word about Skaha
 
 ## How to Contribute Code
@@ -58,6 +58,33 @@ To run tests for Skaha, you need to have a valid CANFAR account and access to th
 ```bash
 uv run pytest
 ```
+
+#### Running Tests Efficiently
+
+Some tests in the Skaha test suite are marked as "slow" because they involve network operations, waiting for session states, or other time-consuming operations. These tests can take several minutes to complete.
+
+**Run all tests (including slow ones):**
+```bash
+uv run pytest
+```
+
+**Skip slow tests for faster development:**
+```bash
+uv run pytest -m "not slow"
+```
+
+**Run only slow tests:**
+```bash
+uv run pytest -m "slow"
+```
+
+The slow tests are primarily integration tests that interact with the CANFAR Science Platform and include:
+- Session creation and management tests
+- Log retrieval tests
+- Authentication timeout tests
+- Session statistics tests
+
+For rapid development and testing, it's recommended to use `-m "not slow"` to skip these time-consuming tests during your development cycle, and run the full test suite before submitting your pull request.
 
 ### 6. Commit Your Changes
 

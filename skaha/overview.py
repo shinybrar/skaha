@@ -1,14 +1,20 @@
 """Skaha Overview."""
 
+from __future__ import annotations
+
+from typing import TYPE_CHECKING
+
 from defusedxml import ElementTree
-from httpx import Response
 from pydantic import model_validator
 from typing_extensions import Self
 
+from skaha import get_logger
 from skaha.client import SkahaClient
-from skaha.utils import logs
 
-log = logs.get_logger(__name__)
+if TYPE_CHECKING:
+    from httpx import Response
+
+log = get_logger(__name__)
 
 
 class Overview(SkahaClient):
@@ -36,16 +42,23 @@ class Overview(SkahaClient):
         Returns:
             bool: True if the server is available, False otherwise.
         """
-        response: Response = self.client.get("availability")  # type: ignore # noqa
-        # Parse the XML string
-        root = ElementTree.fromstring(response.text)  # type: ignore
+        response: Response = self.client.get("availability")
+        data: str = response.text
+        if not data:
+            log.error("No data returned from availability endpoint.")
+            return False
+        root = ElementTree.fromstring(data)
         available = root.find(
-            ".//{http://www.ivoa.net/xml/VOSIAvailability/v1.0}available"
-        ).text  # type: ignore
+            ".//{http://www.ivoa.net/xml/VOSIAvailability/v1.0}available",
+        )
+        availaibility: str | None = available.text if available is not None else None
+
         note = root.find(
-            ".//{http://www.ivoa.net/xml/VOSIAvailability/v1.0}note"
-        ).text  # type: ignore
-        log.info(note)
-        if available == "true":
-            return True
-        return False
+            ".//{http://www.ivoa.net/xml/VOSIAvailability/v1.0}note",
+        )
+        notify: str | None = note.text if note is not None else None
+        if availaibility is None:
+            log.error("No availability information found in the response.")
+            return False
+        log.info(notify if notify else "No additional information provided.")
+        return availaibility == "true"
