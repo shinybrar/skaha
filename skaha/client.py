@@ -95,12 +95,7 @@ class SkahaClient(BaseSettings):
         title="HTTP Timeout",
         description="HTTP Timeout in seconds.",
     )
-    verify: bool = Field(
-        default=True,
-        title="Verify SSL Certificate[DEPRECATED]",
-        description="Whether verify SSL Certs[DEPRECATED].",
-        deprecated=True,
-    )
+    
     registry: Annotated[
         ContainerRegistry | None,
         Field(
