@@ -3,26 +3,24 @@
 from __future__ import annotations
 
 import time
+from datetime import datetime, timezone
+from os import R_OK, access
 from pathlib import Path
 from typing import Annotated
 
+from cryptography import x509
+from cryptography.hazmat.backends import default_backend
 from pydantic import BaseModel, Field
 from pydantic_settings import BaseSettings
 
 from skaha import get_logger
+from skaha.models.http import Server
+from skaha.models.types import Mode  # noqa: TC001
 
 log = get_logger(__name__)
 
 
-class Server(BaseModel):
-    """Server information for authentication configuration."""
-
-    name: str | None = Field(default=None, description="Server display name")
-    uri: str | None = Field(default=None, description="Server URI identifier")
-    url: str | None = Field(default=None, description="Server URL endpoint")
-
-
-class OIDCUrls(BaseModel):
+class Endpoint(BaseModel):
     """OIDC URL configuration."""
 
     discovery: str | None = Field(default=None, description="OIDC discovery URL")
@@ -35,38 +33,52 @@ class OIDCUrls(BaseModel):
     token: str | None = Field(default=None, description="OIDC token endpoint URL")
 
 
-class OIDCClient(BaseModel):
+class Client(BaseModel):
     """OIDC client configuration."""
 
     identity: str | None = Field(default=None, description="OIDC client ID")
     secret: str | None = Field(default=None, description="OIDC client secret")
 
 
-class OIDCTokens(BaseModel):
+class Token(BaseModel):
     """OIDC token configuration."""
 
     access: str | None = Field(default=None, description="Access token")
     refresh: str | None = Field(default=None, description="Refresh token")
-    expiry: float | None = Field(default=None, description="Refresh Token expiry ctime")
+
+
+class Expiry(BaseModel):
+    """OIDC token expiry times."""
+
+    access: float | None = Field(
+        default=None, description="Access token expiry in ctime"
+    )
+    refresh: float | None = Field(
+        default=None, description="Refresh token expiry in ctime"
+    )
 
 
 class OIDC(BaseModel):
     """Complete OIDC configuration."""
 
     endpoints: Annotated[
-        OIDCUrls, Field(default_factory=OIDCUrls, description="OIDC URLs")
+        Endpoint, Field(default_factory=Endpoint, description="OIDC Endpoints.")
     ]
     client: Annotated[
-        OIDCClient,
-        Field(default_factory=OIDCClient, description="OIDC client credentials"),
+        Client,
+        Field(default_factory=Client, description="OIDC Client Credentials."),
     ]
     token: Annotated[
-        OIDCTokens,
-        Field(default_factory=OIDCTokens, description="OIDC tokens"),
+        Token,
+        Field(default_factory=Token, description="OIDC Tokens"),
     ]
     server: Annotated[
         Server,
-        Field(default_factory=Server, description="OIDC server information"),
+        Field(default_factory=Server, description="Science Platform Server."),
+    ]
+    expiry: Annotated[
+        Expiry,
+        Field(default_factory=Expiry, description="OIDC Token Expiry."),
     ]
 
     def valid(self) -> bool:
@@ -81,7 +93,6 @@ class OIDC(BaseModel):
             self.client.identity,
             self.client.secret,
             self.token.refresh,
-            self.token.expiry,
         ]
 
         # Check if all required fields are defined
@@ -100,16 +111,32 @@ class OIDC(BaseModel):
         """
         if self.token.refresh is None:
             return True
-        if self.token.expiry is None:
+        if self.expiry.refresh is None:
             return True
-        return self.token.expiry < time.time()
+        return self.expiry.refresh < time.time()
 
 
 class X509(BaseModel):
     """X.509 certificate configuration."""
 
-    path: str | None = Field(default=None, description="Path to PEM certificate file")
-    expiry: float | None = Field(default=None, description="Certificate expiry ctime")
+    path: Annotated[
+        Path,
+        Field(
+            default_factory=lambda: Path.home() / ".ssl" / "cadcproxy.pem",
+            title="x509 Certificate",
+            description="Pathlike to PEM certificate",
+        ),
+    ]
+    expiry: Annotated[
+        float,
+        Field(
+            default=0.0,
+            title="x509 Expiry Time",
+            description="ctime of cert expiration",
+            gt=time.time(),
+            validate_default=False,
+        ),
+    ]
     server: Annotated[
         Server,
         Field(default_factory=Server, description="X509 server information"),
@@ -121,11 +148,14 @@ class X509(BaseModel):
         Returns:
             bool: True if certificate path exists and is not expired, False otherwise.
         """
-        if self.path is None:
-            return False
-        if not Path(self.path).exists():
-            return False
-        return self.expiry is not None
+        destination = self.path.resolve(strict=True)
+        if not destination.is_file():
+            msg = f"cert file {destination} does not exist."
+            raise FileNotFoundError(msg)
+        if not access(destination, R_OK):
+            msg = f"cert file {destination} is not readable."
+            raise PermissionError(msg)
+        return True
 
     @property
     def expired(self) -> bool:
@@ -134,31 +164,46 @@ class X509(BaseModel):
         Returns:
             bool: True if the certificate is expired, False otherwise.
         """
-        if self.expiry is None:
-            return True
         return self.expiry < time.time()
 
+    def get_expiry(self) -> float:
+        """Get the x509 cert expiry ctime.
 
-class AuthConfig(BaseSettings):
+        Raises:
+            ValueError: If the cert is already expired,
+                or not yet valid.
+
+        Returns:
+            float: expiry utc in ctime
+        """
+        destination = self.path.resolve(strict=True)
+        data = destination.read_bytes()
+        cert = x509.load_pem_x509_certificate(data, default_backend())
+        now_utc = datetime.now(timezone.utc)
+        if cert.not_valid_after_utc <= now_utc:
+            msg = f"cert {destination} expired."
+            raise ValueError(msg)
+        if cert.not_valid_before_utc >= now_utc:
+            msg = f"cert {destination} not valid yet."
+            raise ValueError(msg)
+        return cert.not_valid_after_utc.timestamp()
+
+
+class Authentication(BaseSettings):
     """Authentication configuration."""
 
-    mode: Annotated[str | None, Field(default=None, description="Authentication mode")]
+    mode: Annotated[Mode, Field(default="x509", description="Authentication mode")]
     oidc: Annotated[
         OIDC,
         Field(
-            default_factory=lambda: OIDC(
-                endpoints=OIDCUrls(),
-                client=OIDCClient(),
-                token=OIDCTokens(),
-                server=Server(),
-            ),
+            default_factory=lambda: OIDC,
             description="OIDC settings",
         ),
     ]
     x509: Annotated[
         X509,
         Field(
-            default_factory=lambda: X509(server=Server()),
+            default_factory=lambda: X509,
             description="X.509 certificate settings",
         ),
     ]
@@ -172,11 +217,12 @@ class AuthConfig(BaseSettings):
         Raises:
             ValueError: If the selected mode's configuration is invalid.
         """
+        status: bool = False
         if self.mode == "oidc":
-            return self.oidc.valid()
+            status = self.oidc.valid()
         if self.mode == "x509":
-            return self.x509.valid()
-        return False
+            status = self.x509.valid()
+        return status
 
     def expired(self) -> bool:
         """Check if the authentication configuration is expired.
@@ -184,8 +230,9 @@ class AuthConfig(BaseSettings):
         Returns:
             bool: True if the authentication configuration is expired, False otherwise.
         """
+        status: bool = False
         if self.mode == "oidc":
-            return self.oidc.expired
+            status = self.oidc.expired
         if self.mode == "x509":
-            return self.x509.expired
-        return True
+            status = self.x509.expired
+        return status
