@@ -32,13 +32,17 @@ def show(
     try:
         cfg = Configuration.assemble()
         console.print(CONFIG_PATH)
-        console.print(cfg.model_dump(mode="python", exclude_none=True))
+        console.print(
+            cfg.model_dump(
+                mode="python", exclude_none=True, exclude_defaults=(not defaults)
+            )
+        )
     except (FileNotFoundError, OSError, ValueError):
-        console.print("[yellow italic]No configuration found.[/yellow italic]")
+        console.print("[yellow italic]No local configuration found.[/yellow italic]")
         if not defaults:
             console.print("[dim]Use --defaults to show default configuration.[/dim]")
             return
-        console.print("[dim]Default Configuration[/dim]")
+        console.print("[dim]Default Client Configuration[/dim]")
         cfg = Configuration()
         console.print(cfg.model_dump(mode="python", exclude_none=True))
         return

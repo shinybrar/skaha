@@ -12,11 +12,11 @@ from pydantic_settings import BaseSettings, SettingsConfigDict
 
 from skaha import CONFIG_PATH
 from skaha.models.auth import Authentication
-from skaha.models.http import Connection, Server
+from skaha.models.http import Connection
 from skaha.models.registry import ContainerRegistry
 
 
-class Configuration(Server, Connection, BaseSettings):
+class Configuration(Connection, BaseSettings):
     """Unified configuration settings for Skaha client and authentication."""
 
     model_config = SettingsConfigDict(
@@ -66,6 +66,46 @@ class Configuration(Server, Connection, BaseSettings):
         le=50,
         ge=10,
     )
+
+    @property
+    def url(self) -> str:
+        """Return the URL for the server.
+
+        Returns:
+            str | None: The URL for the server.
+        """
+        mode = self.auth.mode
+        return str(getattr(self.auth, mode).server.url)
+
+    @property
+    def uri(self) -> str:
+        """Return the URI for the server.
+
+        Returns:
+            str | None: The URI for the server.
+        """
+        mode = self.auth.mode
+        return str(getattr(self.auth, mode).server.uri)
+
+    @property
+    def name(self) -> str:
+        """Return the name for the server.
+
+        Returns:
+            str | None: The name for the server.
+        """
+        mode = self.auth.mode
+        return str(getattr(self.auth, mode).server.name)
+
+    @property
+    def version(self) -> str:
+        """Return the version for the server.
+
+        Returns:
+            str | None: The version for the server.
+        """
+        mode = self.auth.mode
+        return str(getattr(self.auth, mode).server.version)
 
     @classmethod
     def assemble(cls, **kwargs: object) -> Configuration:

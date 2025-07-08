@@ -120,13 +120,12 @@ class X509(BaseModel):
     """X.509 certificate configuration."""
 
     path: Annotated[
-        Path,
+        Path | None,
         Field(
-            default_factory=lambda: Path.home() / ".ssl" / "cadcproxy.pem",
             title="x509 Certificate",
             description="Pathlike to PEM certificate",
         ),
-    ]
+    ] = None
     expiry: Annotated[
         float,
         Field(
@@ -136,14 +135,9 @@ class X509(BaseModel):
         ),
     ]
     server: Annotated[
-        Server,
+        Server | None,
         Field(description="X509 server information"),
-    ] = Server(
-        name="CADC-CANFAR",
-        uri=AnyUrl("ivo://cadc.nrc.ca/skaha"),
-        url=AnyHttpUrl("https://ws-uv.canfar.net/skaha"),
-        version="v0",
-    )
+    ] = None
 
     @model_validator(mode="after")
     def _compute_expiry(self) -> Self:
@@ -159,6 +153,8 @@ class X509(BaseModel):
         Returns:
             float: expiry utc in ctime or 0.0 if cert doesn't exist/can't be read.
         """
+        if self.path is None:
+            return 0.0
         try:
             self.valid()
             data = self.path.read_bytes()
@@ -174,6 +170,8 @@ class X509(BaseModel):
         Returns:
             bool: True if certificate path exists and is not expired, False otherwise.
         """
+        if self.path is None:
+            return False
         destination = self.path.resolve(strict=True)
         if not destination.is_file():
             msg = f"cert file {destination} does not exist."
@@ -203,10 +201,27 @@ class X509(BaseModel):
         return self.expiry < time.time()
 
 
+class TokenAuth(BaseModel):
+    """Token authentication configuration."""
+
+    token: Annotated[
+        str | None,
+        Field(
+            default=None,
+            title="Authentication Token",
+            description="Authentication token for the server.",
+        ),
+    ]
+    server: Annotated[
+        Server | None,
+        Field(description="Token server information"),
+    ]
+
+
 class Authentication(BaseModel):
     """Science Platform Authentication Configuration."""
 
-    mode: Annotated[Mode, Field(description="Authentication Mode.")] = "x509"
+    mode: Annotated[Mode, Field(description="Authentication Mode.")] = "default"
     oidc: Annotated[
         OIDC,
         Field(
@@ -221,6 +236,22 @@ class Authentication(BaseModel):
             description="X.509 certificate settings",
         ),
     ]
+    default: Annotated[
+        X509,
+        Field(
+            default=False,
+            description="Use default authentication mode.",
+        ),
+    ] = X509(
+        path=Path.home() / ".ssl" / "cadcproxy.pem",
+        expiry=0.0,
+        server=Server(
+            name="CADC-CANFAR",
+            uri=AnyUrl("ivo://cadc.nrc.ca/skaha"),
+            url=AnyHttpUrl("https://ws-uv.canfar.net/skaha"),
+            version="v0",
+        ),
+    )
 
     def valid(self) -> bool:
         """Validate that the selected authentication mode has valid configuration.

@@ -12,4 +12,4 @@ from typing import Literal, TypeAlias
 Kind: TypeAlias = Literal["desktop", "notebook", "carta", "headless", "firefly"]
 Status: TypeAlias = Literal["Pending", "Running", "Terminating", "Succeeded", "Error"]
 View: TypeAlias = Literal["all"]
-Mode: TypeAlias = Literal["x509", "oidc", "token"]
+Mode: TypeAlias = Literal["x509", "oidc", "token", "default"]

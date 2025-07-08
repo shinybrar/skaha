@@ -116,11 +116,6 @@ def login(
             version="v0",
         )
 
-        config.url = server.url
-        config.version = server.version
-        config.uri = server.uri
-        config.name = server.name
-
         # Step 7-8: Choose authentication method based on registry
         if selected.registry.upper() == "CADC":
             console.print("[bold blue]X509 Certificate Authentication[/bold blue]")
@@ -168,12 +163,8 @@ def logout(
 
     try:
         config = Configuration.assemble()
-        config.name = None
-        config.uri = None
-        config.url = None
-        config.version = None
         # Clear authentication details
-        config.auth.mode = "x509"
+        config.auth.mode = "default"
         config.auth.x509 = X509()  # type: ignore [call-arg]
         config.auth.oidc = OIDC()  # type: ignore [call-arg]
         # Save updated configuration
