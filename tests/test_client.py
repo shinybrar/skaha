@@ -12,7 +12,7 @@ from skaha.client import SkahaClient
 
 def test_client_has_session_attribute():
     """Test if it SkahaClient object contains requests.Session attribute."""
-    client = SkahaClient()
+    client = SkahaClient(token="test_token")
     assert hasattr(client, "client")
     assert isinstance(client.client, httpx.Client)
 
@@ -22,13 +22,14 @@ def test_client_session():
     headers = [
         "x-skaha-server",
         "content-type",
-        "acccept",
+        "accept",
         "user-agent",
         "date",
-        "user-agent",
         "x-skaha-registry-auth",
     ]
-    skaha = SkahaClient(registry={"username": "test", "secret": "test"}, loglevel=30)
+    from skaha.models.registry import ContainerRegistry
+    registry = ContainerRegistry(username="test", secret="test")
+    skaha = SkahaClient(registry=registry, token="test_token", loglevel=30)
     assert any(header in skaha.client.headers for header in headers)
 
 
