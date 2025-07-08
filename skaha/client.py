@@ -2,41 +2,36 @@
 
 from __future__ import annotations
 
-import logging
 import ssl
 from contextlib import asynccontextmanager, contextmanager
 from datetime import datetime, timezone
 from os import R_OK, access
-from pathlib import Path
 from time import asctime, gmtime
-from typing import TYPE_CHECKING, Annotated, Any
+from typing import TYPE_CHECKING, Any
 
 from cryptography import x509
 from cryptography.hazmat.backends import default_backend
 from httpx import URL, AsyncClient, Client, Limits
 from pydantic import (
-    AnyHttpUrl,
-    Field,
     PrivateAttr,
-    SecretStr,
     ValidationInfo,
     field_validator,
 )
-from pydantic_settings import BaseSettings, SettingsConfigDict
 from typing_extensions import Self
 
 from skaha import __version__, get_logger, set_log_level
 from skaha.hooks.httpx import errors
-from skaha.models.registry import ContainerRegistry  # noqa: TC001
+from skaha.models.config import Configuration
 
 if TYPE_CHECKING:
     from collections.abc import AsyncIterator, Iterator
+    from pathlib import Path
     from types import TracebackType
 
 log = get_logger(__name__)
 
 
-class SkahaClient(BaseSettings):
+class SkahaClient(Configuration):
     """Skaha Client.
 
     Args:
@@ -62,71 +57,6 @@ class SkahaClient(BaseSettings):
             class Sample(SkahaClient):
                 pass
     """
-
-    model_config = SettingsConfigDict(
-        title="Skaha Client Settings",
-        env_prefix="SKAHA_",
-        extra="forbid",
-        json_schema_mode_override="serialization",
-        str_strip_whitespace=True,
-        str_max_length=256,
-        str_min_length=1,
-    )
-
-    server: AnyHttpUrl = Field(
-        default=AnyHttpUrl("https://ws-uv.canfar.net/skaha"),
-        title="API Server URL",
-        description="API Server URL.",
-    )
-    version: str = Field(
-        default="v0",
-        title="API Version",
-        description="Version of the API to use.",
-        pattern=r"^v\d+$",
-    )
-    certificate: Path = Field(
-        default=Path.home() / ".ssl" / "cadcproxy.pem",
-        title="X509 Certificate",
-        description="Path to the X509 certificate used for authentication.",
-        validate_default=False,
-    )
-    timeout: int = Field(
-        default=30,
-        title="HTTP Timeout",
-        description="HTTP Timeout in seconds.",
-    )
-    
-    registry: Annotated[
-        ContainerRegistry | None,
-        Field(
-            default=None,
-            title="Container Registry",
-            description="Credentials for a private images from a registry.",
-        ),
-    ] = None
-
-    token: SecretStr | None = Field(
-        default=None,
-        title="Authentication Token",
-        description="Authentication token for the server.",
-        exclude=True,
-    )
-
-    concurrency: int = Field(
-        default=32,
-        title="Concurrency",
-        description="Maximum concurrent requests.",
-        le=256,
-        ge=1,
-    )
-
-    loglevel: int = Field(
-        default=logging.INFO,
-        title="Logging Level",
-        description="10=DEBUG, 20=INFO, 30=WARNING, 40=ERROR, 50=CRITICAL",
-        le=50,
-        ge=10,
-    )
 
     _client: Client | None = PrivateAttr(
         default=None,
@@ -230,7 +160,7 @@ class SkahaClient(BaseSettings):
             kwargs.update({"verify": self._get_ssl_context()})
         client: Client = Client(**kwargs)
         client.headers.update(self._get_headers())
-        client.base_url = URL(f"{self.server}/{self.version}")
+        client.base_url = URL(f"{self.url}/{self.version}")
         return client
 
     def _create_asynclient(self) -> AsyncClient:
@@ -252,7 +182,7 @@ class SkahaClient(BaseSettings):
             kwargs.update({"verify": self._get_ssl_context()})
         asynclient: AsyncClient = AsyncClient(**kwargs)
         asynclient.headers.update(self._get_headers())
-        asynclient.base_url = URL(f"{self.server}/{self.version}")
+        asynclient.base_url = URL(f"{self.url}/{self.version}")
         return asynclient
 
     def _get_ssl_context(self) -> ssl.SSLContext:
@@ -261,6 +191,9 @@ class SkahaClient(BaseSettings):
         Return:
             ssl.SSLContext: SSL Context.
         """
+        if not self.certificate:
+            msg = "No x509 certificate provided."
+            raise ValueError(msg)
         certfile: str = self.certificate.as_posix()
         ctx = ssl.create_default_context(ssl.Purpose.SERVER_AUTH)
         ctx.minimum_version = ssl.TLSVersion.TLSv1_2
@@ -274,7 +207,7 @@ class SkahaClient(BaseSettings):
             Dict[str, str]: HTTP headers.
         """
         headers: dict[str, str] = {
-            "X-Skaha-Server": str(self.server),
+            "X-Skaha-Server": str(self.name),
             "Content-Type": "application/x-www-form-urlencoded",
             "Accept": "application/json",
             "Date": asctime(gmtime()),
