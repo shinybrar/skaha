@@ -17,13 +17,7 @@ from rich.console import Console
 from rich.progress import BarColumn, Progress, TextColumn, TimeRemainingColumn
 
 from skaha import get_logger
-from skaha.models.auth import (
-    OIDC,
-    OIDCClient,
-    OIDCTokens,
-    OIDCUrls,
-    Server,
-)
+from skaha.models.auth import OIDC
 
 console = Console()
 log = get_logger(__name__)
@@ -376,8 +370,11 @@ async def authenticate(oidc: OIDC) -> OIDC:
 
         oidc.token.access = tokens["access_token"]
         oidc.token.refresh = tokens["refresh_token"]
-        oidc.token.expiry = jwt.decode(  # type: ignore [attr-defined]
+        oidc.expiry.refresh = jwt.decode(  # type: ignore [attr-defined]
             str(oidc.token.refresh), options={"verify_signature": False}
+        ).get("exp")
+        oidc.expiry.access = jwt.decode(  # type: ignore [attr-defined]
+            str(oidc.token.access), options={"verify_signature": False}
         ).get("exp")
 
         console.print("[green]✓[/green] OIDC device authenticated successfully")
@@ -395,12 +392,8 @@ async def authenticate(oidc: OIDC) -> OIDC:
 
 
 if __name__ == "__main__":
-    config = OIDC(
-        endpoints=OIDCUrls(
-            discovery="https://ska-iam.stfc.ac.uk/.well-known/openid-configuration"
-        ),
-        client=OIDCClient(),
-        token=OIDCTokens(),
-        server=Server(),
+    oidc_config = OIDC()  # type: ignore [call-arg]
+    oidc_config.endpoints.discovery = (
+        "https://ska-iam.stfc.ac.uk/.well-known/openid-configuration"
     )
-    asyncio.run(authenticate(config))
+    asyncio.run(authenticate(oidc_config))
