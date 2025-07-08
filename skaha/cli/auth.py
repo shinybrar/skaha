@@ -15,9 +15,9 @@ from skaha.auth import oidc, x509
 from skaha.models.auth import (
     OIDC,
     X509,
-    Server,
 )
 from skaha.models.config import Configuration
+from skaha.models.http import Server
 from skaha.utils.discover import servers
 
 console = Console()
@@ -174,8 +174,8 @@ def logout(
         config.version = None
         # Clear authentication details
         config.auth.mode = "x509"
-        config.auth.x509 = X509() # type: ignore [call-arg]
-        config.auth.oidc = OIDC() # type: ignore [call-arg]
+        config.auth.x509 = X509()  # type: ignore [call-arg]
+        config.auth.oidc = OIDC()  # type: ignore [call-arg]
         # Save updated configuration
         config.save()
         console.print("[green]✓[/green] Authentication credentials cleared")

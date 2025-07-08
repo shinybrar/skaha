@@ -1,4 +1,5 @@
 """Client HTTP Models."""
+
 from __future__ import annotations
 
 from pydantic import AnyHttpUrl, AnyUrl, Field
@@ -46,7 +47,7 @@ class Server(BaseSettings):
         ],
     )
     version: str | None = Field(
-        default= None,
+        default=None,
         title="API Version",
         description="Server API Version.",
         pattern=r"^v\d+$",

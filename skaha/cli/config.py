@@ -18,7 +18,8 @@ console = Console(width=120)
 
 
 @config.command("show | list | ls")
-def show(defaults: Annotated[
+def show(
+    defaults: Annotated[
         bool,
         typer.Option(
             "--defaults",
@@ -38,7 +39,7 @@ def show(defaults: Annotated[
             console.print("[dim]Use --defaults to show default configuration.[/dim]")
             return
         console.print("[dim]Default Configuration[/dim]")
-        cfg = Configuration() # type: ignore [call-arg]
+        cfg = Configuration()
         console.print(cfg.model_dump(mode="python", exclude_none=True))
         return
     except Exception as error:
