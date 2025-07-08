@@ -6,6 +6,7 @@ import asyncio
 from typing import Annotated
 
 import typer
+from pydantic import AnyHttpUrl, AnyUrl
 from rich.console import Console
 from rich.prompt import Confirm
 
@@ -14,12 +15,9 @@ from skaha.auth import oidc, x509
 from skaha.models.auth import (
     OIDC,
     X509,
-    OIDCClient,
-    OIDCTokens,
-    OIDCUrls,
     Server,
 )
-from skaha.models.types import Configuration
+from skaha.models.config import Configuration
 from skaha.utils.discover import servers
 
 console = Console()
@@ -92,50 +90,51 @@ def login(
     try:
         console.print("[bold blue]Starting Science Platform Login[/bold blue]")
         config = Configuration.assemble()
+        console.print("[green]✓[/green] Found existing configuration")
     except (FileNotFoundError, OSError, ValueError):
+        msg = "No configuration found, using defaults."
+        console.print(f"[yellow dim]{msg}.[/yellow dim]")
         config = Configuration()
 
     try:
         if not force and (config.auth.valid() and not config.auth.expired()):
-            console.print("[green]✓[/green] Found existing configuration")
             console.print("[green]✓[/green] Credentials valid")
-            server = getattr(config.auth, str(config.auth.mode)).server
+            selected = getattr(config.auth, str(config.auth.mode)).server
             console.print(
-                f"[green]✓[/green] Authenticated with {server.name} @ {server.url}"
+                f"[green]✓[/green] Authenticated with {selected.name} @ {selected.url}"
             )
             console.print("[dim] Use --force to re-authenticate.[dim]")
             return
 
         # Run discovery and get selected server
-        server = asyncio.run(servers(dev=dev, dead=dead, details=details))
-        config.client.url = server.url
-        config.client.version = "v0"
-
-        # Create server info for auth method
-        server_info = Server(
-            name=server.name,
-            uri=server.uri,
-            url=server.url,
+        selected = asyncio.run(servers(dev=dev, dead=dead, details=details))
+        log.debug("Selected server: %s", selected)
+        server: Server = Server(
+            name=f"{selected.registry}-{selected.name}",
+            uri=AnyUrl(selected.uri),
+            url=AnyHttpUrl(selected.url),
+            version="v0",
         )
 
+        config.url = server.url
+        config.version = server.version
+        config.uri = server.uri
+        config.name = server.name
+
         # Step 7-8: Choose authentication method based on registry
-        if server.registry.upper() == "CADC":
+        if selected.registry.upper() == "CADC":
             console.print("[bold blue]X509 Certificate Authentication[/bold blue]")
-            config.auth.x509 = X509(server=server_info)
-            config.auth.x509 = x509.authenticate(config.auth.x509)
             config.auth.mode = "x509"
+            config.auth.x509.server = server
+            config.auth.x509 = x509.authenticate(config.auth.x509)
         else:
             console.print(
-                f"[bold blue]OIDC Authentication for {server.url}[/bold blue]"
+                f"[bold blue]OIDC Authentication for {selected.url}[/bold blue]"
             )
-            config.auth.oidc = OIDC(
-                endpoints=OIDCUrls(discovery=discovery_url),
-                client=OIDCClient(),
-                token=OIDCTokens(),
-                server=server_info,
-            )
-            config.auth.oidc = asyncio.run(oidc.authenticate(config.auth.oidc))
             config.auth.mode = "oidc"
+            config.auth.oidc.server = server
+            config.auth.oidc.endpoints.discovery = discovery_url
+            config.auth.oidc = asyncio.run(oidc.authenticate(config.auth.oidc))
 
         console.print("[green]✓[/green] Saving configuration")
         config.save()
@@ -169,17 +168,14 @@ def logout(
 
     try:
         config = Configuration.assemble()
-
-        # Clear authentication credentials
-        config.auth.mode = None
-        config.auth.oidc = OIDC(
-            endpoints=OIDCUrls(),
-            client=OIDCClient(),
-            token=OIDCTokens(),
-            server=Server(),
-        )
-        config.auth.x509 = X509(server=Server())
-
+        config.name = None
+        config.uri = None
+        config.url = None
+        config.version = None
+        # Clear authentication details
+        config.auth.mode = "x509"
+        config.auth.x509 = X509() # type: ignore [call-arg]
+        config.auth.oidc = OIDC() # type: ignore [call-arg]
         # Save updated configuration
         config.save()
         console.print("[green]✓[/green] Authentication credentials cleared")
