@@ -103,7 +103,7 @@ class Configuration(Server, Connection, BaseSettings):
         """Save the current configuration to the configuration file."""
         CONFIG_PATH.parent.mkdir(parents=True, exist_ok=True)
 
-        data = self.model_dump(mode="python")
+        data = self.model_dump(mode="json", exclude_defaults=True)
 
         try:
             with CONFIG_PATH.open(mode="w", encoding="utf-8") as filepath:

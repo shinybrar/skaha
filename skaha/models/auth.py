@@ -9,7 +9,7 @@ from typing import Annotated
 
 from cryptography import x509
 from cryptography.hazmat.backends import default_backend
-from pydantic import BaseModel, Field, model_validator
+from pydantic import AnyHttpUrl, AnyUrl, BaseModel, Field, model_validator
 from typing_extensions import Self
 
 from skaha import get_logger
@@ -137,8 +137,13 @@ class X509(BaseModel):
     ]
     server: Annotated[
         Server,
-        Field(default_factory=Server, description="X509 server information"),
-    ]
+        Field(description="X509 server information"),
+    ] = Server(
+        name="CADC-CANFAR",
+        uri=AnyUrl("ivo://cadc.nrc.ca/skaha"),
+        url=AnyHttpUrl("https://ws-uv.canfar.net/skaha"),
+        version="v0",
+    )
 
     @model_validator(mode="after")
     def _compute_expiry(self) -> Self:

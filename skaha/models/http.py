@@ -1,4 +1,5 @@
 """Client HTTP Models."""
+from __future__ import annotations
 
 from pydantic import AnyHttpUrl, AnyUrl, Field
 from pydantic_settings import BaseSettings, SettingsConfigDict
@@ -20,22 +21,23 @@ class Server(BaseSettings):
         str_min_length=1,
     )
 
-    name: str = Field(
-        default="CADC-CANFAR",
+    name: str | None = Field(
+        default=None,
         title="Server Name",
         description="Common name for the science platform server.",
         examples=["SRCnet-Sweden", "SRCnet-UK-CAM"],
         min_length=1,
         max_length=256,
+        validate_default=False,
     )
-    uri: AnyUrl = Field(
-        default=AnyUrl("ivo://cadc.nrc.ca/skaha"),
+    uri: AnyUrl | None = Field(
+        default=None,
         title="Server URI identifier",
         description="IVOA static uri identifier for the server.",
         examples=["ivo://swesrc.chalmers.se/skaha", "ivo://canfar.cam.uksrc.org/skaha"],
     )
-    url: AnyHttpUrl = Field(
-        default=AnyHttpUrl("https://ws-uv.canfar.net/skaha"),
+    url: AnyHttpUrl | None = Field(
+        default=None,
         title="Server URL",
         description="URL where the server is currently accessible from.",
         examples=[
@@ -43,8 +45,8 @@ class Server(BaseSettings):
             "https://canfar.cam.uksrc.org/skaha",
         ],
     )
-    version: str = Field(
-        default="v0",
+    version: str | None = Field(
+        default= None,
         title="API Version",
         description="Server API Version.",
         pattern=r"^v\d+$",
