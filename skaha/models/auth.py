@@ -3,14 +3,14 @@
 from __future__ import annotations
 
 import time
-from datetime import datetime, timezone
 from os import R_OK, access
 from pathlib import Path
 from typing import Annotated
 
 from cryptography import x509
 from cryptography.hazmat.backends import default_backend
-from pydantic import BaseModel, Field
+from pydantic import BaseModel, Field, model_validator
+from typing_extensions import Self
 
 from skaha import get_logger
 from skaha.models.http import Server
@@ -133,14 +133,35 @@ class X509(BaseModel):
             default=0.0,
             title="x509 Expiry Time",
             description="ctime of cert expiration",
-            gt=time.time(),
-            validate_default=False,
         ),
     ]
     server: Annotated[
         Server,
         Field(default_factory=Server, description="X509 server information"),
     ]
+
+    @model_validator(mode="after")
+    def _compute_expiry(self) -> Self:
+        """Compute expiry from certificate file if not already set."""
+        # Only compute if expiry is still the default value (0.0)
+        if self.expiry == 0.0:
+            self.expiry = self._read_expiry_from_cert()
+        return self
+
+    def _read_expiry_from_cert(self) -> float:
+        """Read expiry time from the certificate file.
+
+        Returns:
+            float: expiry utc in ctime or 0.0 if cert doesn't exist/can't be read.
+        """
+        try:
+            self.valid()
+            data = self.path.read_bytes()
+            cert = x509.load_pem_x509_certificate(data, default_backend())
+            return cert.not_valid_after_utc.timestamp()
+        except (FileNotFoundError, PermissionError, ValueError) as err:
+            log.debug("Failed to read expiry from certificate: %s", err)
+            return 0.0
 
     def valid(self) -> bool:
         """Check if the certificate filepath is defined and expiry is in the future.
@@ -157,6 +178,14 @@ class X509(BaseModel):
             raise PermissionError(msg)
         return True
 
+    def refresh_expiry(self) -> None:
+        """Refresh the expiry time from the certificate file.
+
+        This method updates the expiry time by reading the certificate file.
+        It does not check if the certificate is expired or not.
+        """
+        self.expiry = self._read_expiry_from_cert()
+
     @property
     def expired(self) -> bool:
         """Check if the X.509 certificate is expired.
@@ -164,29 +193,9 @@ class X509(BaseModel):
         Returns:
             bool: True if the certificate is expired, False otherwise.
         """
+        if self.expiry == 0.0:
+            self.expiry = self._read_expiry_from_cert()
         return self.expiry < time.time()
-
-    def get_expiry(self) -> float:
-        """Get the x509 cert expiry ctime.
-
-        Raises:
-            ValueError: If the cert is already expired,
-                or not yet valid.
-
-        Returns:
-            float: expiry utc in ctime
-        """
-        destination = self.path.resolve(strict=True)
-        data = destination.read_bytes()
-        cert = x509.load_pem_x509_certificate(data, default_backend())
-        now_utc = datetime.now(timezone.utc)
-        if cert.not_valid_after_utc <= now_utc:
-            msg = f"cert {destination} expired."
-            raise ValueError(msg)
-        if cert.not_valid_before_utc >= now_utc:
-            msg = f"cert {destination} not valid yet."
-            raise ValueError(msg)
-        return cert.not_valid_after_utc.timestamp()
 
 
 class Authentication(BaseModel):
