@@ -11,7 +11,6 @@ from typing import Annotated
 from cryptography import x509
 from cryptography.hazmat.backends import default_backend
 from pydantic import BaseModel, Field
-from pydantic_settings import BaseSettings
 
 from skaha import get_logger
 from skaha.models.http import Server
@@ -23,46 +22,47 @@ log = get_logger(__name__)
 class Endpoint(BaseModel):
     """OIDC URL configuration."""
 
-    discovery: str | None = Field(default=None, description="OIDC discovery URL")
-    device: str | None = Field(
-        default=None, description="OIDC device authorization URL"
-    )
-    registration: str | None = Field(
-        default=None, description="OIDC client registration URL"
-    )
-    token: str | None = Field(default=None, description="OIDC token endpoint URL")
+    discovery: Annotated[str | None, Field(description="OIDC discovery URL")] = None
+    device: Annotated[
+        str | None, Field(description="OIDC device authorization URL")
+    ] = None
+    registration: Annotated[
+        str | None, Field(description="OIDC client registration URL")
+    ] = None
+    token: Annotated[str | None, Field(description="OIDC token endpoint URL")] = None
 
 
 class Client(BaseModel):
     """OIDC client configuration."""
 
-    identity: str | None = Field(default=None, description="OIDC client ID")
-    secret: str | None = Field(default=None, description="OIDC client secret")
+    identity: Annotated[str | None, Field(description="OIDC client ID")] = None
+    secret: Annotated[str | None, Field(description="OIDC client secret")] = None
 
 
 class Token(BaseModel):
     """OIDC token configuration."""
 
-    access: str | None = Field(default=None, description="Access token")
-    refresh: str | None = Field(default=None, description="Refresh token")
+    access: Annotated[str | None, Field(description="Access token")] = None
+    refresh: Annotated[str | None, Field(description="Refresh token")] = None
 
 
 class Expiry(BaseModel):
     """OIDC token expiry times."""
 
-    access: float | None = Field(
-        default=None, description="Access token expiry in ctime"
-    )
-    refresh: float | None = Field(
-        default=None, description="Refresh token expiry in ctime"
-    )
+    access: Annotated[
+        float | None, Field(description="Access token expiry in ctime")
+    ] = None
+    refresh: Annotated[
+        float | None, Field(description="Refresh token expiry in ctime")
+    ] = None
 
 
 class OIDC(BaseModel):
     """Complete OIDC configuration."""
 
     endpoints: Annotated[
-        Endpoint, Field(default_factory=Endpoint, description="OIDC Endpoints.")
+        Endpoint,
+        Field(default_factory=Endpoint, description="OIDC Endpoints."),
     ]
     client: Annotated[
         Client,
@@ -189,21 +189,21 @@ class X509(BaseModel):
         return cert.not_valid_after_utc.timestamp()
 
 
-class Authentication(BaseSettings):
-    """Authentication configuration."""
+class Authentication(BaseModel):
+    """Science Platform Authentication Configuration."""
 
-    mode: Annotated[Mode, Field(default="x509", description="Authentication mode")]
+    mode: Annotated[Mode, Field(description="Authentication Mode.")] = "x509"
     oidc: Annotated[
         OIDC,
         Field(
-            default_factory=lambda: OIDC,
+            default_factory=lambda: OIDC(),
             description="OIDC settings",
         ),
     ]
     x509: Annotated[
         X509,
         Field(
-            default_factory=lambda: X509,
+            default_factory=lambda: X509(),
             description="X.509 certificate settings",
         ),
     ]

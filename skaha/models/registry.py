@@ -103,7 +103,7 @@ class ContainerRegistry(BaseModel):
         object: Pydantic BaseModel object.
     """
 
-    url: str | None = Field(default=None, description="Container Registry URL")
+    url: AnyHttpUrl | None = Field(default=None, description="Container Registry URL")
     username: str | None = Field(
         default=None,
         description="Username for the container registry",
@@ -130,8 +130,6 @@ class ContainerRegistry(BaseModel):
         Returns:
             Self: _description_
         """
-        if self.url:
-            self.url = AnyHttpUrl(self.url).encoded_string()
         if self.username and not self.secret:
             msg = "container registry secret is required."
             raise ValueError(msg)
