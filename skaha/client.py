@@ -28,6 +28,7 @@ if TYPE_CHECKING:
     from pathlib import Path
     from types import TracebackType
 
+
 log = get_logger(__name__)
 
 
@@ -145,6 +146,27 @@ class SkahaClient(Configuration):
             self._asynclient = self._create_asynclient()
         return self._asynclient
 
+    @property
+    def expiry(self) -> float | None:
+        """Get the expiry time for the current authentication method.
+
+        Returns:
+            float | None: Expiry time in ctime format, or None if no expiry or
+                user-passed credentials.
+        """
+        # If user passes cert or token, do not set expiry
+        if self.token or self.certificate:
+            return None
+
+        # Map to appropriate expiry based on auth mode
+        if self.auth.mode == "oidc":
+            return self.auth.oidc.expiry.access
+        if self.auth.mode == "x509":
+            return self.auth.x509.expiry
+        if self.auth.mode == "default":
+            return self.auth.default.expiry
+        return None
+
     # Client Configuration Methods
     def _create_client(self) -> Client:
         """Create synchronous HTTPx Client.
@@ -156,8 +178,20 @@ class SkahaClient(Configuration):
             "timeout": self.timeout,
             "event_hooks": {"response": [errors.catch]},
         }
-        if not self.token:
-            kwargs.update({"verify": self._get_ssl_context()})
+
+        # Use user-passed token if provided
+        if self.token or self.auth.mode == "oidc":
+            # No SSL context needed
+            pass
+        elif self.auth.mode == "x509":
+            assert self.auth.x509.path is not None
+            kwargs.update({"verify": self._get_ssl_context(self.auth.x509.path)})
+        elif self.auth.mode == "default":
+            assert self.auth.default.path is not None
+            kwargs.update({"verify": self._get_ssl_context(self.auth.default.path)})
+        elif self.certificate:
+            kwargs.update({"verify": self._get_ssl_context(self.certificate)})
+
         client: Client = Client(**kwargs)
         client.headers.update(self._get_headers())
         client.base_url = URL(f"{self.url}/{self.version}")
@@ -178,23 +212,38 @@ class SkahaClient(Configuration):
                 keepalive_expiry=5,
             ),
         }
-        if not self.token:
-            kwargs.update({"verify": self._get_ssl_context()})
+
+        # Use user-passed token if provided
+        if self.token or self.auth.mode == "oidc":
+            # No SSL context needed
+            pass
+        elif self.auth.mode == "x509":
+            assert self.auth.x509.path is not None
+            kwargs.update({"verify": self._get_ssl_context(self.auth.x509.path)})
+        elif self.auth.mode == "default":
+            assert self.auth.default.path is not None
+            kwargs.update({"verify": self._get_ssl_context(self.auth.default.path)})
+        elif self.certificate:
+            kwargs.update({"verify": self._get_ssl_context(self.certificate)})
+
         asynclient: AsyncClient = AsyncClient(**kwargs)
         asynclient.headers.update(self._get_headers())
         asynclient.base_url = URL(f"{self.url}/{self.version}")
         return asynclient
 
-    def _get_ssl_context(self) -> ssl.SSLContext:
-        """Get SSL Context from X509 certiticate.
+    def _get_ssl_context(self, certpath: Path) -> ssl.SSLContext:
+        """Get SSL Context from authentication configuration.
 
-        Return:
+        Args:
+            certpath (Path): Path to the certificate file.
+
+        Returns:
             ssl.SSLContext: SSL Context.
         """
-        if not self.certificate:
-            msg = "No x509 certificate provided."
-            raise ValueError(msg)
-        certfile: str = self.certificate.as_posix()
+        if not certpath.exists():
+            msg = f"Certificate path {certpath} does not exist."
+            raise FileNotFoundError(msg)
+        certfile: str = str(certpath)
         ctx = ssl.create_default_context(ssl.Purpose.SERVER_AUTH)
         ctx.minimum_version = ssl.TLSVersion.TLSv1_2
         ctx.load_cert_chain(certfile=certfile)
@@ -214,11 +263,29 @@ class SkahaClient(Configuration):
             "User-Agent": f"python/{__version__}",
         }
 
+        # Handle user-passed token first
         if self.token:
+            assert self.token is not None
             headers.update(
                 {
                     "Authorization": f"Bearer {self.token.get_secret_value()}",
                     "X-Skaha-Authentication-Type": "token",
+                },
+            )
+        # Use authentication mode from configuration
+        elif self.auth.mode == "oidc":
+            # Use OIDC access token
+            if self.auth.oidc.token.access:
+                headers.update(
+                    {
+                        "Authorization": f"Bearer {self.auth.oidc.token.access}",
+                        "X-Skaha-Authentication-Type": "oidc",
+                    },
+                )
+        elif self.auth.mode in ("x509", "default") or self.certificate:
+            headers.update(
+                {
+                    "X-Skaha-Authentication-Type": "certificate",
                 },
             )
         if self.registry:
@@ -227,12 +294,7 @@ class SkahaClient(Configuration):
                     "X-Skaha-Registry-Auth": self.registry.encoded(),
                 },
             )
-        if self.certificate:
-            headers.update(
-                {
-                    "X-Skaha-Authentication-Type": "certificate",
-                },
-            )
+
         return headers
 
     # Context Manager Methods
