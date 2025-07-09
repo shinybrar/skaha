@@ -174,7 +174,7 @@ class TestConfiguration:
         config = Configuration(loglevel=logging.DEBUG, concurrency=16)
 
         with patch("skaha.models.config.CONFIG_PATH") as mock_path:
-            mock_path.parent.mkdir = lambda parents=True, exist_ok=True: None
+            mock_path.parent.mkdir = lambda *_args, **_kwargs: None
             mock_file = mock_open()
             mock_path.open.return_value.__enter__.return_value = mock_file.return_value
 
@@ -190,7 +190,7 @@ class TestConfiguration:
         config = Configuration()
 
         with patch("skaha.models.config.CONFIG_PATH") as mock_path:
-            mock_path.parent.mkdir = lambda parents=True, exist_ok=True: None
+            mock_path.parent.mkdir = lambda *_args, **_kwargs: None
             mock_path.open.side_effect = OSError("Write failed")
 
             with pytest.raises(OSError, match="failed to save config"):
