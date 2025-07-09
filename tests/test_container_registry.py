@@ -1,18 +1,20 @@
+"""Test ContainerRegistry model."""
+
 import pytest
 from pydantic import ValidationError
 
-from skaha.models import ContainerRegistry
+from skaha.models.registry import ContainerRegistry
 
 
 def test_valid_container_registry():
     """Test valid container registry."""
     valid = {
-        "url": "images.canfar.net",
+        "url": "https://images.canfar.net",
         "username": "test",
         "secret": "ghp_1234567890",
     }
     registry = ContainerRegistry(**valid)
-    assert registry.url == "images.canfar.net"
+    assert str(registry.url) == "https://images.canfar.net/"
     assert registry.username == "test"  # nosec
     assert registry.secret == "ghp_1234567890"  # nosec
 
@@ -38,9 +40,8 @@ def test_invalid_container_registry_wrong_server():
         "username": "test",
         "secret": "ghp_1234567890",
     }
-    with pytest.raises(ValidationError) as exc_info:
+    with pytest.raises(ValidationError):
         ContainerRegistry(**invalid_data)
-    assert "Currently only images.canfar.net is supported" in str(exc_info.value)
 
 
 def test_base64_encoding():

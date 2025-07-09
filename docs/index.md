@@ -48,7 +48,7 @@
     ```
 
     ### **🗄️ Backend Upgrades**
-    
+
     - 📡 Skaha now uses the `httpx` library for making HTTP requests instead of `requests`. This adds asynchronous support and also to circumvent the `requests` dependence on `urllib3` which was causing SSL issues on MacOS. See [this issue](https://github.com/urllib3/urllib3/issues/3020) for more details.
     - 🔑 Skaha now supports tokens for authentication. As a result, the constraints for providing a valid certificate filepath have been relaxed and are only enforced when the certificate is used for authentication.
     - 🏎️💨 Added `loglevel` and `concurrency` support to manage the new explosion in functionality!s
@@ -65,7 +65,7 @@
     ```
 
     ### **🪰 Firefly Support**
-    Skaha now supports launching `firefly` session on the CANFAR Science Platform. 
+    Skaha now supports launching `firefly` session on the CANFAR Science Platform.
 
     ```python
     session.create(
@@ -78,7 +78,7 @@
 
     ### **🔐 Private Images**
 
-    Starting October 2024, to create a session with a private container image from the [CANFAR Harbor Registry](https://images.canfar.net/), you will need to provide your harbor `username` and the `CLI Secret` through a `ContainerRegistry` object. 
+    Starting October 2024, to create a session with a private container image from the [CANFAR Harbor Registry](https://images.canfar.net/), you will need to provide your harbor `username` and the `CLI Secret` through a `ContainerRegistry` object.
 
     ```python
     from skaha.models import ContainerRegistry
@@ -105,6 +105,6 @@
     session.destroy_with(prefix="test", kind="headless", status="Pending")
     ```
 
-[Get Started :material-coffee:](get-started.md){: .md-button .md-button--primary } 
+[Get Started :material-coffee:](get-started.md){: .md-button .md-button--primary }
 [Go to GitHub :fontawesome-brands-github:](https://github.com/shinybrar/skaha){: .md-button .md-button--primary }
 [Changelog :material-vector-polyline-remove:](changelog.md){: .md-button .md-button--primary }
