@@ -33,30 +33,78 @@ log = get_logger(__name__)
 
 
 class SkahaClient(Configuration):
-    """Skaha Client.
+    """Skaha Client for interacting with CANFAR Science Platform services.
+
+    The SkahaClient provides both synchronous and asynchronous HTTP clients with
+    comprehensive authentication support including X.509 certificates, OIDC tokens,
+    and bearer tokens. It automatically configures SSL contexts, headers, and
+    connection settings based on the authentication mode.
+
+    Authentication Modes:
+        - **x509**: Uses X.509 certificate authentication from auth.x509 configuration
+        - **oidc**: Uses OIDC bearer token authentication from auth.oidc configuration
+        - **default**: Uses default X.509 certificate from auth.default configuration
+        - **token**: Uses user-provided bearer token (overrides configuration)
 
     Args:
-        server (str): Server URL.
-        version (str): Skaha API version.
-        certificate (str): Certificate file.
-        timeout (int): HTTP Timeout.
-        verify (bool): Verify SSL certificate.
-        registry (ContainerRegistry): Credentials for a private registry.
-        client (Client): HTTPx Client.
-        asynclient (AsyncClient): HTTPx Async Client.
-        concurrency (int): Number of concurrent requests.
-        token (str): Authentication token.
-        loglevel (int): Logging level. Default is 20 (INFO).
+        certificate (Path | None): Path to X.509 certificate file for authentication.
+            Overrides configuration-based authentication when provided.
+        timeout (int): HTTP request timeout in seconds. Default is 30.
+        registry (ContainerRegistry | None): Credentials for private container registry.
+        concurrency (int): Maximum number of concurrent connections for async client.
+            Default is 32.
+        token (SecretStr | None): Bearer token for authentication. When provided,
+            overrides all other authentication methods.
+        loglevel (int): Logging level (10=DEBUG, 20=INFO, 30=WARNING, etc.).
+            Default is 20 (INFO).
+        auth (Authentication): Authentication configuration containing mode and
+            credentials for different authentication types.
+
+    Attributes:
+        client (Client): Synchronous HTTPx client instance (lazy-loaded).
+        asynclient (AsyncClient): Asynchronous HTTPx client instance (lazy-loaded).
+        expiry (float | None): Expiry timestamp for current authentication method.
+            Returns None for user-provided credentials.
 
     Raises:
-        ValidationError: If the client is misconfigured.
-        FileNotFoundError: If the cert file does not exist or is not readable.
+        ValidationError: If the client configuration is invalid.
+        FileNotFoundError: If certificate file does not exist or is not readable.
+        PermissionError: If certificate file is not accessible.
+        ValueError: If certificate is expired or not yet valid.
 
     Examples:
-        >>> from skaha.client import SkahaClient
+        Basic usage with default authentication:
 
-            class Sample(SkahaClient):
-                pass
+        >>> from skaha.client import SkahaClient
+        >>> client = SkahaClient()
+        >>> response = client.client.get("/session")
+
+        Using with bearer token:
+
+        >>> from pydantic import SecretStr
+        >>> client = SkahaClient(token=SecretStr("your-token-here"))
+        >>> response = client.client.get("/session")
+
+        Using with custom certificate:
+
+        >>> from pathlib import Path
+        >>> client = SkahaClient(certificate=Path("/path/to/cert.pem"))
+        >>> response = client.client.get("/session")
+
+        Async usage:
+
+        >>> async with SkahaClient() as client:
+        ...     response = await client.asynclient.aget("/session")
+
+        Context manager usage:
+
+        >>> with SkahaClient() as client:
+        ...     response = client.client.get("/session")
+
+    Note:
+        The client automatically handles SSL context creation, header generation,
+        and connection pooling. Debug logging is available by setting loglevel=10
+        to trace client creation and authentication flow.
     """
 
     _client: Client | None = PrivateAttr(
@@ -133,6 +181,7 @@ class SkahaClient(Configuration):
         """
         if self._client is None:
             self._client = self._create_client()
+            log.debug("Synchronous HTTPx client created successfully")
         return self._client
 
     @property
@@ -144,36 +193,80 @@ class SkahaClient(Configuration):
         """
         if self._asynclient is None:
             self._asynclient = self._create_asynclient()
+            log.debug("Asynchronous HTTPx client created successfully")
         return self._asynclient
 
     @property
     def expiry(self) -> float | None:
         """Get the expiry time for the current authentication method.
 
+        This property returns the expiry timestamp for the currently configured
+        authentication method.
+
+        Authentication Mode Mapping:
+            - **oidc**: Returns auth.oidc.expiry.access (OIDC access token expiry)
+            - **x509**: Returns auth.x509.expiry (X.509 certificate expiry)
+            - **default**: Returns auth.default.expiry (default certificate expiry)
+            - **user-provided**: Returns None (no automatic expiry tracking)
+
         Returns:
-            float | None: Expiry time in ctime format, or None if no expiry or
-                user-passed credentials.
+            float | None: Expiry time as Unix timestamp (seconds since epoch),
+                or None if no expiry is available or user-provided credentials
+                are being used.
+
+        Examples:
+            >>> client = SkahaClient()  # Using default auth
+            >>> if client.expiry:
+            ...     import time
+            ...
+            ...     time_left = client.expiry - time.time()
+            ...     print(f"Credentials expire in {time_left:.0f} seconds")
+
+            >>> # User-provided token has no tracked expiry
+            >>> client = SkahaClient(token="user-token")
+            >>> assert client.expiry is None
+
+        Note:
+            When user-provided certificates or tokens are used, this property
+            returns None since the client cannot track their expiry automatically.
         """
         # If user passes cert or token, do not set expiry
         if self.token or self.certificate:
+            log.debug("User-passed credentials detected, returning None for expiry")
             return None
 
         # Map to appropriate expiry based on auth mode
         if self.auth.mode == "oidc":
-            return self.auth.oidc.expiry.access
+            expiry = self.auth.oidc.expiry.access
+            log.debug("OIDC mode: returning expiry %s", expiry)
+            return expiry
         if self.auth.mode == "x509":
-            return self.auth.x509.expiry
+            expiry = self.auth.x509.expiry
+            log.debug("X509 mode: returning expiry %s", expiry)
+            return expiry
         if self.auth.mode == "default":
-            return self.auth.default.expiry
+            expiry = self.auth.default.expiry
+            log.debug("Default mode: returning expiry %s", expiry)
+            return expiry
+        log.debug("Unknown auth mode '%s', returning None for expiry", self.auth.mode)
         return None
 
     # Client Configuration Methods
     def _create_client(self) -> Client:
-        """Create synchronous HTTPx Client.
+        """Create and configure a synchronous HTTPx Client.
+
+        This method creates a synchronous HTTPx client with appropriate SSL context,
+        headers, and configuration based on the current authentication mode.
+        The client is configured with error handling hooks and proper timeouts.
 
         Returns:
-            Client: HTTPx Client.
+            Client: Configured synchronous HTTPx Client
+
+        Note:
+            This method is called lazily when the client property is first accessed.
+            The created client is cached and reused for subsequent requests.
         """
+        log.debug("Creating synchronous client with auth mode: %s", self.auth.mode)
         kwargs: dict[str, Any] = {
             "timeout": self.timeout,
             "event_hooks": {"response": [errors.catch]},
@@ -182,26 +275,49 @@ class SkahaClient(Configuration):
         # Use user-passed token if provided
         if self.token or self.auth.mode == "oidc":
             # No SSL context needed
-            pass
+            log.debug("Using token/OIDC authentication - no SSL context required")
         elif self.auth.mode == "x509":
             assert self.auth.x509.path is not None
+            log.debug("Using X509 authentication with cert: %s", self.auth.x509.path)
             kwargs.update({"verify": self._get_ssl_context(self.auth.x509.path)})
         elif self.auth.mode == "default":
             assert self.auth.default.path is not None
+            log.debug(
+                "Using default authentication with cert: %s", self.auth.default.path
+            )
             kwargs.update({"verify": self._get_ssl_context(self.auth.default.path)})
         elif self.certificate:
+            log.debug(
+                "Using certificate authentication with cert: %s", self.certificate
+            )
             kwargs.update({"verify": self._get_ssl_context(self.certificate)})
 
         client: Client = Client(**kwargs)
-        client.headers.update(self._get_headers())
-        client.base_url = URL(f"{self.url}/{self.version}")
+        headers = self._get_headers()
+        client.headers.update(headers)
+        base_url = f"{self.url}/{self.version}"
+        log.debug("Setting client base URL: %s", base_url)
+        client.base_url = URL(base_url)
         return client
 
     def _create_asynclient(self) -> AsyncClient:
-        """Create asynchronous HTTPx Client.
+        """Create and configure an asynchronous HTTPx Client.
+
+        This method creates an asynchronous HTTPx client with appropriate SSL context,
+        headers, connection pooling, and configuration based on the current
+        authentication mode. The async client is optimized for concurrent requests.
+
+        Connection Pooling:
+            - max_connections: Set to configured concurrency level
+            - max_keepalive_connections: Set to 25% of max_connections
+            - keepalive_expiry: 5 seconds for connection reuse
 
         Returns:
-            AsyncClient: HTTPx Async Client.
+            AsyncClient: Configured asynchronous HTTPx Client
+
+        Note:
+            This method is called lazily when the asynclient property is first accessed.
+            The created client is cached and reused for subsequent async requests.
         """
         kwargs: dict[str, Any] = {
             "timeout": self.timeout,
@@ -212,23 +328,34 @@ class SkahaClient(Configuration):
                 keepalive_expiry=5,
             ),
         }
+        log.debug("Creating asynchronous client with %s", kwargs)
 
         # Use user-passed token if provided
         if self.token or self.auth.mode == "oidc":
             # No SSL context needed
-            pass
+            log.debug("Using token/OIDC authentication - no SSL context required")
         elif self.auth.mode == "x509":
             assert self.auth.x509.path is not None
+            log.debug("Using X509 authentication with cert: %s", self.auth.x509.path)
             kwargs.update({"verify": self._get_ssl_context(self.auth.x509.path)})
         elif self.auth.mode == "default":
             assert self.auth.default.path is not None
+            log.debug(
+                "Using default authentication with cert: %s", self.auth.default.path
+            )
             kwargs.update({"verify": self._get_ssl_context(self.auth.default.path)})
         elif self.certificate:
+            log.debug(
+                "Using certificate authentication with cert: %s", self.certificate
+            )
             kwargs.update({"verify": self._get_ssl_context(self.certificate)})
 
         asynclient: AsyncClient = AsyncClient(**kwargs)
-        asynclient.headers.update(self._get_headers())
-        asynclient.base_url = URL(f"{self.url}/{self.version}")
+        headers = self._get_headers()
+        asynclient.headers.update(headers)
+        base_url = f"{self.url}/{self.version}"
+        log.debug("Setting async client base URL: %s", base_url)
+        asynclient.base_url = URL(base_url)
         return asynclient
 
     def _get_ssl_context(self, certpath: Path) -> ssl.SSLContext:
@@ -242,18 +369,52 @@ class SkahaClient(Configuration):
         """
         if not certpath.exists():
             msg = f"Certificate path {certpath} does not exist."
+            log.error(msg)
             raise FileNotFoundError(msg)
+
         certfile: str = str(certpath)
+        log.debug("Loading certificate chain from: %s", certfile)
         ctx = ssl.create_default_context(ssl.Purpose.SERVER_AUTH)
         ctx.minimum_version = ssl.TLSVersion.TLSv1_2
         ctx.load_cert_chain(certfile=certfile)
+        log.debug("SSL context created successfully")
         return ctx
 
     def _get_headers(self) -> dict[str, str]:
-        """Generate HTTP headers for the client.
+        """Generate HTTP headers for the client based on authentication mode.
+
+        Standard Headers:
+            - X-Skaha-Server: Server name identifier
+            - Content-Type: application/x-www-form-urlencoded
+            - Accept: application/json
+            - Date: Current GMT timestamp
+            - User-Agent: Python client version
+
+        Authentication Headers:
+            - **token**: Authorization: Bearer <token>,
+              X-Skaha-Authentication-Type: token
+            - **oidc**: Authorization: Bearer <access_token>,
+              X-Skaha-Authentication-Type: oidc
+            - **x509/default/certificate**: X-Skaha-Authentication-Type: certificate
+
+        Registry Headers:
+            - X-Skaha-Registry-Auth: Base64 encoded registry credentials (if configured)
 
         Returns:
-            Dict[str, str]: HTTP headers.
+            dict[str, str]: Complete HTTP headers dictionary ready for use with
+                HTTPx clients. Headers include authentication, content type,
+                and any configured registry authentication.
+
+        Examples:
+            >>> client = SkahaClient(token="my-token")
+            >>> headers = client._get_headers()
+            >>> assert "Authorization" in headers
+            >>> assert headers["X-Skaha-Authentication-Type"] == "token"
+
+        Note:
+            User-provided tokens take precedence over configuration-based
+            authentication. Registry authentication headers are only added if a
+            registry is configured.
         """
         headers: dict[str, str] = {
             "X-Skaha-Server": str(self.name),
@@ -282,12 +443,17 @@ class SkahaClient(Configuration):
                         "X-Skaha-Authentication-Type": "oidc",
                     },
                 )
+            else:
+                msg = "OIDC mode selected but no access token available"
+                log.error(msg)
+                raise ValueError(msg)
         elif self.auth.mode in ("x509", "default") or self.certificate:
             headers.update(
                 {
                     "X-Skaha-Authentication-Type": "certificate",
                 },
             )
+
         if self.registry:
             headers.update(
                 {
@@ -295,19 +461,23 @@ class SkahaClient(Configuration):
                 },
             )
 
+        log.debug("Generated headers: %s", list(headers.keys()))
         return headers
 
     # Context Manager Methods
     @contextmanager
     def _session(self) -> Iterator[Client]:
         """Sync context."""
+        log.debug("Entering synchronous session context")
         try:
             yield self.client
         finally:
+            log.debug("Exiting synchronous session context")
             self._close()
 
     def __enter__(self) -> Self:
         """Sync context manager entry."""
+        log.debug("Entering synchronous context manager")
         return self
 
     def __exit__(
@@ -317,24 +487,32 @@ class SkahaClient(Configuration):
         exc_tb: TracebackType | None,
     ) -> None:
         """Sync context manager exit."""
+        log.debug("Exiting synchronous context manager")
         self._close()
 
     def _close(self) -> None:
         """Close sync client."""
         if self._client:
+            log.debug("Closing synchronous HTTPx client")
             self._client.close()
             self._client = None
+            log.debug("Synchronous HTTPx client closed")
+        else:
+            log.debug("No synchronous client to close")
 
     @asynccontextmanager
     async def _asession(self) -> AsyncIterator[AsyncClient]:
         """Async context."""
+        log.debug("Entering asynchronous session context")
         try:
             yield self.asynclient
         finally:
+            log.debug("Exiting asynchronous session context")
             await self._aclose()
 
     async def __aenter__(self) -> Self:
         """Async context manager entry."""
+        log.debug("Entering asynchronous context manager")
         return self
 
     async def __aexit__(
@@ -344,16 +522,22 @@ class SkahaClient(Configuration):
         exc_tb: TracebackType | None,
     ) -> None:
         """Async context manager exit."""
+        log.debug("Exiting asynchronous context manager")
         await self._aclose()
 
     async def _aclose(self) -> None:
         """Close async client."""
         if self._asynclient:
+            log.debug("Closing asynchronous HTTPx client")
             await self._asynclient.aclose()
             self._asynclient = None
+            log.debug("Asynchronous HTTPx client closed")
+        else:
+            log.debug("No asynchronous client to close")
 
     def __del__(self) -> None:
         """Cleanup on deletion."""
+        log.debug("SkahaClient instance being deleted - cleaning up clients")
         # Sync session cleanup
         self._client = None
         # Async session cleanup
