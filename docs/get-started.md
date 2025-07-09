@@ -19,46 +19,102 @@ Before you can use the Skaha Python package, you need a valid account with acces
 
 ## Authentication
 
-### X509 Authentication
+Skaha supports multiple authentication methods to interact with the CANFAR Science Platform. The authentication system automatically handles SSL contexts, headers, and credential management.
 
-Skaha can use X509 security certificate for interactions with the Science Platform. The certificate comes in the form of a `.pem` file which is saved in your home directory by default under the path `~/.ssl/cadcproxy.pem`.
+### Authentication Modes
 
-!!! info "X509 Certificate"
-    You need to have a valid certificate in order to use the CANFAR Science Platform.
+!!! tip "Automatic Configuration"
+    Starting with v1.7, Skaha features an enhanced authentication system that automatically configures the appropriate authentication method based on your configuration.
 
-!!! question "Generate a certificate"
-    As part of the skaha package installation, a command line tool named `cadc-get-cert` is also installed. This tool simplifies the process of generating a certificate by executing the following command:
+#### X.509 Certificate Authentication
 
-    ```bash
-    cadc-get-cert -u username
-    Password: *******
+The most common authentication method uses X.509 security certificates. Certificates come in the form of `.pem` files.
 
-    DONE. 10 day certificate saved in /home/username/.ssl/cadcproxy.pem
-    ```
+!!! info "Default Certificate Location"
+    By default, Skaha looks for certificates at `$HOME/.ssl/cadcproxy.pem`.
 
+**Generate a Certificate:**
 
+```bash
+cadc-get-cert -u username
+Password: *******
 
-!!! info "Certificate Location"
+DONE. 10 day certificate saved in /home/username/.ssl/cadcproxy.pem
+```
 
-    By default, `skaha` **only** looks at the location `$HOME/.ssl/cadcproxy.pem` for the X509 authentication certificate. When using the `skaha` python package, you can specify a custom location of your certificate with,
-    ```python
-    from skaha.session import Session
-
-    session = Session(certificate="/path/to/certificate.pem")
-    ```
-
-### Token Authentication
-
-Starting with v1.6, Skaha supports token authentication. You can use a token instead of a certificate for authentication. The token can be passed as a string or as a file path.
+**Using Default Certificate:**
 
 ```python
 from skaha.session import Session
 
-session = Session(token="your_super_token")
+# Uses default certificate location
+session = Session()
 ```
 
-!!! note "Beta Feature"
-    Token authentication is a beta feature intended for testing purposes. It is not recommended for production use. As CADC migrates to token-based authentication, this feature will be updated to support with better documentation and examples for end-users.
+**Using Custom Certificate:**
+
+```python
+from pathlib import Path
+from skaha.session import Session
+
+session = Session(certificate=Path("/path/to/certificate.pem"))
+```
+
+#### OIDC Token Authentication
+
+For OIDC (OpenID Connect) authentication, configure your authentication settings:
+
+```python
+from skaha.session import Session
+
+# Uses configured OIDC authentication
+# (requires auth.mode = "oidc" in configuration)
+session = Session()
+```
+
+#### Bearer Token Authentication
+
+You can use bearer tokens for direct authentication:
+
+```python
+from pydantic import SecretStr
+from skaha.session import Session
+
+session = Session(token=SecretStr("your-bearer-token"))
+```
+
+!!! warning "Token Security"
+    Always use `SecretStr` for tokens to prevent accidental logging of sensitive credentials.
+
+### Authentication Priority
+
+The authentication system follows this priority order:
+
+1. **User-provided token** (highest priority)
+2. **User-provided certificate**
+3. **Configured authentication mode** (oidc, x509, default)
+4. **Default certificate** (fallback)
+
+### Checking Authentication Status
+
+You can check the authentication expiry and mode:
+
+```python
+import time
+from skaha.client import SkahaClient
+
+client = SkahaClient()
+
+# Check authentication mode
+print(f"Authentication mode: {client.auth.mode}")
+
+# Check expiry (if available)
+if client.expiry:
+    time_left = client.expiry - time.time()
+    print(f"Authentication expires in {time_left:.0f} seconds")
+else:
+    print("No expiry tracking available")
+```
 
 ## Container Registry Access
 

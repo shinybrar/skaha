@@ -25,7 +25,25 @@
 
 ## What's New
 
-!!! info "New in v1.6+"
+!!! info "New in v1.7+"
+
+    ### **🔐 Enhanced Authentication System**
+    Skaha now features a comprehensive authentication system with support for multiple authentication modes and automatic credential management.
+
+    ```python
+    from skaha.client import SkahaClient
+    from pathlib import Path
+
+    # X.509 certificate authentication
+    client = SkahaClient(certificate=Path("/path/to/cert.pem"))
+
+    # OIDC token authentication (configured)
+    client = SkahaClient()  # Uses auth.mode = "oidc"
+
+    # Bearer token authentication
+    from pydantic import SecretStr
+    client = SkahaClient(token=SecretStr("your-token"))
+    ```
 
     ### **🚀 Asynchronous Sessions**
     Skaha now supports asynchronous sessions using the `AsyncSession` class while maintaining 1-to-1 compatibility with the `Session` class.
@@ -50,8 +68,9 @@
     ### **🗄️ Backend Upgrades**
 
     - 📡 Skaha now uses the `httpx` library for making HTTP requests instead of `requests`. This adds asynchronous support and also to circumvent the `requests` dependence on `urllib3` which was causing SSL issues on MacOS. See [this issue](https://github.com/urllib3/urllib3/issues/3020) for more details.
-    - 🔑 Skaha now supports tokens for authentication. As a result, the constraints for providing a valid certificate filepath have been relaxed and are only enforced when the certificate is used for authentication.
-    - 🏎️💨 Added `loglevel` and `concurrency` support to manage the new explosion in functionality!s
+    - 🔑 Skaha now supports multiple authentication methods including X.509 certificates, OIDC tokens, and bearer tokens with automatic SSL context management.
+    - 🏎️💨 Added `loglevel` and `concurrency` support to manage the new explosion in functionality!
+    - 🔍 Comprehensive debug logging for authentication flow and client creation troubleshooting.
 
     ### **🧾 Logs to `stdout`**
 
