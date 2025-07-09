@@ -1,15 +1,16 @@
 """Comprehensive tests for the registry models module."""
 
 import base64
+
 import pytest
 from pydantic import ValidationError
 
 from skaha.models.registry import (
-    IVOARegistrySearch,
+    ContainerRegistry,
     IVOARegistry,
+    IVOARegistrySearch,
     Server,
     ServerResults,
-    ContainerRegistry,
 )
 
 
@@ -19,22 +20,33 @@ class TestIVOARegistrySearch:
     def test_default_values(self) -> None:
         """Test default values for IVOARegistrySearch."""
         search = IVOARegistrySearch()
-        
+
         # Check default registries
         assert "https://spsrc27.iaa.csic.es/reg/resource-caps" in search.registries
-        assert search.registries["https://spsrc27.iaa.csic.es/reg/resource-caps"] == "SRCnet"
-        assert "https://ws.cadc-ccda.hia-iha.nrc-cnrc.gc.ca/reg/resource-caps" in search.registries
-        assert search.registries["https://ws.cadc-ccda.hia-iha.nrc-cnrc.gc.ca/reg/resource-caps"] == "CADC"
-        
+        assert (
+            search.registries["https://spsrc27.iaa.csic.es/reg/resource-caps"]
+            == "SRCnet"
+        )
+        assert (
+            "https://ws.cadc-ccda.hia-iha.nrc-cnrc.gc.ca/reg/resource-caps"
+            in search.registries
+        )
+        assert (
+            search.registries[
+                "https://ws.cadc-ccda.hia-iha.nrc-cnrc.gc.ca/reg/resource-caps"
+            ]
+            == "CADC"
+        )
+
         # Check default names
         assert "ivo://canfar.net/src/skaha" in search.names
         assert search.names["ivo://canfar.net/src/skaha"] == "Canada"
         assert "ivo://cadc.nrc.ca/skaha" in search.names
         assert search.names["ivo://cadc.nrc.ca/skaha"] == "CANFAR"
-        
+
         # Check default omit list
         assert ("CADC", "ivo://canfar.net/src/skaha") in search.omit
-        
+
         # Check default excluded terms
         assert "dev" in search.excluded
         assert "test" in search.excluded
@@ -46,14 +58,14 @@ class TestIVOARegistrySearch:
         custom_names = {"ivo://custom.com/service": "Custom Service"}
         custom_omit = [("Custom", "ivo://custom.com/service")]
         custom_excluded = ("custom", "exclude")
-        
+
         search = IVOARegistrySearch(
             registries=custom_registries,
             names=custom_names,
             omit=custom_omit,
             excluded=custom_excluded,
         )
-        
+
         assert search.registries == custom_registries
         assert search.names == custom_names
         assert search.omit == custom_omit
@@ -62,7 +74,7 @@ class TestIVOARegistrySearch:
     def test_all_default_registry_entries(self) -> None:
         """Test that all expected default registry entries are present."""
         search = IVOARegistrySearch()
-        
+
         expected_names = {
             "ivo://canfar.net/src/skaha": "Canada",
             "ivo://swesrc.chalmers.se/skaha": "Sweden",
@@ -76,7 +88,7 @@ class TestIVOARegistrySearch:
             "ivo://canfar.ska.zverse.space/skaha": "China",
             "ivo://cadc.nrc.ca/skaha": "CANFAR",
         }
-        
+
         for uri, name in expected_names.items():
             assert uri in search.names
             assert search.names[uri] == name
@@ -88,7 +100,7 @@ class TestIVOARegistry:
     def test_default_values(self) -> None:
         """Test default values for IVOARegistry."""
         registry = IVOARegistry(name="Test Registry", content="<xml>content</xml>")
-        
+
         assert registry.name == "Test Registry"
         assert registry.content == "<xml>content</xml>"
         assert registry.success is True
@@ -102,7 +114,7 @@ class TestIVOARegistry:
             success=False,
             error="Connection failed",
         )
-        
+
         assert registry.name == "Failed Registry"
         assert registry.content == ""
         assert registry.success is False
@@ -113,7 +125,7 @@ class TestIVOARegistry:
         # Missing name should raise ValidationError
         with pytest.raises(ValidationError):
             IVOARegistry(content="content")
-        
+
         # Missing content should raise ValidationError
         with pytest.raises(ValidationError):
             IVOARegistry(name="name")
@@ -129,7 +141,7 @@ class TestServer:
             uri="ivo://cadc.nrc.ca/skaha",
             url="https://ws-uv.canfar.net/skaha",
         )
-        
+
         assert server.registry == "CADC"
         assert server.uri == "ivo://cadc.nrc.ca/skaha"
         assert server.url == "https://ws-uv.canfar.net/skaha"
@@ -145,7 +157,7 @@ class TestServer:
             status=200,
             name="Sweden",
         )
-        
+
         assert server.registry == "SRCnet"
         assert server.uri == "ivo://swesrc.chalmers.se/skaha"
         assert server.url == "https://services.swesrc.chalmers.se/skaha"
@@ -156,10 +168,10 @@ class TestServer:
         """Test that missing required fields raise ValidationError."""
         with pytest.raises(ValidationError):
             Server(uri="ivo://test.com", url="https://test.com")  # Missing registry
-        
+
         with pytest.raises(ValidationError):
             Server(registry="Test", url="https://test.com")  # Missing uri
-        
+
         with pytest.raises(ValidationError):
             Server(registry="Test", uri="ivo://test.com")  # Missing url
 
@@ -170,7 +182,7 @@ class TestServerResults:
     def test_default_values(self) -> None:
         """Test default values for ServerResults."""
         results = ServerResults()
-        
+
         assert results.endpoints == []
         assert results.total_time == 0.0
         assert results.registry_fetch_time == 0.0
@@ -182,9 +194,13 @@ class TestServerResults:
     def test_with_custom_values(self) -> None:
         """Test ServerResults with custom values."""
         endpoints = [
-            Server(registry="CADC", uri="ivo://cadc.nrc.ca/skaha", url="https://ws-uv.canfar.net/skaha")
+            Server(
+                registry="CADC",
+                uri="ivo://cadc.nrc.ca/skaha",
+                url="https://ws-uv.canfar.net/skaha",
+            )
         ]
-        
+
         results = ServerResults(
             endpoints=endpoints,
             total_time=5.5,
@@ -194,7 +210,7 @@ class TestServerResults:
             checked=8,
             successful=6,
         )
-        
+
         assert len(results.endpoints) == 1
         assert results.total_time == 5.5
         assert results.registry_fetch_time == 2.0
@@ -206,7 +222,7 @@ class TestServerResults:
     def test_add_method(self) -> None:
         """Test add method."""
         results = ServerResults()
-        
+
         # Add successful endpoint
         successful_server = Server(
             registry="CADC",
@@ -215,10 +231,10 @@ class TestServerResults:
             status=200,
         )
         results.add(successful_server)
-        
+
         assert len(results.endpoints) == 1
         assert results.successful == 1
-        
+
         # Add failed endpoint
         failed_server = Server(
             registry="Failed",
@@ -227,24 +243,30 @@ class TestServerResults:
             status=500,
         )
         results.add(failed_server)
-        
+
         assert len(results.endpoints) == 2
         assert results.successful == 1  # Still 1, only 200 status counts
 
     def test_get_by_registry_method(self) -> None:
         """Test get_by_registry method."""
         results = ServerResults()
-        
-        cadc_server1 = Server(registry="CADC", uri="ivo://cadc1.com", url="https://cadc1.com")
-        cadc_server2 = Server(registry="CADC", uri="ivo://cadc2.com", url="https://cadc2.com")
-        srcnet_server = Server(registry="SRCnet", uri="ivo://srcnet.com", url="https://srcnet.com")
-        
+
+        cadc_server1 = Server(
+            registry="CADC", uri="ivo://cadc1.com", url="https://cadc1.com"
+        )
+        cadc_server2 = Server(
+            registry="CADC", uri="ivo://cadc2.com", url="https://cadc2.com"
+        )
+        srcnet_server = Server(
+            registry="SRCnet", uri="ivo://srcnet.com", url="https://srcnet.com"
+        )
+
         results.add(cadc_server1)
         results.add(cadc_server2)
         results.add(srcnet_server)
-        
+
         grouped = results.get_by_registry()
-        
+
         assert "CADC" in grouped
         assert "SRCnet" in grouped
         assert len(grouped["CADC"]) == 2
@@ -260,7 +282,7 @@ class TestContainerRegistry:
     def test_default_values(self) -> None:
         """Test default values for ContainerRegistry."""
         registry = ContainerRegistry()
-        
+
         assert registry.url is None
         assert registry.username is None
         assert registry.secret is None
@@ -273,18 +295,24 @@ class TestContainerRegistry:
             secret="testsecret",
         )
 
-        assert str(registry.url) == "https://registry.example.com/"  # pydantic adds trailing slash
+        assert (
+            str(registry.url) == "https://registry.example.com/"
+        )  # pydantic adds trailing slash
         assert registry.username == "testuser"
         assert registry.secret == "testsecret"
 
     def test_validation_username_without_secret(self) -> None:
         """Test validation fails when username provided without secret."""
-        with pytest.raises(ValidationError, match="container registry secret is required"):
+        with pytest.raises(
+            ValidationError, match="container registry secret is required"
+        ):
             ContainerRegistry(username="testuser")
 
     def test_validation_secret_without_username(self) -> None:
         """Test validation fails when secret provided without username."""
-        with pytest.raises(ValidationError, match="container registry username is required"):
+        with pytest.raises(
+            ValidationError, match="container registry username is required"
+        ):
             ContainerRegistry(secret="testsecret")
 
     def test_validation_both_username_and_secret(self) -> None:
@@ -302,14 +330,14 @@ class TestContainerRegistry:
     def test_encoded_method(self) -> None:
         """Test encoded method."""
         registry = ContainerRegistry(username="testuser", secret="testsecret")
-        
+
         expected = base64.b64encode(b"testuser:testsecret").decode()
         assert registry.encoded() == expected
 
     def test_encoded_method_with_special_characters(self) -> None:
         """Test encoded method with special characters."""
         registry = ContainerRegistry(username="user@domain.com", secret="p@ssw0rd!")
-        
+
         expected = base64.b64encode(b"user@domain.com:p@ssw0rd!").decode()
         assert registry.encoded() == expected
 
@@ -317,10 +345,14 @@ class TestContainerRegistry:
         """Test URL field validation."""
         # Valid URLs
         registry = ContainerRegistry(url="https://registry.example.com")
-        assert str(registry.url) == "https://registry.example.com/"  # pydantic adds trailing slash
+        assert (
+            str(registry.url) == "https://registry.example.com/"
+        )  # pydantic adds trailing slash
 
         registry = ContainerRegistry(url="http://localhost:5000")
-        assert str(registry.url) == "http://localhost:5000/"  # pydantic adds trailing slash
+        assert (
+            str(registry.url) == "http://localhost:5000/"
+        )  # pydantic adds trailing slash
 
         # Invalid URLs
         with pytest.raises(ValidationError):
@@ -334,14 +366,14 @@ class TestContainerRegistry:
         # Valid lengths
         registry = ContainerRegistry(username="a", secret="secret")  # Min length
         assert registry.username == "a"
-        
+
         registry = ContainerRegistry(username="a" * 255, secret="secret")  # Max length
         assert len(registry.username) == 255
-        
+
         # Invalid lengths
         with pytest.raises(ValidationError):
             ContainerRegistry(username="", secret="secret")  # Too short
-        
+
         with pytest.raises(ValidationError):
             ContainerRegistry(username="a" * 256, secret="secret")  # Too long
 
@@ -350,13 +382,13 @@ class TestContainerRegistry:
         # Valid lengths
         registry = ContainerRegistry(username="user", secret="s")  # Min length
         assert registry.secret == "s"
-        
+
         registry = ContainerRegistry(username="user", secret="s" * 255)  # Max length
         assert len(registry.secret) == 255
-        
+
         # Invalid lengths
         with pytest.raises(ValidationError):
             ContainerRegistry(username="user", secret="")  # Too short
-        
+
         with pytest.raises(ValidationError):
             ContainerRegistry(username="user", secret="s" * 256)  # Too long

@@ -1,11 +1,11 @@
 """Comprehensive tests for the session models module."""
 
 import warnings
+
 import pytest
 from pydantic import ValidationError
 
 from skaha.models.session import CreateSpec, FetchSpec
-from skaha.models.types import Kind, Status, View
 
 
 class TestCreateSpec:
@@ -18,7 +18,7 @@ class TestCreateSpec:
             image="images.canfar.net/skaha/terminal:1.1.1",
             kind="headless",
         )
-        
+
         assert spec.name == "test-session"
         assert spec.image == "images.canfar.net/skaha/terminal:1.1.1"
         assert spec.kind == "headless"
@@ -33,7 +33,7 @@ class TestCreateSpec:
     def test_with_all_fields(self) -> None:
         """Test CreateSpec with all fields."""
         env_vars = {"FOO": "BAR", "DEBUG": "true"}
-        
+
         spec = CreateSpec(
             name="full-session",
             image="custom/image:latest",
@@ -46,7 +46,7 @@ class TestCreateSpec:
             env=env_vars,
             replicas=3,
         )
-        
+
         assert spec.name == "full-session"
         assert spec.image == "custom/image:latest"
         assert spec.kind == "headless"
@@ -63,14 +63,14 @@ class TestCreateSpec:
         # Valid values
         spec = CreateSpec(name="test", image="test:latest", kind="headless", cores=1)
         assert spec.cores == 1
-        
+
         spec = CreateSpec(name="test", image="test:latest", kind="headless", cores=256)
         assert spec.cores == 256
-        
+
         # Invalid values
         with pytest.raises(ValidationError):
             CreateSpec(name="test", image="test:latest", kind="headless", cores=0)
-        
+
         with pytest.raises(ValidationError):
             CreateSpec(name="test", image="test:latest", kind="headless", cores=257)
 
@@ -79,14 +79,14 @@ class TestCreateSpec:
         # Valid values
         spec = CreateSpec(name="test", image="test:latest", kind="headless", ram=1)
         assert spec.ram == 1
-        
+
         spec = CreateSpec(name="test", image="test:latest", kind="headless", ram=512)
         assert spec.ram == 512
-        
+
         # Invalid values
         with pytest.raises(ValidationError):
             CreateSpec(name="test", image="test:latest", kind="headless", ram=0)
-        
+
         with pytest.raises(ValidationError):
             CreateSpec(name="test", image="test:latest", kind="headless", ram=513)
 
@@ -95,14 +95,14 @@ class TestCreateSpec:
         # Valid values
         spec = CreateSpec(name="test", image="test:latest", kind="headless", gpus=1)
         assert spec.gpus == 1
-        
+
         spec = CreateSpec(name="test", image="test:latest", kind="headless", gpus=28)
         assert spec.gpus == 28
-        
+
         # Invalid values
         with pytest.raises(ValidationError):
             CreateSpec(name="test", image="test:latest", kind="headless", gpus=0)
-        
+
         with pytest.raises(ValidationError):
             CreateSpec(name="test", image="test:latest", kind="headless", gpus=29)
 
@@ -111,14 +111,16 @@ class TestCreateSpec:
         # Valid values
         spec = CreateSpec(name="test", image="test:latest", kind="headless", replicas=1)
         assert spec.replicas == 1
-        
-        spec = CreateSpec(name="test", image="test:latest", kind="headless", replicas=512)
+
+        spec = CreateSpec(
+            name="test", image="test:latest", kind="headless", replicas=512
+        )
         assert spec.replicas == 512
-        
+
         # Invalid values
         with pytest.raises(ValidationError):
             CreateSpec(name="test", image="test:latest", kind="headless", replicas=0)
-        
+
         with pytest.raises(ValidationError):
             CreateSpec(name="test", image="test:latest", kind="headless", replicas=513)
 
@@ -129,7 +131,7 @@ class TestCreateSpec:
         for kind in valid_kinds:
             spec = CreateSpec(name="test", image="test:latest", kind=kind)
             assert spec.kind == kind
-        
+
         # Invalid kind
         with pytest.raises(ValidationError):
             CreateSpec(name="test", image="test:latest", kind="invalid")
@@ -144,7 +146,7 @@ class TestCreateSpec:
             args="script.py",
             env={"VAR": "value"},
         )
-        
+
         assert spec.cmd == "python"
         assert spec.args == "script.py"
         assert spec.env == {"VAR": "value"}
@@ -152,34 +154,44 @@ class TestCreateSpec:
     def test_non_headless_validation_failure(self) -> None:
         """Test that cmd, args, env are not allowed for non-headless sessions."""
         non_headless_kinds = ["desktop", "notebook", "carta", "firefly"]
-        
+
         for kind in non_headless_kinds:
             # Test cmd restriction
-            with pytest.raises(ValidationError, match="cmd, args, env only allowed for headless"):
+            with pytest.raises(
+                ValidationError, match="cmd, args, env only allowed for headless"
+            ):
                 CreateSpec(name="test", image="test:latest", kind=kind, cmd="python")
-            
+
             # Test args restriction
-            with pytest.raises(ValidationError, match="cmd, args, env only allowed for headless"):
-                CreateSpec(name="test", image="test:latest", kind=kind, args="--verbose")
-            
+            with pytest.raises(
+                ValidationError, match="cmd, args, env only allowed for headless"
+            ):
+                CreateSpec(
+                    name="test", image="test:latest", kind=kind, args="--verbose"
+                )
+
             # Test env restriction
-            with pytest.raises(ValidationError, match="cmd, args, env only allowed for headless"):
-                CreateSpec(name="test", image="test:latest", kind=kind, env={"VAR": "value"})
+            with pytest.raises(
+                ValidationError, match="cmd, args, env only allowed for headless"
+            ):
+                CreateSpec(
+                    name="test", image="test:latest", kind=kind, env={"VAR": "value"}
+                )
 
     def test_firefly_desktop_warnings(self) -> None:
         """Test warnings for firefly and desktop sessions."""
         with warnings.catch_warnings(record=True) as w:
             warnings.simplefilter("always")
-            
+
             # Test firefly with ignored parameters
             CreateSpec(
                 name="test",
                 image="test:latest",
                 kind="firefly",
                 cores=8,  # Should be ignored
-                ram=16,   # Should be ignored
+                ram=16,  # Should be ignored
             )
-            
+
             # Should have warnings about ignored parameters
             assert len(w) > 0
             assert "ignored for firefly sessions" in str(w[0].message)
@@ -187,7 +199,9 @@ class TestCreateSpec:
     def test_firefly_desktop_replicas_validation(self) -> None:
         """Test that firefly and desktop sessions cannot have multiple replicas."""
         for kind in ["firefly", "desktop"]:
-            with pytest.raises(ValidationError, match=f"multiple replicas invalid for {kind}"):
+            with pytest.raises(
+                ValidationError, match=f"multiple replicas invalid for {kind}"
+            ):
                 CreateSpec(
                     name="test",
                     image="test:latest",
@@ -208,10 +222,10 @@ class TestCreateSpec:
     def test_replicas_excluded_from_serialization(self) -> None:
         """Test that replicas field is excluded from serialization."""
         spec = CreateSpec(name="test", image="test:latest", kind="headless", replicas=5)
-        
+
         data = spec.model_dump()
         assert "replicas" not in data
-        
+
         # But should be accessible directly
         assert spec.replicas == 5
 
@@ -232,7 +246,7 @@ class TestFetchSpec:
     def test_default_values(self) -> None:
         """Test default values for FetchSpec."""
         spec = FetchSpec()
-        
+
         assert spec.kind is None
         assert spec.status is None
         assert spec.view is None
@@ -328,7 +342,7 @@ class TestSessionModelsIntegration:
             image="test:latest",
             kind="notebook",
         )
-        
+
         # Fetch sessions of the same kind
         fetch_spec = FetchSpec(type=create_spec.kind)  # Using alias
 
@@ -361,12 +375,12 @@ class TestSessionModelsIntegration:
             args="process_data.py",
             env={"DATA_PATH": "/data", "OUTPUT_PATH": "/output"},
         )
-        
+
         assert create_spec.name == "data-processing"
         assert create_spec.kind == "headless"
         assert create_spec.cores == 4
         assert create_spec.ram == 8
-        
+
         # Fetch running headless sessions
         fetch_spec = FetchSpec(type="headless", status="Running")  # Using alias
 

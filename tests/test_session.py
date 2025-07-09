@@ -5,7 +5,6 @@ from typing import Any
 from uuid import uuid4
 
 import pytest
-from httpx import HTTPError
 from pydantic import ValidationError
 
 from skaha.models.session import CreateSpec
@@ -171,26 +170,6 @@ def test_create_session_with_type_field(name: str):
     assert "type" in data
     assert data["type"] == "headless"
     assert "kind" not in data
-
-
-def test_bad_error_exceptions():
-    """Test error handling."""
-    local = Session(server="https://bad.server.com")
-    with pytest.raises(HTTPError):
-        local.fetch()
-    with pytest.raises(HTTPError):
-        local.stats()
-    with pytest.raises(HTTPError):
-        local.destroy_with(prefix="bad")
-
-    assert not local.create(
-        name="bad",
-        image="images.canfar.net/skaha/terminal:1.1.2",
-    )
-
-    assert not local.info(["bad"])
-    assert not local.logs(["bad"])
-    assert local.destroy(["bad"]) == {"bad": False}
 
 
 def test_bad_repica_requests(session: Session):

@@ -1,9 +1,8 @@
 """Comprehensive tests for the types module."""
 
-import pytest
 from typing import get_args
 
-from skaha.models.types import Kind, Status, View, Mode
+from skaha.models.types import Kind, Mode, Status, View
 
 
 class TestKindType:
@@ -13,14 +12,14 @@ class TestKindType:
         """Test that Kind contains expected values."""
         expected_kinds = ("desktop", "notebook", "carta", "headless", "firefly")
         actual_kinds = get_args(Kind)
-        
+
         assert actual_kinds == expected_kinds
 
     def test_kind_type_checking(self) -> None:
         """Test Kind type checking behavior."""
         # Valid kinds
         valid_kinds = ["desktop", "notebook", "carta", "headless", "firefly"]
-        
+
         for kind in valid_kinds:
             # These should be valid at runtime
             assert kind in get_args(Kind)
@@ -28,14 +27,14 @@ class TestKindType:
     def test_kind_completeness(self) -> None:
         """Test that all expected session kinds are included."""
         kinds = get_args(Kind)
-        
+
         # Check that all common session types are present
         assert "desktop" in kinds
         assert "notebook" in kinds
         assert "carta" in kinds
         assert "headless" in kinds
         assert "firefly" in kinds
-        
+
         # Check total count
         assert len(kinds) == 5
 
@@ -43,7 +42,7 @@ class TestKindType:
         """Test that Kind values are in expected order."""
         kinds = get_args(Kind)
         expected_order = ("desktop", "notebook", "carta", "headless", "firefly")
-        
+
         assert kinds == expected_order
 
 
@@ -54,14 +53,14 @@ class TestStatusType:
         """Test that Status contains expected values."""
         expected_statuses = ("Pending", "Running", "Terminating", "Succeeded", "Error")
         actual_statuses = get_args(Status)
-        
+
         assert actual_statuses == expected_statuses
 
     def test_status_type_checking(self) -> None:
         """Test Status type checking behavior."""
         # Valid statuses
         valid_statuses = ["Pending", "Running", "Terminating", "Succeeded", "Error"]
-        
+
         for status in valid_statuses:
             # These should be valid at runtime
             assert status in get_args(Status)
@@ -69,21 +68,21 @@ class TestStatusType:
     def test_status_completeness(self) -> None:
         """Test that all expected session statuses are included."""
         statuses = get_args(Status)
-        
+
         # Check that all Kubernetes pod statuses are present
         assert "Pending" in statuses
         assert "Running" in statuses
         assert "Terminating" in statuses
         assert "Succeeded" in statuses
         assert "Error" in statuses
-        
+
         # Check total count
         assert len(statuses) == 5
 
     def test_status_capitalization(self) -> None:
         """Test that Status values follow proper capitalization."""
         statuses = get_args(Status)
-        
+
         for status in statuses:
             # All statuses should start with capital letter
             assert status[0].isupper()
@@ -94,7 +93,7 @@ class TestStatusType:
         """Test that Status values are in expected order."""
         statuses = get_args(Status)
         expected_order = ("Pending", "Running", "Terminating", "Succeeded", "Error")
-        
+
         assert statuses == expected_order
 
 
@@ -105,7 +104,7 @@ class TestViewType:
         """Test that View contains expected values."""
         expected_views = ("all",)
         actual_views = get_args(View)
-        
+
         assert actual_views == expected_views
 
     def test_view_type_checking(self) -> None:
@@ -116,7 +115,7 @@ class TestViewType:
     def test_view_completeness(self) -> None:
         """Test that View contains only expected value."""
         views = get_args(View)
-        
+
         # Currently only "all" is supported
         assert "all" in views
         assert len(views) == 1
@@ -135,14 +134,14 @@ class TestModeType:
         """Test that Mode contains expected values."""
         expected_modes = ("x509", "oidc", "token", "default")
         actual_modes = get_args(Mode)
-        
+
         assert actual_modes == expected_modes
 
     def test_mode_type_checking(self) -> None:
         """Test Mode type checking behavior."""
         # Valid modes
         valid_modes = ["x509", "oidc", "token", "default"]
-        
+
         for mode in valid_modes:
             # These should be valid at runtime
             assert mode in get_args(Mode)
@@ -150,20 +149,20 @@ class TestModeType:
     def test_mode_completeness(self) -> None:
         """Test that all expected authentication modes are included."""
         modes = get_args(Mode)
-        
+
         # Check that all authentication modes are present
         assert "x509" in modes
         assert "oidc" in modes
         assert "token" in modes
         assert "default" in modes
-        
+
         # Check total count
         assert len(modes) == 4
 
     def test_mode_lowercase(self) -> None:
         """Test that Mode values are lowercase."""
         modes = get_args(Mode)
-        
+
         for mode in modes:
             assert mode.islower()
 
@@ -171,7 +170,7 @@ class TestModeType:
         """Test that Mode values are in expected order."""
         modes = get_args(Mode)
         expected_order = ("x509", "oidc", "token", "default")
-        
+
         assert modes == expected_order
 
 
@@ -185,17 +184,17 @@ class TestTypeAliasesIntegration:
         assert isinstance(get_args(Status), tuple)
         assert isinstance(get_args(View), tuple)
         assert isinstance(get_args(Mode), tuple)
-        
+
         # All values should be strings
         for kind in get_args(Kind):
             assert isinstance(kind, str)
-        
+
         for status in get_args(Status):
             assert isinstance(status, str)
-        
+
         for view in get_args(View):
             assert isinstance(view, str)
-        
+
         for mode in get_args(Mode):
             assert isinstance(mode, str)
 
@@ -205,22 +204,22 @@ class TestTypeAliasesIntegration:
         status_values = set(get_args(Status))
         view_values = set(get_args(View))
         mode_values = set(get_args(Mode))
-        
+
         # No overlap between Kind and Status
         assert kind_values.isdisjoint(status_values)
-        
+
         # No overlap between Kind and View
         assert kind_values.isdisjoint(view_values)
-        
+
         # No overlap between Kind and Mode
         assert kind_values.isdisjoint(mode_values)
-        
+
         # No overlap between Status and View
         assert status_values.isdisjoint(view_values)
-        
+
         # No overlap between Status and Mode
         assert status_values.isdisjoint(mode_values)
-        
+
         # No overlap between View and Mode
         assert view_values.isdisjoint(mode_values)
 
@@ -231,7 +230,7 @@ class TestTypeAliasesIntegration:
         assert len(get_args(Status)) > 0
         assert len(get_args(View)) > 0
         assert len(get_args(Mode)) > 0
-        
+
         # All values should be non-empty strings
         for type_alias in [Kind, Status, View, Mode]:
             for value in get_args(type_alias):
@@ -242,8 +241,8 @@ class TestTypeAliasesIntegration:
     def test_import_accessibility(self) -> None:
         """Test that all type aliases can be imported."""
         # This test ensures the imports work correctly
-        from skaha.models.types import Kind, Status, View, Mode
-        
+        from skaha.models.types import Kind, Mode, Status, View
+
         # All should be accessible
         assert Kind is not None
         assert Status is not None
@@ -256,17 +255,17 @@ class TestTypeAliasesIntegration:
         kinds = get_args(Kind)
         session_types = {"desktop", "notebook", "carta", "headless", "firefly"}
         assert set(kinds) == session_types
-        
+
         # Status should represent Kubernetes-style statuses
         statuses = get_args(Status)
         k8s_statuses = {"Pending", "Running", "Terminating", "Succeeded", "Error"}
         assert set(statuses) == k8s_statuses
-        
+
         # View should represent view options
         views = get_args(View)
         view_options = {"all"}
         assert set(views) == view_options
-        
+
         # Mode should represent authentication modes
         modes = get_args(Mode)
         auth_modes = {"x509", "oidc", "token", "default"}
@@ -278,9 +277,10 @@ class TestTypeAliasUsage:
 
     def test_kind_in_function_annotation(self) -> None:
         """Test using Kind in function annotations."""
+
         def process_session(kind: Kind) -> str:
             return f"Processing {kind} session"
-        
+
         # Should work with valid kinds
         for kind in get_args(Kind):
             result = process_session(kind)
@@ -288,9 +288,10 @@ class TestTypeAliasUsage:
 
     def test_status_in_function_annotation(self) -> None:
         """Test using Status in function annotations."""
+
         def check_status(status: Status) -> bool:
             return status in ["Running", "Succeeded"]
-        
+
         # Should work with valid statuses
         assert check_status("Running") is True
         assert check_status("Succeeded") is True
@@ -298,18 +299,20 @@ class TestTypeAliasUsage:
 
     def test_view_in_function_annotation(self) -> None:
         """Test using View in function annotations."""
+
         def set_view(view: View) -> str:
             return f"View set to {view}"
-        
+
         # Should work with valid view
         result = set_view("all")
         assert "all" in result
 
     def test_mode_in_function_annotation(self) -> None:
         """Test using Mode in function annotations."""
+
         def authenticate(mode: Mode) -> str:
             return f"Authenticating with {mode}"
-        
+
         # Should work with valid modes
         for mode in get_args(Mode):
             result = authenticate(mode)

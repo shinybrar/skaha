@@ -28,6 +28,7 @@ def test_client_session():
         "x-skaha-registry-auth",
     ]
     from skaha.models.registry import ContainerRegistry
+
     registry = ContainerRegistry(username="test", secret="test")
     skaha = SkahaClient(registry=registry, token="test_token", loglevel=30)
     assert any(header in skaha.client.headers for header in headers)
@@ -36,7 +37,7 @@ def test_client_session():
 def test_bad_server_no_schema():
     """Test server URL without schema."""
     with pytest.raises(ValidationError):
-        SkahaClient(server="ws-uv.canfar.net")
+        SkahaClient(url="ws-uv.canfar.net")
 
 
 def test_default_certificate():
