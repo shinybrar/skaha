@@ -134,7 +134,6 @@ class TestOIDC:
 
     def test_valid_with_all_required_fields(self) -> None:
         """Test valid method with all required fields present."""
-        future_time = time.time() + 3600
         config = OIDC()
         config.endpoints.discovery = (
             "https://example.com/.well-known/openid-configuration"
@@ -271,7 +270,6 @@ class TestAuthConfig:
 
     def test_valid_oidc_mode_valid_config(self) -> None:
         """Test valid method with OIDC mode and valid OIDC configuration."""
-        future_time = time.time() + 3600
         config = Authentication(mode="oidc")
         config.oidc.endpoints.discovery = (
             "https://example.com/.well-known/openid-configuration"
@@ -400,6 +398,7 @@ class TestX509WithServer:
     def test_with_server_info(self) -> None:
         """Test X509 with server information."""
         from pydantic import AnyHttpUrl, AnyUrl
+
         server_info = Server(
             name="CANFAR",
             uri=AnyUrl("ivo://cadc.nrc.ca/skaha"),
@@ -413,6 +412,7 @@ class TestX509WithServer:
     def test_server_field_serialization(self) -> None:
         """Test that X509 server field is properly serialized."""
         from pydantic import AnyHttpUrl, AnyUrl
+
         server_info = Server(
             name="Test Server",
             uri=AnyUrl("ivo://test.example.com/skaha"),
@@ -434,6 +434,7 @@ class TestAuthConfigWithMethodSpecificServers:
     def test_oidc_server_access(self) -> None:
         """Test accessing server info through OIDC method."""
         from pydantic import AnyHttpUrl, AnyUrl
+
         server_info = Server(
             name="Test OIDC Server",
             uri=AnyUrl("ivo://test.example.com/skaha"),
@@ -449,6 +450,7 @@ class TestAuthConfigWithMethodSpecificServers:
     def test_x509_server_access(self) -> None:
         """Test accessing server info through X509 method."""
         from pydantic import AnyHttpUrl, AnyUrl
+
         server_info = Server(
             name="Test X509 Server",
             uri=AnyUrl("ivo://cadc.nrc.ca/skaha"),
@@ -464,6 +466,7 @@ class TestAuthConfigWithMethodSpecificServers:
     def test_both_methods_with_different_servers(self) -> None:
         """Test that both auth methods can have different server info."""
         from pydantic import AnyHttpUrl, AnyUrl
+
         oidc_server = Server(
             name="OIDC Server",
             uri=AnyUrl("ivo://oidc.example.com/skaha"),
