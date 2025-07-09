@@ -71,22 +71,21 @@ Fast, isolated tests:
 uv run pytest -m "unit"
 ```
 
-### Test Organization
+### Test Methodology
 
-Tests are organized in the `tests/` directory:
+Tests are organized in the `tests/` directory and follow a specific naming convention that mirrors the source code structure. This approach ensures that tests are easy to locate and maintain.
 
-```
-tests/
-├── test_auth_oidc.py          # OIDC authentication tests
-├── test_auth_x509.py          # X.509 certificate tests
-├── test_async_session.py      # Async session management tests (contains slow tests)
-├── test_client.py             # HTTP client tests
-├── test_config_*.py           # Configuration tests
-├── test_images.py             # Container image tests
-├── test_overview.py           # Platform overview tests
-├── test_session.py            # Session management tests (contains slow tests)
-└── test_utils_*.py            # Utility function tests
-```
+The naming convention is as follows:
+
+- If the source file is `skaha/path/to/file.py`, the corresponding test file will be `tests/test_path_to_file.py`.
+- If the source file is `skaha/module.py`, the corresponding test file will be `tests/test_module.py`.
+
+For example:
+
+- The tests for `skaha/client.py` are located in `tests/test_client.py`.
+- The tests for `skaha/auth/oidc.py` are located in `tests/test_auth_oidc.py`.
+
+This structure makes it straightforward to find the tests associated with a particular module or file.
 
 ## Slow Tests Details
 
@@ -130,7 +129,7 @@ Test configuration is defined in `pyproject.toml`:
 [tool.pytest.ini_options]
 markers = [
     "integration: marks tests as integration tests",
-    "unit: marks tests as unit tests", 
+    "unit: marks tests as unit tests",
     "slow: marks tests as slow (deselect with '-m \"not slow\"')",
     "order: marks tests that need to run in a specific order",
 ]
@@ -149,10 +148,10 @@ In CI environments, all tests (including slow ones) are executed to ensure compl
 
 When contributing new tests:
 
-1. **Mark slow tests**: Add `@pytest.mark.slow` to tests that take >5 seconds
-2. **Use appropriate markers**: Mark tests as `unit`, `integration`, etc.
-3. **Follow naming conventions**: Test files should start with `test_`
-4. **Add docstrings**: Document what each test verifies
+1. **Follow the naming convention**: Create a test file that mirrors the source file's path and name.
+2. **Mark slow tests**: Add `@pytest.mark.slow` to tests that take >5 seconds.
+3. **Use appropriate markers**: Mark tests as `unit`, `integration`, etc.
+4. **Add docstrings**: Document what each test verifies.
 
 Example of a slow test:
 ```python
