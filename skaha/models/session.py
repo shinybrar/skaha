@@ -22,7 +22,7 @@ from typing_extensions import Self
 from skaha.models.types import Kind, Status, View
 
 
-class CreateSpec(BaseModel):
+class CreateRequest(BaseModel):
     """Payload specification for creating a new session.
 
     Args:
@@ -74,7 +74,7 @@ class CreateSpec(BaseModel):
 
     # Validate that cmd, args and env are only used with headless sessions.
     @model_validator(mode="after")
-    def validate_headless(self) -> Self:
+    def _validate_headless(self) -> Self:
         """Validate that cmd, args and env are only used for headless sessions.
 
         Args:
@@ -137,7 +137,7 @@ class CreateSpec(BaseModel):
         return value
 
 
-class FetchSpec(BaseModel):
+class FetchRequest(BaseModel):
     """Payload specification for fetching session[s] information.
 
     Args:
