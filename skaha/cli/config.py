@@ -37,7 +37,7 @@ def show(
                 mode="python", exclude_none=True, exclude_defaults=(not defaults)
             )
         )
-    except (FileNotFoundError, OSError, ValueError):
+    except (OSError, ValueError):
         console.print("[yellow italic]No local configuration found.[/yellow italic]")
         if not defaults:
             console.print("[dim]Use --defaults to show default configuration.[/dim]")

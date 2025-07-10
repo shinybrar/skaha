@@ -2,6 +2,7 @@
 
 from __future__ import annotations
 
+import math
 import time
 from os import R_OK, access
 from pathlib import Path
@@ -143,7 +144,7 @@ class X509(BaseModel):
     def _compute_expiry(self) -> Self:
         """Compute expiry from certificate file if not already set."""
         # Only compute if expiry is still the default value (0.0)
-        if self.expiry == 0.0:
+        if math.isclose(self.expiry, 0.0, abs_tol=1e-9):
             self.expiry = self._read_expiry_from_cert()
         return self
 
@@ -196,7 +197,7 @@ class X509(BaseModel):
         Returns:
             bool: True if the certificate is expired, False otherwise.
         """
-        if self.expiry == 0.0:
+        if math.isclose(self.expiry, 0.0, abs_tol=1e-9):
             self.expiry = self._read_expiry_from_cert()
         return self.expiry < time.time()
 

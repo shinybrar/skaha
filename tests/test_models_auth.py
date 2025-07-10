@@ -1,5 +1,6 @@
 """Comprehensive tests for the authentication configuration module."""
 
+import math
 import time
 from pathlib import Path
 from tempfile import NamedTemporaryFile
@@ -179,7 +180,7 @@ class TestX509:
         """Test default values for X.509 configuration."""
         config = X509()
         assert config.path is None
-        assert config.expiry == 0.0
+        assert math.isclose(config.expiry, 0.0, abs_tol=1e-9)
 
     def test_with_values(self) -> None:
         """Test X.509 configuration with values."""
