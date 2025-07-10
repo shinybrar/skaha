@@ -20,20 +20,6 @@ from skaha.auth.oidc import (
 from skaha.models.auth import OIDC, Client, Endpoint, Token
 
 
-class TestOIDCExceptions:
-    """Test OIDC custom exceptions."""
-
-    def test_auth_pending_error(self) -> None:
-        """Test AuthPendingError exception."""
-        with pytest.raises(AuthPendingError):
-            raise AuthPendingError
-
-    def test_slow_down_error(self) -> None:
-        """Test SlowDownError exception."""
-        with pytest.raises(SlowDownError):
-            raise SlowDownError
-
-
 class TestDiscoverFunction:
     """Test the discover function."""
 

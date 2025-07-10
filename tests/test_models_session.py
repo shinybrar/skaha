@@ -6,7 +6,7 @@ from typing import TYPE_CHECKING, Any
 import pytest
 from pydantic import ValidationError
 
-from skaha.models.session import CreateRequest, FetchResponse, FetchRequest
+from skaha.models.session import CreateRequest, FetchRequest, FetchResponse
 
 if TYPE_CHECKING:
     from skaha.models.types import Kind, Status
@@ -68,7 +68,9 @@ class TestCreateSpec:
         spec = CreateRequest(name="test", image="test:latest", kind="headless", cores=1)
         assert spec.cores == 1
 
-        spec = CreateRequest(name="test", image="test:latest", kind="headless", cores=256)
+        spec = CreateRequest(
+            name="test", image="test:latest", kind="headless", cores=256
+        )
         assert spec.cores == 256
 
         # Invalid values
@@ -113,7 +115,9 @@ class TestCreateSpec:
     def test_replicas_validation(self) -> None:
         """Test replicas field validation."""
         # Valid values
-        spec = CreateRequest(name="test", image="test:latest", kind="headless", replicas=1)
+        spec = CreateRequest(
+            name="test", image="test:latest", kind="headless", replicas=1
+        )
         assert spec.replicas == 1
 
         spec = CreateRequest(
@@ -126,7 +130,9 @@ class TestCreateSpec:
             CreateRequest(name="test", image="test:latest", kind="headless", replicas=0)
 
         with pytest.raises(ValidationError):
-            CreateRequest(name="test", image="test:latest", kind="headless", replicas=513)
+            CreateRequest(
+                name="test", image="test:latest", kind="headless", replicas=513
+            )
 
     def test_kind_validation(self) -> None:
         """Test kind field validation."""
@@ -225,7 +231,9 @@ class TestCreateSpec:
 
     def test_replicas_excluded_from_serialization(self) -> None:
         """Test that replicas field is excluded from serialization."""
-        spec = CreateRequest(name="test", image="test:latest", kind="headless", replicas=5)
+        spec = CreateRequest(
+            name="test", image="test:latest", kind="headless", replicas=5
+        )
 
         data = spec.model_dump()
         assert "replicas" not in data

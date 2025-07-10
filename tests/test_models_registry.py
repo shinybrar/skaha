@@ -106,7 +106,7 @@ class TestServer:
     """Test Server class."""
 
     @pytest.mark.parametrize(
-        "server_data, expected_status, expected_name",
+        ("server_data", "expected_status", "expected_name"),
         [
             (
                 {
@@ -272,7 +272,7 @@ class TestContainerRegistry:
         assert registry.secret == "testsecret"
 
     @pytest.mark.parametrize(
-        "username, secret, message",
+        ("username", "secret", "message"),
         [
             ("user", None, "container registry secret is required"),
             (None, "secret", "container registry username is required"),
@@ -284,7 +284,7 @@ class TestContainerRegistry:
             ContainerRegistry(username=username, secret=secret)
 
     @pytest.mark.parametrize(
-        "username, secret",
+        ("username", "secret"),
         [("testuser", "testsecret"), ("user@domain.com", "p@ssw0rd!")],
     )
     def test_encoded(self, username, secret) -> None:
@@ -294,7 +294,7 @@ class TestContainerRegistry:
         assert registry.encoded() == expected
 
     @pytest.mark.parametrize(
-        "url, is_valid",
+        ("url", "is_valid"),
         [
             ("https://registry.example.com", True),
             ("http://localhost:5000", True),
@@ -312,7 +312,7 @@ class TestContainerRegistry:
                 ContainerRegistry(url=url)
 
     @pytest.mark.parametrize(
-        "field, value, is_valid",
+        ("field", "value", "is_valid"),
         [
             ("username", "a", True),
             ("username", "a" * 255, True),
