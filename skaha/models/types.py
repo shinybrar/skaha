@@ -8,8 +8,14 @@ from __future__ import annotations
 
 from typing import Literal, TypeAlias
 
-# Session type constants (new lowercase style)
 Kind: TypeAlias = Literal["desktop", "notebook", "carta", "headless", "firefly"]
+"""Session type constants (new lowercase style)."""
+
 Status: TypeAlias = Literal["Pending", "Running", "Terminating", "Succeeded", "Error"]
+"""Session status constants."""
+
 View: TypeAlias = Literal["all"]
+"""Session view constants."""
+
 Mode: TypeAlias = Literal["x509", "oidc", "token", "default"]
+"""Authentication mode constants."""

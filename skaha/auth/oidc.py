@@ -36,8 +36,8 @@ async def discover(url: str, client: httpx.AsyncClient | None = None) -> dict[st
 
     Args:
         url (str): OIDC Discovery URL.
-        client (httpx.AsyncClient | None): Optional async HTTP client.
-            If None, creates a new one.
+        client (httpx.AsyncClient | None, optional): Optional async HTTP client.
+            If None, creates a new one. Defaults to None.
 
     Returns:
         dict[str, Any]: OIDC provider configuration.
@@ -61,8 +61,8 @@ async def register(url: str, client: httpx.AsyncClient | None = None) -> dict[st
 
     Args:
         url (str): OIDC Registration URL.
-        client (httpx.AsyncClient | None): Optional async HTTP client.
-            If None, creates a new one.
+        client (httpx.AsyncClient | None, optional): Optional async HTTP client.
+            If None, creates a new one. Defaults to None.
 
     Returns:
         dict[str, Any]: Client registration details.
@@ -151,8 +151,8 @@ async def authflow(
         token_url (str): Token endpoint.
         identity (str): Client identity.
         secret (str): Client secret.
-        client (httpx.AsyncClient | None): Optional async HTTP client.
-            If None, creates a new one.
+        client (httpx.AsyncClient | None, optional): Optional async HTTP client.
+            If None, creates a new one. Defaults to None.
 
     Returns:
         dict[str, Any]: OIDC tokens including access and refresh tokens.
@@ -333,7 +333,6 @@ async def authenticate(oidc: OIDC) -> OIDC:
 
     Args:
         oidc (OIDC): OIDC configuration.
-        console (Console): Rich console for output.
 
     Returns:
         OIDC: Updated OIDC configuration with tokens.

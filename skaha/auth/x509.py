@@ -29,9 +29,10 @@ def gather(
 
     Args:
         username (str, optional): Username for authentication. Will prompt if None.
-        days_valid (int): Number of days the certificate should be valid. Default 10.
+            Defaults to None.
+        days_valid (int): Number of days the certificate should be valid. Defaults to 10.
         cert_path (Path, optional): Path to save certificate.
-            Default ~/.ssl/cadcproxy.pem.
+            Defaults to ~/.ssl/cadcproxy.pem.
 
     Returns:
         dict[str, Any]: Dictionary with certificate info for skaha.config.auth.X509:
@@ -83,7 +84,7 @@ def inspect(path: Path | None = None) -> dict[str, Any]:
 
     Args:
         path (Path, optional): Path to certificate file.
-            Default ~/.ssl/cadcproxy.pem.
+            Defaults to ~/.ssl/cadcproxy.pem.
 
     Returns:
         dict[str, Any]: Dictionary with certificate info for skaha.config.auth.X509:
@@ -127,10 +128,10 @@ def authenticate(config: auth.X509) -> auth.X509:
     """Authenticate using X509 certificate.
 
     Args:
-        config (X509Config): X509 configuration.
+        config (auth.X509): X509 configuration.
 
     Returns:
-        X509Config: X509 configuration.
+        auth.X509: X509 configuration.
 
     Raises:
         ValueError: If certificate cannot be read or parsed.

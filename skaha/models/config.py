@@ -72,7 +72,7 @@ class Configuration(Connection, BaseSettings):
         """Return the URL for the server.
 
         Returns:
-            str | None: The URL for the server.
+            str: The URL for the server.
         """
         mode = self.auth.mode
         return str(getattr(self.auth, mode).server.url)
@@ -82,7 +82,7 @@ class Configuration(Connection, BaseSettings):
         """Return the URI for the server.
 
         Returns:
-            str | None: The URI for the server.
+            str: The URI for the server.
         """
         mode = self.auth.mode
         return str(getattr(self.auth, mode).server.uri)
@@ -92,7 +92,7 @@ class Configuration(Connection, BaseSettings):
         """Return the name for the server.
 
         Returns:
-            str | None: The name for the server.
+            str: The name for the server.
         """
         mode = self.auth.mode
         return str(getattr(self.auth, mode).server.name)
@@ -102,7 +102,7 @@ class Configuration(Connection, BaseSettings):
         """Return the version for the server.
 
         Returns:
-            str | None: The version for the server.
+            str: The version for the server.
         """
         mode = self.auth.mode
         return str(getattr(self.auth, mode).server.version)
@@ -112,7 +112,7 @@ class Configuration(Connection, BaseSettings):
         """Assemble the configuration.
 
         Args:
-            **kwargs: Runtime configuration overrides.
+            **kwargs (object): Runtime configuration overrides.
 
         Returns:
             Configuration: The assembled configuration object.

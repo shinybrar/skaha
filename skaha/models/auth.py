@@ -257,7 +257,7 @@ class Authentication(BaseModel):
         """Validate that the selected authentication mode has valid configuration.
 
         Returns:
-            AuthConfig: The validated configuration.
+            bool: The validated configuration.
 
         Raises:
             ValueError: If the selected mode's configuration is invalid.
