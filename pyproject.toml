@@ -40,7 +40,6 @@ classifiers = [
 ]
 
 dependencies = [
-    "authlib>=1.6.0",
     "cadcutils>=1.5.4",
     "defusedxml>=0.7.1",
     "httpx[http2]>=0.28.1",
@@ -74,13 +73,13 @@ dev-dependencies = [
     "vulture>=2.11",
 ]
 
-[project.optional-dependencies]
+[dependency-groups]
 docs = [
-    "mkdocs>=1.6.0",
-    "mkdocs-material>=9.5.41",
-    "mkdocs-git-revision-date-localized-plugin>=1.2.9",
-    "mkdocstrings[python]>=0.25.0",
     "mike>=2.1.3",
+    "mkdocs-git-revision-date-localized-plugin>=1.4.7",
+    "mkdocs-material>=9.6.14",
+    "mkdocstrings[python]>=0.29.1",
+    "mkdocstrings[python]>=0.25.0",
 ]
 
 [project.urls]

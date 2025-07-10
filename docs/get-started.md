@@ -6,13 +6,12 @@ Before you can use the Skaha Python package, you need a valid account with acces
 
 ## Quick Start
 
-!!! note "Skaha Requirements"
+!!! info "Skaha Requirements"
 
     - Python 3.9+
     - Science Platform Account
 
-!!! code "Installation"
-
+!!! example "Installation"
     ```bash
     pip3 install skaha
     ```

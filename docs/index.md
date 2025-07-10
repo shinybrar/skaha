@@ -1,12 +1,11 @@
 # Skaha
 
-!!! note ""
+!!! note "Skaha Overview"
 
     A lightweight python interface to the CANFAR Science Platform.
 
-!!! example "Example"
-
-    ```python
+!!! example "Session Creation Example"
+    ```python title="Python Session Creation"
     from skaha.session import Session
 
     session = Session()
@@ -30,7 +29,7 @@
     ### **🔐 Enhanced Authentication System**
     Skaha now features a comprehensive authentication system with support for multiple authentication modes and automatic credential management.
 
-    ```python
+    ```python title="Authentication Examples"
     from skaha.client import SkahaClient
     from pathlib import Path
 
@@ -48,7 +47,7 @@
     ### **🚀 Asynchronous Sessions**
     Skaha now supports asynchronous sessions using the `AsyncSession` class while maintaining 1-to-1 compatibility with the `Session` class.
 
-    ```python
+    ```python title="Asynchronous Session Creation"
     from skaha.session import AsyncSession
 
     asession = AsyncSession()
@@ -67,7 +66,7 @@
 
     ### **🗄️ Backend Upgrades**
 
-    - 📡 Skaha now uses the `httpx` library for making HTTP requests instead of `requests`. This adds asynchronous support and also to circumvent the `requests` dependence on `urllib3` which was causing SSL issues on MacOS. See [this issue](https://github.com/urllib3/urllib3/issues/3020) for more details.
+    - 📡 Skaha now uses the `httpx` library for making HTTP requests instead of `requests`. This adds asynchronous support and also to circumvent the `requests` dependence on `urllib3` which was causing SSL issues on MacOS. See [this issue](https://github.com/urllib3/urllib3/issues/3020](https://github.com/urllib3/urllib3/issues/3020) for more details.
     - 🔑 Skaha now supports multiple authentication methods including X.509 certificates, OIDC tokens, and bearer tokens with automatic SSL context management.
     - 🏎️💨 Added `loglevel` and `concurrency` support to manage the new explosion in functionality!
     - 🔍 Comprehensive debug logging for authentication flow and client creation troubleshooting.
@@ -76,7 +75,7 @@
 
     The `[Session|AsyncSession].logs` method now prints colored output to `stdout` instead of returning them as a string with `verbose=True` flag.
 
-    ```python
+    ```python title="Session Logs"
     from skaha.session import AsyncSession
 
     asession = AsyncSession()
@@ -86,20 +85,20 @@
     ### **🪰 Firefly Support**
     Skaha now supports launching `firefly` session on the CANFAR Science Platform.
 
-    ```python
+    ```python title="Firefly Session Creation"
     session.create(
         name="firefly",
         image="images.canfar.net/skaha/firefly:latest",
     )
     ```
 
-!!! Info "New in v1.4+"
+!!! info "New in v1.4+"
 
     ### **🔐 Private Images**
 
     Starting October 2024, to create a session with a private container image from the [CANFAR Harbor Registry](https://images.canfar.net/), you will need to provide your harbor `username` and the `CLI Secret` through a `ContainerRegistry` object.
 
-    ```python
+    ```python title="Private Image Registry Configuration"
     from skaha.models import ContainerRegistry
     from skaha.session import Session
 
@@ -109,14 +108,14 @@
 
     Alernatively, if you have environment variables, `SKAHA_REGISTRY_USERNAME` and `SKAHA_REGISTRY_SECRET`, you can create a `ContainerRegistry` object without providing the `username` and `secret`.
 
-    ```python
+    ```python title="Private Image Registry with Environment Variables"
     from skaha.models import ContainerRegistry
 
     registry = ContainerRegistry()
     ```
 
     ### **💣 Destroy Sessions**
-    ```python
+    ```python title="Destroying Sessions"
     from skaha.session import Session
 
     session = Session()
