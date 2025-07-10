@@ -299,7 +299,7 @@ class TestContainerRegistry:
             ("https://registry.example.com", True),
             ("http://localhost:5000", True),
             ("not-a-valid-url", False),
-            ("ftp://registry.com", False),
+            ("sftp://registry.com", False),
         ],
     )
     def test_url_validation(self, url, is_valid) -> None:

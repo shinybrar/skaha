@@ -86,7 +86,7 @@ class TestServer:
             Server(url="not-a-valid-url")
 
         with pytest.raises(ValidationError):
-            Server(url="ftp://example.com")  # Not HTTP/HTTPS
+            Server(url="sftp://example.com")  # Not HTTP/HTTPS
 
     def test_version_validation(self) -> None:
         """Test version field validation."""
