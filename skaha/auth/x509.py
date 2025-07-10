@@ -30,7 +30,8 @@ def gather(
     Args:
         username (str, optional): Username for authentication. Will prompt if None.
             Defaults to None.
-        days_valid (int): Number of days the certificate should be valid. Defaults to 10.
+        days_valid (int): Number of days the certificate should be valid.
+            Defaults to 10.
         cert_path (Path, optional): Path to save certificate.
             Defaults to ~/.ssl/cadcproxy.pem.
 
