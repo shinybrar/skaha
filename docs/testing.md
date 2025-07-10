@@ -87,21 +87,6 @@ For example:
 
 This structure makes it straightforward to find the tests associated with a particular module or file.
 
-## Slow Tests Details
-
-The following tests are marked as slow and may take several minutes to complete:
-
-### Session Tests (`test_session.py`)
-- `test_session_stats`: Retrieves platform statistics (~12.7s)
-- `test_session_logs`: Waits for session completion and retrieves logs (~62.9s)
-
-### Async Session Tests (`test_async_session.py`)
-- `test_get_succeeded`: Waits for session to reach succeeded state (~63.4s)
-- `test_get_session_stats`: Retrieves platform statistics (~7.0s)
-
-### Authentication Tests (`test_auth_oidc.py`)
-- `test_poll_with_backoff_timeout`: Tests authentication timeout behavior (~15.0s)
-
 ## Development Workflow
 
 For efficient development, follow this testing workflow:
@@ -149,7 +134,7 @@ In CI environments, all tests (including slow ones) are executed to ensure compl
 When contributing new tests:
 
 1. **Follow the naming convention**: Create a test file that mirrors the source file's path and name.
-2. **Mark slow tests**: Add `@pytest.mark.slow` to tests that take >5 seconds.
+2. **Mark slow tests**: Add `@pytest.mark.slow` to any test that involves network operations, interacts with external services, or has long execution times. This allows developers to skip these tests for a faster development cycle.
 3. **Use appropriate markers**: Mark tests as `unit`, `integration`, etc.
 4. **Add docstrings**: Document what each test verifies.
 
@@ -163,6 +148,7 @@ def test_long_running_operation():
     # Test implementation
     pass
 ```
+
 
 ## Troubleshooting
 
