@@ -1,15 +1,11 @@
 """Comprehensive tests for the session models module."""
 
 import warnings
-from typing import TYPE_CHECKING, Any
 
 import pytest
 from pydantic import ValidationError
 
 from skaha.models.session import CreateRequest, FetchRequest
-
-if TYPE_CHECKING:
-    from skaha.models.types import Kind, Status
 
 
 class TestCreateSpec:
@@ -398,6 +394,3 @@ class TestSessionModelsIntegration:
 
         assert fetch_spec.kind == "headless"
         assert fetch_spec.status == "Running"
-
-
-

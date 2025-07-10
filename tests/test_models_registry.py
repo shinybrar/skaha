@@ -2,6 +2,7 @@
 
 import base64
 import math
+
 import pytest
 from pydantic import ValidationError
 
@@ -189,8 +190,12 @@ class TestServerResults:
 
         assert len(results.endpoints) == 1
         assert math.isclose(results.total_time, 5.5, rel_tol=1e-9, abs_tol=1e-9)
-        assert math.isclose(results.registry_fetch_time, 2.0, rel_tol=1e-9, abs_tol=1e-9)
-        assert math.isclose(results.endpoint_check_time, 3.5, rel_tol=1e-9, abs_tol=1e-9)
+        assert math.isclose(
+            results.registry_fetch_time, 2.0, rel_tol=1e-9, abs_tol=1e-9
+        )
+        assert math.isclose(
+            results.endpoint_check_time, 3.5, rel_tol=1e-9, abs_tol=1e-9
+        )
         assert results.found == 10
         assert results.checked == 8
         assert results.successful == 6
