@@ -20,7 +20,7 @@ from pydantic import (
 from typing_extensions import Self
 
 from skaha import __version__, get_logger, set_log_level
-from skaha.hooks.httpx import errors
+from skaha.hooks.httpx import auth, errors
 from skaha.models.config import Configuration
 
 if TYPE_CHECKING:
@@ -236,9 +236,20 @@ class SkahaClient(Configuration):
         Returns:
             dict[str, Any]: Keyword arguments for creating an HTTPx client.
         """
+        # Set up event hooks
+        event_hooks: dict[str, list[Any]] = {
+            "response": [errors.acatch if is_async else errors.catch]
+        }
+
+        # Add auth hooks for automatic token refresh (OIDC only, no user credentials)
+        if self.auth.mode == "oidc" and not self.token and not self.certificate:
+            log.debug("Adding authentication refresh hook for OIDC mode")
+            refresh_access_token = auth.ahook(self) if is_async else auth.hook(self)
+            event_hooks["request"] = [refresh_access_token]
+
         kwargs: dict[str, Any] = {
             "timeout": self.timeout,
-            "event_hooks": {"response": [errors.acatch if is_async else errors.catch]},
+            "event_hooks": event_hooks,
         }
 
         if is_async:

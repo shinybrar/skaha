@@ -68,7 +68,7 @@ def hook(client: SkahaClient) -> Callable[[httpx.Request], None]:
         Args:
             request (httpx.Request): The outgoing HTTP request.
         """
-        if client.auth.mode == "oidc" and client.auth.expired:
+        if client.auth.expired:
             if (
                 not client.auth.oidc.expiry.refresh
                 or client.auth.oidc.expiry.refresh < time.time()
@@ -78,28 +78,28 @@ def hook(client: SkahaClient) -> Callable[[httpx.Request], None]:
                 raise AuthenticationError(msg)
 
             try:
-                log.debug("starting oidc sync refresh")
+                log.debug("Starting synchronous OIDC token refresh")
                 token: SecretStr = oidc.sync_refresh(
                     url=str(client.auth.oidc.endpoints.token),
                     identity=str(client.auth.oidc.client.identity),
                     secret=str(client.auth.oidc.client.secret),
                     token=str(client.auth.oidc.token.refresh),
                 )
-                log.debug("oidc sync refresh successful")
+                log.debug("Synchronous OIDC token refresh successful")
                 client.auth.oidc.token.access = token.get_secret_value()
                 client.auth.oidc.expiry.access = jwt.decode(  # type: ignore [attr-defined]
-                    str(token), options={"verify_signature": False}
+                    client.auth.oidc.token.access, options={"verify_signature": False}
                 ).get("exp")
                 client.save()
-                log.debug("authentication refreshed and configuration saved")
+                log.debug("Authentication refreshed and configuration saved")
                 client.client.headers.update(
                     {"Authorization": f"Bearer {client.auth.oidc.token.access}"}
                 )
                 request.headers.update(
                     {"Authorization": f"Bearer {client.auth.oidc.token.access}"}
                 )
-                log.debug("request headers updated with new authentication")
-                log.info("oidc authentication token refreshed")
+                log.debug("HTTP request headers updated with new authentication")
+                log.info("OIDC Access Token Refreshed")
             except Exception as err:
                 msg = f"Failed to refresh authentication: {err}"
                 log.exception(msg)
@@ -125,7 +125,7 @@ def ahook(client: SkahaClient) -> Callable[[httpx.Request], Awaitable[None]]:
             request (httpx.Request): The outgoing HTTP request.
         """
         # Skip refresh for user-provided credentials
-        if client.auth.mode == "oidc" and client.auth.expired:
+        if client.auth.expired:
             if (
                 not client.auth.oidc.expiry.refresh
                 or client.auth.oidc.expiry.refresh < time.time()
@@ -143,7 +143,7 @@ def ahook(client: SkahaClient) -> Callable[[httpx.Request], Awaitable[None]]:
                 )
                 client.auth.oidc.token.access = token.get_secret_value()
                 client.auth.oidc.expiry.access = jwt.decode(  # type: ignore [attr-defined]
-                    str(token), options={"verify_signature": False}
+                    client.auth.oidc.token.access, options={"verify_signature": False}
                 ).get("exp")
                 client.save()
                 log.debug("authentication refreshed and configuration saved")
