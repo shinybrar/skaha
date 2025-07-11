@@ -13,6 +13,7 @@ from typing import Any
 import httpx
 import jwt
 import segno
+from pydantic import SecretStr
 from rich.console import Console
 from rich.progress import BarColumn, Progress, TextColumn, TimeRemainingColumn
 
@@ -135,6 +136,110 @@ async def _poll_token(
         raise SlowDownError
     msg = f"Unknown error in polling for tokens: {err}"
     raise ValueError(msg)
+
+
+async def refresh(
+    url: str,
+    identity: str,
+    secret: str,
+    token: str,
+) -> SecretStr:
+    """Refresh OIDC access token using refresh token.
+
+    Args:
+        url (str): Token endpoint URL.
+        identity (str): Client ID.
+        secret (str): Client secret.
+        token (str): Refresh token.
+
+    Returns:
+        pydantic.SecretStr: New access token.
+
+    Raises:
+        httpx.HTTPStatusError: For HTTP errors.
+        KeyError: If refresh token is invalid or expired.
+        Exception: For other errors.
+    """
+    payload: dict[str, Any] = {
+        "grant_type": "refresh_token",
+        "refresh_token": token,
+        "client_id": identity,
+        "client_secret": secret,
+    }
+
+    try:
+        async with httpx.AsyncClient() as client:
+            log.debug("Refreshing OIDC access token")
+            response = await client.post(url, data=payload, auth=(identity, secret))
+            response.raise_for_status()
+            data: dict[str, Any] = response.json()
+            log.debug("refresh http request successful")
+            access: SecretStr = SecretStr(data["access_token"])
+            return access
+    except httpx.HTTPStatusError as error:
+        msg = "HTTP error while refreshing OIDC access token"
+        log.exception(msg)
+        raise ValueError(msg) from error
+    except KeyError as error:
+        msg = "server response does not contain access token"
+        log.exception(msg)
+        raise ValueError(msg) from error
+    except Exception as error:
+        msg = "Failed to refresh OIDC access token"
+        log.exception(msg)
+        raise ValueError(msg) from error
+
+
+def sync_refresh(
+    url: str,
+    identity: str,
+    secret: str,
+    token: str,
+) -> SecretStr:
+    """Refresh OIDC access token using refresh token.
+
+    Args:
+        url (str): Token endpoint URL.
+        identity (str): Client ID.
+        secret (str): Client secret.
+        token (str): Refresh token.
+
+    Returns:
+        pydantic.SecretStr: New access token.
+
+    Raises:
+        httpx.HTTPStatusError: For HTTP errors.
+        KeyError: If refresh token is invalid or expired.
+        Exception: For other errors.
+    """
+    payload: dict[str, Any] = {
+        "grant_type": "refresh_token",
+        "refresh_token": token,
+        "client_id": identity,
+        "client_secret": secret,
+    }
+
+    try:
+        with httpx.Client() as client:
+            log.debug("Refreshing OIDC access token")
+            response = client.post(url, data=payload, auth=(identity, secret))
+            response.raise_for_status()
+            data: dict[str, Any] = response.json()
+            log.debug("refresh http request successful")
+            access: SecretStr = SecretStr(data["access_token"])
+            return access
+    except httpx.HTTPStatusError as error:
+        msg = "HTTP error while refreshing OIDC access token"
+        log.exception(msg)
+        raise ValueError(msg) from error
+    except KeyError as error:
+        msg = "server response does not contain access token"
+        log.exception(msg)
+        raise ValueError(msg) from error
+    except Exception as error:
+        msg = "Failed to refresh OIDC access token"
+        log.exception(msg)
+        raise ValueError(msg) from error
 
 
 async def authflow(
