@@ -90,7 +90,7 @@ def login(
     try:
         console.print("[bold blue]Starting Science Platform Login[/bold blue]")
         config = Configuration()
-        if not force and (config.auth.valid() and not config.auth.expired()):
+        if not force and (config.auth.valid and not config.auth.expired):
             console.print("[green]✓[/green] Credentials valid")
             selected = getattr(config.auth, str(config.auth.mode)).server
             console.print(
@@ -155,7 +155,7 @@ def logout(
             raise typer.Exit(0)
 
     try:
-        config = Configuration()  # type: ignore [call-arg]
+        config = Configuration()
         # Clear authentication details
         config.auth.mode = "default"
         config.auth.x509 = X509()  # type: ignore [call-arg]

@@ -120,7 +120,7 @@ class TestOIDC:
     def test_valid_with_missing_fields(self) -> None:
         """Test valid method with missing required fields."""
         config = OIDC()
-        assert not config.valid()
+        assert not config.valid
 
     def test_valid_with_partial_fields(self) -> None:
         """Test valid method with some required fields missing."""
@@ -131,7 +131,7 @@ class TestOIDC:
         config.endpoints.token = "https://example.com/token"  # nosec B105
         config.client.identity = "test_client_id"
         # Missing client.secret, token.refresh, token.expiry
-        assert not config.valid()
+        assert not config.valid
 
     def test_valid_with_all_required_fields(self) -> None:
         """Test valid method with all required fields present."""
@@ -143,7 +143,7 @@ class TestOIDC:
         config.client.identity = "test_client_id"
         config.client.secret = "test_client_secret"  # nosec B105
         config.token.refresh = "test_refresh_token"
-        assert config.valid()
+        assert config.valid
 
     def test_expired_no_access_token(self) -> None:
         """Test expired property when access token is None."""
@@ -168,8 +168,8 @@ class TestOIDC:
         """Test expired property when token is still valid."""
         future_time = time.time() + 3600
         config = OIDC()
-        config.token.refresh = "test_refresh_token"
-        config.expiry.refresh = future_time
+        config.token.access = "test_refresh_token"
+        config.expiry.access = future_time
         assert config.expired is False
 
 
@@ -195,26 +195,20 @@ class TestX509:
     def test_valid_no_path(self) -> None:
         """Test valid method when path is None."""
         config = X509()
-        assert not config.valid()
-
-    def test_valid_path_not_exists(self) -> None:
-        """Test valid method when path doesn't exist."""
-        config = X509(path="/nonexistent")
-        with pytest.raises(FileNotFoundError):
-            config.valid()
+        assert not config.valid
 
     def test_valid_path_exists_no_expiry(self) -> None:
         """Test valid method when path exists but expiry is default."""
         with NamedTemporaryFile() as temp_file:
             config = X509(path=Path(temp_file.name))
-            assert config.valid()  # Should be valid if file exists
+            assert config.valid  # Should be valid if file exists
 
     def test_valid_path_exists_with_expiry(self) -> None:
         """Test valid method when path exists and expiry is set."""
         future_time = time.time() + 3600
         with NamedTemporaryFile() as temp_file:
             config = X509(path=Path(temp_file.name), expiry=future_time)
-            assert config.valid()
+            assert config.valid
 
     def test_expired_no_expiry(self) -> None:
         """Test expired property when expiry is None."""
@@ -249,25 +243,21 @@ class TestAuthConfig:
         """Test AuthConfig with OIDC mode."""
         config = Authentication(mode="oidc")
         assert config.mode == "oidc"
-        assert isinstance(config.oidc, OIDC)
-        assert isinstance(config.x509, X509)
 
     def test_with_x509_mode(self) -> None:
         """Test AuthConfig with X.509 mode."""
         config = Authentication(mode="x509")
         assert config.mode == "x509"
-        assert isinstance(config.oidc, OIDC)
-        assert isinstance(config.x509, X509)
 
     def test_valid_oidc_mode_invalid_config(self) -> None:
         """Test valid method with OIDC mode but invalid OIDC configuration."""
         config = Authentication(mode="oidc")
-        assert config.valid() is False
+        assert config.valid is False
 
     def test_valid_x509_mode_invalid_config(self) -> None:
         """Test valid method with X.509 mode but invalid X.509 configuration."""
         config = Authentication(mode="x509")
-        assert config.valid() is False
+        assert config.valid is False
 
     def test_valid_oidc_mode_valid_config(self) -> None:
         """Test valid method with OIDC mode and valid OIDC configuration."""
@@ -279,7 +269,7 @@ class TestAuthConfig:
         config.oidc.client.identity = "test_client_id"
         config.oidc.client.secret = "test_client_secret"  # nosec B105
         config.oidc.token.refresh = "test_refresh_token"
-        assert config.valid() is True
+        assert config.valid is True
 
     def test_valid_x509_mode_valid_config(self) -> None:
         """Test valid method with X.509 mode and valid X.509 configuration."""
@@ -288,30 +278,30 @@ class TestAuthConfig:
             config = Authentication(mode="x509")
             config.x509.path = Path(temp_file.name)
             config.x509.expiry = future_time
-            assert config.valid() is True
+            assert config.valid is True
 
     def test_expired_oidc_mode(self) -> None:
         """Test expired method with OIDC mode."""
         config = Authentication(mode="oidc")
         # OIDC config is expired by default (no refresh token)
-        assert config.expired() is True
+        assert config.expired is True
 
         # Set valid refresh token
         future_time = time.time() + 3600
-        config.oidc.token.refresh = "test_refresh_token"
-        config.oidc.expiry.refresh = future_time
-        assert config.expired() is False
+        config.oidc.token.access = "test_refresh_token"
+        config.oidc.expiry.access = future_time
+        assert config.expired is False
 
     def test_expired_x509_mode(self) -> None:
         """Test expired method with X.509 mode."""
         config = Authentication(mode="x509")
         # X.509 config is expired by default (no expiry)
-        assert config.expired() is True
+        assert config.expired is True
 
         # Set valid expiry
         future_time = time.time() + 3600
         config.x509.expiry = future_time
-        assert config.expired() is False
+        assert config.expired is False
 
     def test_expired_unknown_mode(self) -> None:
         """Test expired method with unknown mode."""

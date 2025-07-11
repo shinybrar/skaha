@@ -82,6 +82,7 @@ class OIDC(BaseModel):
         Field(default_factory=Expiry, description="OIDC Token Expiry."),
     ]
 
+    @property
     def valid(self) -> bool:
         """Check if all required information for getting new access tokens exists.
 
@@ -110,11 +111,9 @@ class OIDC(BaseModel):
         Returns:
             bool: True if the access token is active, False otherwise.
         """
-        if self.token.refresh is None:
+        if self.expiry.access is None:
             return True
-        if self.expiry.refresh is None:
-            return True
-        return self.expiry.refresh < time.time()
+        return self.expiry.access < time.time()
 
 
 class X509(BaseModel):
@@ -157,7 +156,6 @@ class X509(BaseModel):
         if self.path is None:
             return 0.0
         try:
-            self.valid()
             data = self.path.read_bytes()
             cert = x509.load_pem_x509_certificate(data, default_backend())
             return cert.not_valid_after_utc.timestamp()
@@ -165,6 +163,7 @@ class X509(BaseModel):
             log.debug("Failed to read expiry from certificate: %s", err)
             return 0.0
 
+    @property
     def valid(self) -> bool:
         """Check if the certificate filepath is defined and expiry is in the future.
 
@@ -181,14 +180,6 @@ class X509(BaseModel):
             msg = f"cert file {destination} is not readable."
             raise PermissionError(msg)
         return True
-
-    def refresh_expiry(self) -> None:
-        """Refresh the expiry time from the certificate file.
-
-        This method updates the expiry time by reading the certificate file.
-        It does not check if the certificate is expired or not.
-        """
-        self.expiry = self._read_expiry_from_cert()
 
     @property
     def expired(self) -> bool:
@@ -254,6 +245,7 @@ class Authentication(BaseModel):
         ),
     )
 
+    @property
     def valid(self) -> bool:
         """Validate that the selected authentication mode has valid configuration.
 
@@ -263,22 +255,47 @@ class Authentication(BaseModel):
         Raises:
             ValueError: If the selected mode's configuration is invalid.
         """
-        status: bool = False
-        if self.mode == "oidc":
-            status = self.oidc.valid()
-        if self.mode == "x509":
-            status = self.x509.valid()
-        return status
+        match self.mode:
+            case "oidc":
+                return self.oidc.valid
+            case "x509":
+                return self.x509.valid
+            case "default":
+                return self.default.valid
+            case _:
+                return False
 
+    @property
     def expired(self) -> bool:
         """Check if the authentication configuration is expired.
 
         Returns:
             bool: True if the authentication configuration is expired, False otherwise.
         """
-        status: bool = False
-        if self.mode == "oidc":
-            status = self.oidc.expired
-        if self.mode == "x509":
-            status = self.x509.expired
-        return status
+        match self.mode:
+            case "oidc":
+                return self.oidc.expired
+            case "x509":
+                return self.x509.expired
+            case "default":
+                return self.default.expired
+            case _:
+                return True
+
+    @property
+    def expiry(self) -> float | None:
+        """Get the expiry time for the current authentication method.
+
+        Returns:
+            float | None: Expiry time as Unix timestamp (seconds since epoch),
+                or None if no expiry is available.
+        """
+        match self.mode:
+            case "oidc":
+                return self.oidc.expiry.access
+            case "x509":
+                return self.x509.expiry
+            case "default":
+                return self.default.expiry
+            case _:
+                return None
