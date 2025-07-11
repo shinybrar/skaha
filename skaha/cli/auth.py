@@ -89,14 +89,7 @@ def login(
 
     try:
         console.print("[bold blue]Starting Science Platform Login[/bold blue]")
-        config = Configuration.assemble()
-        console.print("[green]✓[/green] Found existing configuration")
-    except (FileNotFoundError, OSError, ValueError):
-        msg = "No configuration found, using defaults."
-        console.print(f"[yellow dim]{msg}.[/yellow dim]")
         config = Configuration()
-
-    try:
         if not force and (config.auth.valid() and not config.auth.expired()):
             console.print("[green]✓[/green] Credentials valid")
             selected = getattr(config.auth, str(config.auth.mode)).server
@@ -162,7 +155,7 @@ def logout(
             raise typer.Exit(0)
 
     try:
-        config = Configuration.assemble()
+        config = Configuration()  # type: ignore [call-arg]
         # Clear authentication details
         config.auth.mode = "default"
         config.auth.x509 = X509()  # type: ignore [call-arg]
