@@ -8,7 +8,12 @@ from typing import Annotated
 
 import yaml
 from pydantic import Field, SecretStr
-from pydantic_settings import BaseSettings, SettingsConfigDict
+from pydantic_settings import (
+    BaseSettings,
+    PydanticBaseSettingsSource,
+    SettingsConfigDict,
+    YamlConfigSettingsSource,
+)
 
 from skaha import CONFIG_PATH
 from skaha.models.auth import Authentication
@@ -67,6 +72,38 @@ class Configuration(Connection, BaseSettings):
         ge=10,
     )
 
+    @classmethod
+    def settings_customise_sources(
+        cls,
+        settings_cls: type[BaseSettings],
+        init_settings: PydanticBaseSettingsSource,
+        env_settings: PydanticBaseSettingsSource,
+        dotenv_settings: PydanticBaseSettingsSource,  # noqa: ARG003
+        file_secret_settings: PydanticBaseSettingsSource,
+    ) -> tuple[PydanticBaseSettingsSource, ...]:
+        """Customize settings sources to automatically load from YAML config file.
+
+        This method configures the settings sources to automatically load from the
+        YAML config file when Configuration() is instantiated. The order of sources
+        determines priority, with earlier sources taking precedence.
+
+        Args:
+            settings_cls: The settings class being configured.
+            init_settings: Settings from __init__ arguments.
+            env_settings: Settings from environment variables.
+            dotenv_settings: Settings from .env files.
+            file_secret_settings: Settings from secret files.
+
+        Returns:
+            Tuple of settings sources in priority order.
+        """
+        return (
+            init_settings,  # Highest priority: explicit arguments
+            env_settings,  # Environment variables
+            YamlConfigSettingsSource(settings_cls, yaml_file=CONFIG_PATH),  # YAML
+            file_secret_settings,  # Lowest priority: secret files
+        )
+
     @property
     def url(self) -> str:
         """Return the URL for the server.
@@ -106,38 +143,6 @@ class Configuration(Connection, BaseSettings):
         """
         mode = self.auth.mode
         return str(getattr(self.auth, mode).server.version)
-
-    @classmethod
-    def assemble(cls, **kwargs: object) -> Configuration:
-        """Assemble the configuration.
-
-        Args:
-            **kwargs (object): Runtime configuration overrides.
-
-        Returns:
-            Configuration: The assembled configuration object.
-
-        Raises:
-            FileNotFoundError: If the config file does not exist.
-            OSError: If loading the config file fails.
-            ValueError: If the config file is empty.
-        """
-        if not CONFIG_PATH.exists():
-            msg = f"{CONFIG_PATH} does not exist."
-            raise FileNotFoundError(msg)
-
-        try:
-            with CONFIG_PATH.open(encoding="utf-8") as filepath:
-                data = yaml.safe_load(filepath)
-                if not data:
-                    msg = f"config {CONFIG_PATH} is empty."
-                    raise ValueError(msg)
-        except (OSError, yaml.YAMLError) as error:
-            msg = f"failed to load config {CONFIG_PATH}: {error}"
-            raise OSError(msg) from error
-
-        merged: dict[str, object] = {**data, **kwargs}
-        return cls.model_validate(merged)
 
     def save(self) -> None:
         """Save the current configuration to the configuration file."""

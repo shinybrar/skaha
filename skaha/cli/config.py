@@ -2,8 +2,6 @@
 
 from __future__ import annotations
 
-from typing import Annotated
-
 import typer
 from rich.console import Console
 
@@ -14,38 +12,23 @@ from skaha.models.config import Configuration
 config: typer.Typer = typer.Typer(
     cls=AliasGroup,
 )
-console = Console(width=120)
+console = Console(width=80)
 
 
 @config.command("show | list | ls")
-def show(
-    defaults: Annotated[
-        bool,
-        typer.Option(
-            "--defaults",
-            "-d",
-            help="Show default configuration",
-        ),
-    ] = False,
-) -> None:
+def show() -> None:
     """Displays the current configuration."""
     try:
-        cfg = Configuration.assemble()
-        console.print(CONFIG_PATH)
+        cfg = Configuration()
+        exists: bool = CONFIG_PATH.exists()
+        msg = f"{'discovered' if exists else 'does not exist, showing defaults.'}"
+        console.print(f"[dim]{CONFIG_PATH} {msg}[/dim]")
         console.print(
             cfg.model_dump(
-                mode="python", exclude_none=True, exclude_defaults=(not defaults)
+                mode="python",
+                exclude_none=True,
             )
         )
-    except (OSError, ValueError):
-        console.print("[yellow italic]No local configuration found.[/yellow italic]")
-        if not defaults:
-            console.print("[dim]Use --defaults to show default configuration.[/dim]")
-            return
-        console.print("[dim]Default Client Configuration[/dim]")
-        cfg = Configuration()
-        console.print(cfg.model_dump(mode="python", exclude_none=True))
-        return
     except Exception as error:
         console.print(f"[bold red]Error: {error}[/bold red]")
         raise typer.Exit(1) from error

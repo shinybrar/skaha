@@ -110,65 +110,6 @@ class TestConfiguration:
 
         assert config.version == "v1"
 
-    def test_assemble_file_not_found(self) -> None:
-        """Test assemble method when config file doesn't exist."""
-        with patch("skaha.models.config.CONFIG_PATH") as mock_path:
-            mock_path.exists.return_value = False
-
-            with pytest.raises(FileNotFoundError, match="does not exist"):
-                Configuration.assemble()
-
-    def test_assemble_empty_file(self) -> None:
-        """Test assemble method with empty config file."""
-        with patch("skaha.models.config.CONFIG_PATH") as mock_path:
-            mock_path.exists.return_value = True
-            mock_path.open.return_value.__enter__.return_value = mock_open(
-                read_data=""
-            ).return_value
-
-            with pytest.raises(ValueError, match="config .* is empty"):
-                Configuration.assemble()
-
-    def test_assemble_invalid_yaml(self) -> None:
-        """Test assemble method with invalid YAML."""
-        with patch("skaha.models.config.CONFIG_PATH") as mock_path:
-            mock_path.exists.return_value = True
-            mock_path.open.return_value.__enter__.return_value = mock_open(
-                read_data="invalid: yaml: content:"
-            ).return_value
-
-            with pytest.raises(OSError, match="failed to load config"):
-                Configuration.assemble()
-
-    def test_assemble_valid_config(self) -> None:
-        """Test assemble method with valid config."""
-        config_data = {"loglevel": 10, "concurrency": 16, "auth": {"mode": "x509"}}
-
-        with patch("skaha.models.config.CONFIG_PATH") as mock_path:
-            mock_path.exists.return_value = True
-            mock_path.open.return_value.__enter__.return_value = mock_open(
-                read_data=yaml.dump(config_data)
-            ).return_value
-
-            config = Configuration.assemble()
-            assert config.loglevel == 10
-            assert config.concurrency == 16
-            assert config.auth.mode == "x509"
-
-    def test_assemble_with_kwargs_override(self) -> None:
-        """Test assemble method with runtime overrides."""
-        config_data = {"loglevel": 20}
-
-        with patch("skaha.models.config.CONFIG_PATH") as mock_path:
-            mock_path.exists.return_value = True
-            mock_path.open.return_value.__enter__.return_value = mock_open(
-                read_data=yaml.dump(config_data)
-            ).return_value
-
-            config = Configuration.assemble(loglevel=30, concurrency=8)
-            assert config.loglevel == 30  # overridden
-            assert config.concurrency == 8  # overridden
-
     def test_save_method(self) -> None:
         """Test save method."""
         config = Configuration(loglevel=logging.DEBUG, concurrency=16)
@@ -218,3 +159,56 @@ class TestConfiguration:
 
         # But should be accessible directly
         assert config.token.get_secret_value() == "secret_token"
+
+    def test_auto_load_from_yaml_config(self) -> None:
+        """Test that Configuration() automatically loads from YAML config file."""
+        import tempfile
+
+        config_data = {"loglevel": 10, "concurrency": 16, "auth": {"mode": "x509"}}
+
+        # Create a temporary YAML file
+        with tempfile.NamedTemporaryFile(mode="w", suffix=".yaml", delete=False) as f:
+            yaml.dump(config_data, f)
+            temp_config_path = Path(f.name)
+
+        try:
+            with patch("skaha.models.config.CONFIG_PATH", temp_config_path):
+                # Configuration() should automatically load from YAML
+                config = Configuration()
+                assert config.loglevel == 10
+                assert config.concurrency == 16
+                assert config.auth.mode == "x509"
+        finally:
+            # Clean up the temporary file
+            temp_config_path.unlink()
+
+    def test_auto_load_fallback_to_defaults(self) -> None:
+        """Test Configuration() falls back to defaults when config doesn't exist."""
+        with patch("skaha.models.config.CONFIG_PATH", Path("/nonexistent/config.yaml")):
+            # Configuration() should fall back to defaults when file doesn't exist
+            config = Configuration()
+            assert config.loglevel == logging.INFO  # default value
+            assert config.concurrency == 32  # default from Connection
+            assert config.auth.mode == "default"  # default value
+
+    def test_init_args_override_yaml_config(self) -> None:
+        """Test that Configuration(args) overrides values from YAML config."""
+        import tempfile
+
+        config_data = {"loglevel": 10, "concurrency": 16}
+
+        # Create a temporary YAML file
+        with tempfile.NamedTemporaryFile(mode="w", suffix=".yaml", delete=False) as f:
+            yaml.dump(config_data, f)
+            temp_config_path = Path(f.name)
+
+        try:
+            with patch("skaha.models.config.CONFIG_PATH", temp_config_path):
+                # Configuration with args should override YAML values
+                config = Configuration(loglevel=30, timeout=60)
+                assert config.loglevel == 30  # from args, overrides YAML
+                assert config.timeout == 60  # from args
+                assert config.concurrency == 16  # from YAML config
+        finally:
+            # Clean up the temporary file
+            temp_config_path.unlink()
