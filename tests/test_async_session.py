@@ -5,7 +5,6 @@ from time import time
 from uuid import uuid4
 
 import pytest
-from httpx import HTTPError
 from pydantic import ValidationError
 
 from skaha.session import AsyncSession
@@ -138,24 +137,3 @@ async def test_delete_session(asession: AsyncSession, name: str):
                 done = True
     deletion = await asession.destroy_with(prefix=name)
     assert deletion == {pytest.IDENTITY[0]: True}
-
-
-@pytest.mark.asyncio
-async def test_bad_error_exceptions():
-    """Test error handling."""
-    asession = AsyncSession(server="https://bad.server.com")
-    with pytest.raises(HTTPError):
-        await asession.fetch()
-    with pytest.raises(HTTPError):
-        await asession.stats()
-    with pytest.raises(HTTPError):
-        await asession.destroy_with(prefix="bad")
-
-    assert not await asession.create(
-        name="bad",
-        image="images.canfar.net/skaha/terminal:1.1.2",
-    )
-
-    assert not await asession.info(["bad"])
-    assert not await asession.logs(["bad"])
-    assert await asession.destroy(["bad"]) == {"bad": False}

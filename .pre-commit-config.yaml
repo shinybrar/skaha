@@ -41,7 +41,7 @@ repos:
     rev: '1.8.3'
     hooks:
       - id: bandit
-        args: ["--skip=B101"]
+        args: ["--skip=B101", "--config=pyproject.toml"]
 
   - repo: local
     hooks:

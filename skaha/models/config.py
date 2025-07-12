@@ -1,0 +1,160 @@
+"""Skaha Client Configuration."""
+
+from __future__ import annotations
+
+import logging
+from pathlib import Path
+from typing import Annotated
+
+import yaml
+from pydantic import Field, SecretStr
+from pydantic_settings import (
+    BaseSettings,
+    PydanticBaseSettingsSource,
+    SettingsConfigDict,
+    YamlConfigSettingsSource,
+)
+
+from skaha import CONFIG_PATH
+from skaha.models.auth import Authentication
+from skaha.models.http import Connection
+from skaha.models.registry import ContainerRegistry
+
+
+class Configuration(Connection, BaseSettings):
+    """Unified configuration settings for Skaha client and authentication."""
+
+    model_config = SettingsConfigDict(
+        title="Skaha Configuration",
+        env_prefix="SKAHA_",
+        env_nested_delimiter="__",
+        env_file_encoding="utf-8",
+        case_sensitive=False,
+        extra="forbid",
+        json_schema_mode_override="serialization",
+        str_strip_whitespace=True,
+        str_max_length=256,
+        str_min_length=1,
+    )
+    certificate: Path | None = Field(
+        default=None,
+        title="X509 TLS Certificate",
+        description="Pathlike location for the x509 certificate.",
+        examples=[Path.home() / ".custom" / "cert.pem"],
+        validate_default=False,
+    )
+    token: SecretStr | None = Field(
+        default=None,
+        title="Authentication Token",
+        description="Bearer token for the server.",
+        exclude=True,
+        validate_default=False,
+    )
+    auth: Annotated[
+        Authentication,
+        Field(
+            default_factory=lambda: Authentication(),
+            description="Authentication Settings.",
+        ),
+    ]
+    registry: Annotated[
+        ContainerRegistry,
+        Field(
+            default_factory=lambda: ContainerRegistry(),
+            description="Container Registry Settings.",
+        ),
+    ]
+    loglevel: int = Field(
+        default=logging.INFO,
+        title="Logging Level",
+        description="10=DEBUG, 20=INFO, 30=WARNING, 40=ERROR, 50=CRITICAL",
+        le=50,
+        ge=10,
+    )
+
+    @classmethod
+    def settings_customise_sources(
+        cls,
+        settings_cls: type[BaseSettings],
+        init_settings: PydanticBaseSettingsSource,
+        env_settings: PydanticBaseSettingsSource,
+        dotenv_settings: PydanticBaseSettingsSource,  # noqa: ARG003
+        file_secret_settings: PydanticBaseSettingsSource,
+    ) -> tuple[PydanticBaseSettingsSource, ...]:
+        """Customize settings sources to automatically load from YAML config file.
+
+        This method configures the settings sources to automatically load from the
+        YAML config file when Configuration() is instantiated. The order of sources
+        determines priority, with earlier sources taking precedence.
+
+        Args:
+            settings_cls: The settings class being configured.
+            init_settings: Settings from __init__ arguments.
+            env_settings: Settings from environment variables.
+            dotenv_settings: Settings from .env files.
+            file_secret_settings: Settings from secret files.
+
+        Returns:
+            Tuple of settings sources in priority order.
+        """
+        return (
+            init_settings,  # Highest priority: explicit arguments
+            env_settings,  # Environment variables
+            YamlConfigSettingsSource(settings_cls, yaml_file=CONFIG_PATH),  # YAML
+            file_secret_settings,  # Lowest priority: secret files
+        )
+
+    @property
+    def url(self) -> str:
+        """Return the URL for the server.
+
+        Returns:
+            str: The URL for the server.
+        """
+        mode = self.auth.mode
+        return str(getattr(self.auth, mode).server.url)
+
+    @property
+    def uri(self) -> str:
+        """Return the URI for the server.
+
+        Returns:
+            str: The URI for the server.
+        """
+        mode = self.auth.mode
+        return str(getattr(self.auth, mode).server.uri)
+
+    @property
+    def name(self) -> str:
+        """Return the name for the server.
+
+        Returns:
+            str: The name for the server.
+        """
+        mode = self.auth.mode
+        return str(getattr(self.auth, mode).server.name)
+
+    @property
+    def version(self) -> str:
+        """Return the version for the server.
+
+        Returns:
+            str: The version for the server.
+        """
+        mode = self.auth.mode
+        return str(getattr(self.auth, mode).server.version)
+
+    def save(self) -> None:
+        """Save the current configuration to the configuration file."""
+        CONFIG_PATH.parent.mkdir(parents=True, exist_ok=True)
+
+        data = self.model_dump(mode="json", exclude_defaults=True)
+
+        try:
+            with CONFIG_PATH.open(mode="w", encoding="utf-8") as filepath:
+                yaml.dump(
+                    data, filepath, default_flow_style=False, sort_keys=True, indent=2
+                )
+        except Exception as error:
+            msg = f"failed to save config {CONFIG_PATH}: {error}"
+            raise OSError(msg) from error

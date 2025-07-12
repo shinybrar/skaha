@@ -22,15 +22,8 @@ from typing_extensions import Self
 from skaha.models.types import Kind, Status, View
 
 
-class CreateSpec(BaseModel):
-    """Payload specification for creating a new session.
-
-    Args:
-        BaseModel (pydantic.BaseModel): Pydantic BaseModel.
-
-    Returns:
-        object: Pydantic BaseModel object.
-    """
+class CreateRequest(BaseModel):
+    """Payload specification for creating a new session."""
 
     name: str = Field(
         ...,
@@ -74,14 +67,11 @@ class CreateSpec(BaseModel):
 
     # Validate that cmd, args and env are only used with headless sessions.
     @model_validator(mode="after")
-    def validate_headless(self) -> Self:
+    def _validate_headless(self) -> Self:
         """Validate that cmd, args and env are only used for headless sessions.
 
-        Args:
-            values (Dict[str, Any]): Values to validate.
-
         Returns:
-            Dict[str, Any]: Validated values.
+            Self: The validated model instance.
         """
         if (self.cmd or self.args or self.env) and self.kind != "headless":
             msg = "cmd, args, env only allowed for headless sessions."
@@ -94,11 +84,11 @@ class CreateSpec(BaseModel):
         """Validate kind.
 
         Args:
-            value (KINDS): Value to validate.
-            context(ValidationInfo): Class validation context.
+            value (Kind): Value to validate.
+            context (ValidationInfo): Class validation context.
 
         Returns:
-            KINDS: Validated value.
+            Kind: Validated value.
         """
         valid: tuple[str] = get_args(Kind)
         if value not in valid:
@@ -125,7 +115,7 @@ class CreateSpec(BaseModel):
 
         Args:
             value (int): Value to validate.
-            context(ValidationInfo): Class validation context.
+            context (ValidationInfo): Class validation context.
 
         Returns:
             int: Validated value.
@@ -137,15 +127,8 @@ class CreateSpec(BaseModel):
         return value
 
 
-class FetchSpec(BaseModel):
-    """Payload specification for fetching session[s] information.
-
-    Args:
-        BaseModel (pydantic.BaseModel): Pydantic BaseModel.
-
-    Returns:
-        object: Pydantic BaseModel object.
-    """
+class FetchRequest(BaseModel):
+    """Payload specification for fetching session[s] information."""
 
     kind: Kind | None = Field(
         None,

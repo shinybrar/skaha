@@ -32,8 +32,8 @@ class Overview(SkahaClient):
             Self: The current object.
         """
         # The overview endpoint is not versioned, so need to remove it
-        self.client.base_url = f"{self.server}"
-        self.asynclient.base_url = f"{self.server}"
+        self.client.base_url = f"{self.url}"
+        self.asynclient.base_url = f"{self.url}"
         return self
 
     def availability(self) -> bool:
