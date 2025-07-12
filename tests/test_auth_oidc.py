@@ -15,7 +15,9 @@ from skaha.auth.oidc import (
     authenticate,
     authflow,
     discover,
+    refresh,
     register,
+    sync_refresh,
 )
 from skaha.models.auth import OIDC, Client, Endpoint, Token
 
@@ -481,6 +483,160 @@ class TestAuthenticateFunction:
                 assert result.token.refresh == "test_refresh_token"
                 assert result.expiry.access == 1234567890
                 assert result.expiry.refresh == 1234567890
+
+
+class TestRefreshFunction:
+    """Test the async refresh function."""
+
+    @pytest.mark.asyncio
+    async def test_refresh_success(self):
+        """Test successful async token refresh."""
+        mock_response = MagicMock()
+        mock_response.json.return_value = {"access_token": "new_access_token"}
+
+        with patch("httpx.AsyncClient") as mock_client_class:
+            mock_client = AsyncMock()
+            mock_client_class.return_value.__aenter__.return_value = mock_client
+            mock_client.post.return_value = mock_response
+
+            result = await refresh(
+                url="https://example.com/token",
+                identity="client_id",
+                secret="client_secret",
+                token="refresh_token",
+            )
+
+            assert result.get_secret_value() == "new_access_token"
+            mock_client.post.assert_called_once()
+
+    @pytest.mark.asyncio
+    async def test_refresh_http_error(self):
+        """Test async refresh with HTTP error (lines 179-182)."""
+        mock_response = MagicMock()
+        mock_response.raise_for_status.side_effect = httpx.HTTPStatusError(
+            "Bad Request", request=MagicMock(), response=MagicMock()
+        )
+
+        with patch("httpx.AsyncClient") as mock_client_class:
+            mock_client = AsyncMock()
+            mock_client_class.return_value.__aenter__.return_value = mock_client
+            mock_client.post.return_value = mock_response
+
+            with pytest.raises(ValueError, match="HTTP error while refreshing"):
+                await refresh(
+                    url="https://example.com/token",
+                    identity="client_id",
+                    secret="client_secret",
+                    token="refresh_token",
+                )
+
+    @pytest.mark.asyncio
+    async def test_refresh_key_error(self):
+        """Test async refresh with missing access token in response (lines 183-186)."""
+        mock_response = MagicMock()
+        mock_response.json.return_value = {"error": "invalid_grant"}
+
+        with patch("httpx.AsyncClient") as mock_client_class:
+            mock_client = AsyncMock()
+            mock_client_class.return_value.__aenter__.return_value = mock_client
+            mock_client.post.return_value = mock_response
+
+            with pytest.raises(ValueError, match="server response does not contain"):
+                await refresh(
+                    url="https://example.com/token",
+                    identity="client_id",
+                    secret="client_secret",
+                    token="refresh_token",
+                )
+
+    @pytest.mark.asyncio
+    async def test_refresh_general_exception(self):
+        """Test async refresh with general exception (lines 187-190)."""
+        with patch("httpx.AsyncClient") as mock_client_class:
+            mock_client_class.side_effect = Exception("Network error")
+
+            with pytest.raises(ValueError, match="Failed to refresh OIDC access token"):
+                await refresh(
+                    url="https://example.com/token",
+                    identity="client_id",
+                    secret="client_secret",
+                    token="refresh_token",
+                )
+
+
+class TestSyncRefreshFunction:
+    """Test the sync refresh function."""
+
+    def test_sync_refresh_success(self):
+        """Test successful sync token refresh."""
+        mock_response = MagicMock()
+        mock_response.json.return_value = {"access_token": "new_access_token"}
+
+        with patch("httpx.Client") as mock_client_class:
+            mock_client = MagicMock()
+            mock_client_class.return_value.__enter__.return_value = mock_client
+            mock_client.post.return_value = mock_response
+
+            result = sync_refresh(
+                url="https://example.com/token",
+                identity="client_id",
+                secret="client_secret",
+                token="refresh_token",
+            )
+
+            assert result.get_secret_value() == "new_access_token"
+            mock_client.post.assert_called_once()
+
+    def test_sync_refresh_http_error(self):
+        """Test sync refresh with HTTP error (lines 232-235)."""
+        mock_response = MagicMock()
+        mock_response.raise_for_status.side_effect = httpx.HTTPStatusError(
+            "Bad Request", request=MagicMock(), response=MagicMock()
+        )
+
+        with patch("httpx.Client") as mock_client_class:
+            mock_client = MagicMock()
+            mock_client_class.return_value.__enter__.return_value = mock_client
+            mock_client.post.return_value = mock_response
+
+            with pytest.raises(ValueError, match="HTTP error while refreshing"):
+                sync_refresh(
+                    url="https://example.com/token",
+                    identity="client_id",
+                    secret="client_secret",
+                    token="refresh_token",
+                )
+
+    def test_sync_refresh_key_error(self):
+        """Test sync refresh with missing access token in response (lines 236-239)."""
+        mock_response = MagicMock()
+        mock_response.json.return_value = {"error": "invalid_grant"}
+
+        with patch("httpx.Client") as mock_client_class:
+            mock_client = MagicMock()
+            mock_client_class.return_value.__enter__.return_value = mock_client
+            mock_client.post.return_value = mock_response
+
+            with pytest.raises(ValueError, match="server response does not contain"):
+                sync_refresh(
+                    url="https://example.com/token",
+                    identity="client_id",
+                    secret="client_secret",
+                    token="refresh_token",
+                )
+
+    def test_sync_refresh_general_exception(self):
+        """Test sync refresh with general exception (lines 240-242)."""
+        with patch("httpx.Client") as mock_client_class:
+            mock_client_class.side_effect = Exception("Network error")
+
+            with pytest.raises(ValueError, match="Failed to refresh OIDC access token"):
+                sync_refresh(
+                    url="https://example.com/token",
+                    identity="client_id",
+                    secret="client_secret",
+                    token="refresh_token",
+                )
 
 
 class TestIntegration:
