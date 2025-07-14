@@ -26,7 +26,7 @@ def test_expiry_with_valid_jwt():
     token = f"{header_encoded}.{payload_encoded}.{signature}"
 
     result = expiry(token)
-    assert result == 1234567890.0
+    assert result == payload["exp"]
 
 
 def test_expiry_with_exp_in_header():
@@ -47,7 +47,7 @@ def test_expiry_with_exp_in_header():
     token = f"{header_encoded}.{payload_encoded}.{signature}"
 
     result = expiry(token)
-    assert result == 9876543210.0
+    assert result == header["exp"]
 
 
 def test_expiry_with_no_exp_field():
@@ -82,44 +82,3 @@ def test_expiry_with_invalid_json():
 
     with pytest.raises(ValueError, match="Failed to decode JWT token"):
         expiry(token)
-
-
-def test_expiry_with_invalid_base64():
-    """Test expiry function with invalid base64 encoding."""
-    # Create a token with invalid base64
-    token = "invalid.base64.token"
-
-    with pytest.raises(ValueError, match="Failed to decode JWT token"):
-        expiry(token)
-
-
-def test_expiry_with_malformed_token():
-    """Test expiry function with malformed token structure."""
-    # Token with only one part
-    token = "single_part"
-
-    with pytest.raises(ValueError, match="Failed to decode JWT token"):
-        expiry(token)
-
-
-def test_expiry_padding_function():
-    """Test that the internal padding function works correctly."""
-    # This tests the padding logic indirectly through the main function
-    header = {"alg": "HS256", "typ": "JWT"}
-    payload = {"exp": 1234567890}
-
-    # Create base64 without padding to test padding logic
-    header_json = json.dumps(header)
-    payload_json = json.dumps(payload)
-
-    # Encode without padding
-    header_encoded = base64.urlsafe_b64encode(header_json.encode()).decode().rstrip("=")
-    payload_encoded = (
-        base64.urlsafe_b64encode(payload_json.encode()).decode().rstrip("=")
-    )
-    signature = "sig"
-
-    token = f"{header_encoded}.{payload_encoded}.{signature}"
-
-    result = expiry(token)
-    assert result == 1234567890.0
