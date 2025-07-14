@@ -32,11 +32,11 @@ class TestSyncHook:
     """Test the synchronous hook function."""
 
     @patch("skaha.hooks.httpx.auth.oidc.sync_refresh")
-    @patch("skaha.hooks.httpx.auth.jwt.decode")
-    def test_successful_token_refresh(self, mock_jwt_decode, mock_sync_refresh):
+    @patch("skaha.utils.jwt.expiry")
+    def test_successful_token_refresh(self, mock_jwt_expiry, mock_sync_refresh):
         """Test successful token refresh in sync hook."""
         # Setup mocks
-        mock_jwt_decode.return_value = {"exp": 1234567890}
+        mock_jwt_expiry.return_value = 1234567890
         mock_sync_refresh.return_value = SecretStr("new-access-token")
 
         # Create mock client
@@ -128,7 +128,7 @@ class TestSyncHook:
 
     @patch("skaha.hooks.httpx.auth.log")
     @patch("skaha.hooks.httpx.auth.oidc.sync_refresh")
-    def test_refresh_failure_error(self, mock_sync_refresh, _mock_log):
+    def test_refresh_failure_error(self, mock_sync_refresh, mock_log):
         """Test error handling when token refresh fails."""
         mock_sync_refresh.side_effect = Exception("Network error")
 
@@ -157,11 +157,11 @@ class TestAsyncHook:
     """Test the asynchronous hook function."""
 
     @patch("skaha.hooks.httpx.auth.oidc.refresh")
-    @patch("skaha.hooks.httpx.auth.jwt.decode")
-    async def test_successful_token_refresh(self, mock_jwt_decode, mock_refresh):
+    @patch("skaha.utils.jwt.expiry")
+    async def test_successful_token_refresh(self, mock_jwt_expiry, mock_refresh):
         """Test successful token refresh in async hook."""
         # Setup mocks
-        mock_jwt_decode.return_value = {"exp": 1234567890}
+        mock_jwt_expiry.return_value = 1234567890
         mock_refresh.return_value = SecretStr("new-access-token")
 
         # Create mock client
@@ -253,7 +253,7 @@ class TestAsyncHook:
 
     @patch("skaha.hooks.httpx.auth.log")
     @patch("skaha.hooks.httpx.auth.oidc.refresh")
-    async def test_refresh_failure_error(self, mock_refresh, _mock_log):
+    async def test_refresh_failure_error(self, mock_refresh, mock_log):
         """Test error handling when token refresh fails in async hook."""
         mock_refresh.side_effect = Exception("Network error")
 

@@ -462,13 +462,13 @@ class TestAuthenticateFunction:
 
             with (
                 patch("skaha.auth.oidc.authflow") as mock_authflow,
-                patch("jwt.decode") as mock_jwt_decode,
+                patch("skaha.utils.jwt.expiry") as mock_jwt_decode,
             ):
                 mock_authflow.return_value = {
                     "access_token": "test_access_token",
                     "refresh_token": "test_refresh_token",
                 }
-                mock_jwt_decode.return_value = {"exp": 1234567890}
+                mock_jwt_decode.return_value = 1234567890
 
                 # Should complete without errors and return updated config
                 result = await authenticate(oidc_config)
