@@ -45,7 +45,6 @@ dependencies = [
     "httpx[http2]>=0.28.1",
     "pydantic>=2.9.2",
     "pydantic-settings>=2.9.1",
-    "pyjwt>=2.10.1",
     "questionary>=2.1.0",
     "rich>=13.9.4",
     "segno>=1.6.6",
