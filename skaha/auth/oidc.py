@@ -11,7 +11,6 @@ import webbrowser
 from typing import Any
 
 import httpx
-import jwt
 import segno
 from pydantic import SecretStr
 from rich.console import Console
@@ -19,6 +18,7 @@ from rich.progress import BarColumn, Progress, TextColumn, TimeRemainingColumn
 
 from skaha import get_logger
 from skaha.models.auth import OIDC
+from skaha.utils import jwt
 
 console = Console()
 log = get_logger(__name__)
@@ -474,12 +474,8 @@ async def authenticate(oidc: OIDC) -> OIDC:
 
         oidc.token.access = tokens["access_token"]
         oidc.token.refresh = tokens["refresh_token"]
-        oidc.expiry.refresh = jwt.decode(  # type: ignore [attr-defined]
-            str(oidc.token.refresh), options={"verify_signature": False}
-        ).get("exp")
-        oidc.expiry.access = jwt.decode(  # type: ignore [attr-defined]
-            str(oidc.token.access), options={"verify_signature": False}
-        ).get("exp")
+        oidc.expiry.refresh = jwt.expiry(str(oidc.token.refresh))
+        oidc.expiry.access = jwt.expiry(str(oidc.token.access))
 
         console.print("[green]✓[/green] OIDC device authenticated successfully")
 

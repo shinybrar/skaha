@@ -32,10 +32,9 @@ from __future__ import annotations
 import time
 from typing import TYPE_CHECKING, Callable
 
-import jwt
-
 from skaha import get_logger
 from skaha.auth import oidc
+from skaha.utils import jwt
 
 if TYPE_CHECKING:
     from collections.abc import Awaitable
@@ -87,9 +86,9 @@ def hook(client: SkahaClient) -> Callable[[httpx.Request], None]:
                 )
                 log.debug("Synchronous OIDC token refresh successful")
                 client.auth.oidc.token.access = token.get_secret_value()
-                client.auth.oidc.expiry.access = jwt.decode(  # type: ignore [attr-defined]
-                    client.auth.oidc.token.access, options={"verify_signature": False}
-                ).get("exp")
+                client.auth.oidc.expiry.access = jwt.expiry(
+                    client.auth.oidc.token.access
+                )
                 client.save()
                 log.debug("Authentication refreshed and configuration saved")
                 client.client.headers.update(
@@ -142,9 +141,9 @@ def ahook(client: SkahaClient) -> Callable[[httpx.Request], Awaitable[None]]:
                     token=str(client.auth.oidc.token.refresh),
                 )
                 client.auth.oidc.token.access = token.get_secret_value()
-                client.auth.oidc.expiry.access = jwt.decode(  # type: ignore [attr-defined]
-                    client.auth.oidc.token.access, options={"verify_signature": False}
-                ).get("exp")
+                client.auth.oidc.expiry.access = jwt.expiry(
+                    client.auth.oidc.token.access
+                )
                 client.save()
                 log.debug("authentication refreshed and configuration saved")
                 client.client.headers.update(
