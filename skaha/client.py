@@ -259,17 +259,18 @@ class SkahaClient(Configuration):
                 keepalive_expiry=5,
             )
 
-        if self.token or self.auth.mode == "oidc":
+        # Prioritize user-provided credentials over configuration
+        if self.certificate:
+            log.debug(
+                "Using certificate authentication with cert: %s", self.certificate
+            )
+            kwargs["verify"] = self._get_ssl_context(self.certificate)
+        elif self.token or self.auth.mode == "oidc":
             log.debug("Using token/OIDC authentication - no SSL context required")
         elif self.auth.mode == "x509":
             assert self.auth.x509.path is not None
             log.debug("Using X509 authentication with cert: %s", self.auth.x509.path)
             kwargs["verify"] = self._get_ssl_context(self.auth.x509.path)
-        elif self.certificate:
-            log.debug(
-                "Using certificate authentication with cert: %s", self.certificate
-            )
-            kwargs["verify"] = self._get_ssl_context(self.certificate)
         elif self.auth.mode == "default":
             assert self.auth.default.path is not None
             log.debug(
@@ -383,13 +384,19 @@ class SkahaClient(Configuration):
             "User-Agent": f"python/{__version__}",
         }
 
-        # Handle user-passed token first
+        # Handle user-passed credentials first (highest priority)
         if self.token:
             assert self.token is not None
             headers.update(
                 {
                     "Authorization": f"Bearer {self.token.get_secret_value()}",
                     "X-Skaha-Authentication-Type": "token",
+                },
+            )
+        elif self.certificate:
+            headers.update(
+                {
+                    "X-Skaha-Authentication-Type": "certificate",
                 },
             )
         # Use authentication mode from configuration
@@ -406,7 +413,7 @@ class SkahaClient(Configuration):
                 msg = "OIDC mode selected but no access token available"
                 log.error(msg)
                 raise ValueError(msg)
-        elif self.auth.mode in ("x509", "default") or self.certificate:
+        elif self.auth.mode in ("x509", "default"):
             headers.update(
                 {
                     "X-Skaha-Authentication-Type": "certificate",
