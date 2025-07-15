@@ -5,7 +5,7 @@ import ssl
 import tempfile
 from datetime import datetime, timedelta, timezone
 from pathlib import Path
-from unittest.mock import Mock, patch
+from unittest.mock import patch
 
 import httpx
 import pytest
@@ -17,64 +17,202 @@ from cryptography.x509.oid import NameOID
 from pydantic import SecretStr, ValidationError
 
 from skaha.client import SkahaClient
+from skaha.models.auth import OIDC, X509, Client, Endpoint, Expiry, Token
+from skaha.models.config import Configuration
+from skaha.models.http import Server
 from skaha.models.registry import ContainerRegistry
 
 
-def test_client_has_session_attribute():
-    """Test if it SkahaClient object contains requests.Session attribute."""
-    client = SkahaClient(token="test_token")
-    assert hasattr(client, "client")
-    assert isinstance(client.client, httpx.Client)
+# Test Fixtures
+@pytest.fixture
+def skaha_client_fixture():
+    """Fixture that yields a SkahaClient instance for testing."""
+
+    def _create_client(**kwargs):
+        return SkahaClient(**kwargs)
+
+    return _create_client
 
 
-def test_client_session():
-    """Test SkahaClient object's session attribute contains ther right headers."""
-    headers = [
-        "x-skaha-server",
-        "content-type",
-        "accept",
-        "user-agent",
-        "date",
-        "x-skaha-registry-auth",
-    ]
-    registry = ContainerRegistry(username="test", secret="test")
-    skaha = SkahaClient(registry=registry, token="test_token", loglevel=30)
-    assert any(header in skaha.client.headers for header in headers)
+@pytest.fixture
+def mock_httpx_client():
+    """Mock httpx.Client to prevent actual network calls."""
+    with patch("httpx.Client") as mock_client:
+        yield mock_client
 
 
-def test_bad_server_no_schema():
-    """Test server URL without schema."""
-    with pytest.raises(ValidationError):
-        SkahaClient(url="ws-uv.canfar.net")
+@pytest.fixture
+def mock_httpx_async_client():
+    """Mock httpx.AsyncClient to prevent actual network calls."""
+    with patch("httpx.AsyncClient") as mock_async_client:
+        yield mock_async_client
 
 
-def test_default_certificate():
-    """Test validation with default certificate value."""
-    try:
-        SkahaClient()
-    except ValidationError as err:
-        raise AssertionError from err
-    assert True
+@pytest.fixture
+def mock_cryptography():
+    """Mock cryptography functions for certificate validation."""
+    with patch("skaha.auth.x509.inspect") as mock_inspect:
+        mock_inspect.return_value = {"expiry": 9999999999}  # Far future
+        yield mock_inspect
 
 
-def test_bad_certificate():
-    """Test bad certificate."""
-    with pytest.raises(FileNotFoundError):
-        SkahaClient(certificate="abcdefd")
+class TestInitializationAndConfiguration:
+    """Test SkahaClient initialization and configuration loading."""
+
+    def test_default_initialization(self, skaha_client_fixture):
+        """Test default initialization with no arguments."""
+        client = skaha_client_fixture()
+        assert client.timeout == 30
+        assert client.concurrency == 32
+        assert client.loglevel == "INFO"
+        assert client.token is None
+        assert client.certificate is None
+        assert client.url is None
+        assert isinstance(client.config, Configuration)
+
+    def test_constructor_arguments(self, skaha_client_fixture):
+        """Test initialization with explicit constructor arguments."""
+        config = Configuration()
+        client = skaha_client_fixture(
+            timeout=60,
+            concurrency=64,
+            token=SecretStr("test-token"),
+            certificate=Path("/test/cert.pem"),
+            url="https://example.com/api",
+            config=config,
+            loglevel="DEBUG",
+        )
+        assert client.timeout == 60
+        assert client.concurrency == 64
+        assert client.token.get_secret_value() == "test-token"
+        # Certificate should be None due to token precedence
+        assert client.certificate is None
+        assert str(client.url) == "https://example.com/api"
+        assert client.config is config
+        assert client.loglevel == "DEBUG"
+
+    def test_environment_variables(self, skaha_client_fixture, monkeypatch):
+        """Test that environment variables are picked up correctly."""
+        monkeypatch.setenv("SKAHA_TIMEOUT", "45")
+        monkeypatch.setenv("SKAHA_CONCURRENCY", "16")
+        monkeypatch.setenv("SKAHA_TOKEN", "env-token")
+        monkeypatch.setenv("SKAHA_URL", "https://env.example.com")
+        monkeypatch.setenv("SKAHA_LOGLEVEL", "WARNING")
+
+        client = skaha_client_fixture()
+        assert client.timeout == 45
+        assert client.concurrency == 16
+        assert client.token.get_secret_value() == "env-token"
+        # URL gets normalized with trailing slash
+        assert str(client.url) == "https://env.example.com/"
+        assert client.loglevel == "WARNING"
+
+    def test_precedence_constructor_over_env(self, skaha_client_fixture, monkeypatch):
+        """Test that constructor arguments take precedence over env variables."""
+        monkeypatch.setenv("SKAHA_TIMEOUT", "45")
+        monkeypatch.setenv("SKAHA_TOKEN", "env-token")
+
+        client = skaha_client_fixture(
+            timeout=90,
+            token=SecretStr("constructor-token"),
+            url="https://example.com",  # Need URL when using token
+        )
+        assert client.timeout == 90
+        assert client.token.get_secret_value() == "constructor-token"
+
+    def test_client_has_session_attribute(self, skaha_client_fixture):
+        """Test if SkahaClient object contains httpx.Client attribute."""
+        client = skaha_client_fixture(
+            token=SecretStr("test_token"), url="https://example.com"
+        )
+        assert hasattr(client, "client")
+        assert isinstance(client.client, httpx.Client)
+
+    def test_bad_server_no_schema(self, skaha_client_fixture):
+        """Test server URL without schema."""
+        with pytest.raises(ValidationError):
+            skaha_client_fixture(url="ws-uv.canfar.net")
+
+    def test_default_certificate(self, skaha_client_fixture):
+        """Test validation with default certificate value."""
+        try:
+            skaha_client_fixture()
+        except ValidationError as err:
+            raise AssertionError from err
+        assert True
 
 
-def test_bad_certificate_path():
-    """Test bad certificate."""
-    with pytest.raises(FileNotFoundError):
-        SkahaClient(certificate="/gibberish/path")  # nosec: B108
+class TestRuntimeCredentialHandling:
+    """Test runtime credential handling including mutual exclusivity and validation."""
 
+    def test_token_only(self, skaha_client_fixture):
+        """Test instantiation with token only."""
+        client = skaha_client_fixture(token=SecretStr("abc"), url="https://example.com")
+        assert client.token.get_secret_value() == "abc"
+        assert client.certificate is None
 
-def test_token_setup():
-    """Test token setup."""
-    token: str = "abcdef"
-    skaha = SkahaClient(token=token)
-    assert skaha.token.get_secret_value() == token
-    assert skaha.client.headers["Authorization"] == f"Bearer {token}"
+    def test_certificate_only(self, skaha_client_fixture, tmp_path):
+        """Test instantiation with certificate only."""
+        cert_path = tmp_path / "test.pem"
+        _create_test_certificate(cert_path)
+
+        client = skaha_client_fixture(certificate=cert_path, url="https://example.com")
+        assert client.certificate == cert_path
+        assert client.token is None
+
+    def test_both_token_and_certificate_token_precedence(
+        self, skaha_client_fixture, tmp_path
+    ):
+        """Test that token takes precedence when both are provided."""
+        cert_path = tmp_path / "test.pem"
+        _create_test_certificate(cert_path)
+
+        with patch("skaha.client.log") as mock_log:
+            client = skaha_client_fixture(
+                token=SecretStr("test-token"),
+                certificate=cert_path,
+                url="https://example.com",
+            )
+
+            # Token should be set, certificate should be None
+            assert client.token.get_secret_value() == "test-token"
+            assert client.certificate is None
+
+            # Should log warnings about precedence
+            mock_log.warning.assert_called()
+
+    def test_token_without_url_raises_error(self, skaha_client_fixture):
+        """Test that token without URL raises ValueError."""
+        with pytest.raises(
+            ValueError,
+            match="Server URL must be provided when using runtime credentials",
+        ):
+            skaha_client_fixture(token=SecretStr("test-token"))
+
+    def test_certificate_without_url_raises_error(self, skaha_client_fixture, tmp_path):
+        """Test that certificate without URL raises ValueError."""
+        cert_path = tmp_path / "test.pem"
+        _create_test_certificate(cert_path)
+
+        with pytest.raises(
+            ValueError,
+            match="Server URL must be provided when using runtime credentials",
+        ):
+            skaha_client_fixture(certificate=cert_path)
+
+    def test_invalid_certificate_path_raises_error(self, skaha_client_fixture):
+        """Test that non-existent certificate path raises FileNotFoundError."""
+        with pytest.raises(FileNotFoundError):
+            skaha_client_fixture(
+                certificate=Path("/nonexistent/path.pem"), url="https://example.com"
+            )
+
+    def test_token_setup_headers(self, skaha_client_fixture):
+        """Test token setup creates correct headers."""
+        token = "abcdef"
+        client = skaha_client_fixture(token=SecretStr(token), url="https://example.com")
+        assert client.token.get_secret_value() == token
+        assert client.client.headers["Authorization"] == f"Bearer {token}"
 
 
 def _create_test_certificate(
@@ -145,32 +283,83 @@ def _create_test_certificate(
         )
 
 
+class TestBaseURLConstruction:
+    """Test base URL construction based on precedence."""
+
+    def test_runtime_url_precedence(self, skaha_client_fixture):
+        """Test that runtime URL takes precedence."""
+        client = skaha_client_fixture(
+            token=SecretStr("test-token"), url="https://runtime.com/api"
+        )
+        base_url = client._get_base_url()
+        assert str(base_url) == "https://runtime.com/api"
+
+    def test_configured_url_from_context(self, skaha_client_fixture):
+        """Test base URL construction from configuration context."""
+        from pydantic import AnyHttpUrl, AnyUrl
+
+        # Create a custom context with specific server settings
+        custom_context = X509(
+            path=Path("/test/cert.pem"),
+            expiry=9999999999.0,
+            server=Server(
+                name="Test Server",
+                uri=AnyUrl("ivo://test.org/skaha"),
+                url=AnyHttpUrl("https://config.example.com"),
+                version="v1",
+            ),
+        )
+
+        config = Configuration(active="test", contexts={"test": custom_context})
+
+        client = skaha_client_fixture(config=config)
+        base_url = client._get_base_url()
+        assert str(base_url) == "https://config.example.com//v1"
+
+    def test_no_server_in_context_raises_error(self, skaha_client_fixture):
+        """Test that missing server in context raises ValueError."""
+        # Create a context without server
+        custom_context = X509(
+            path=Path("/test/cert.pem"), expiry=9999999999.0, server=None
+        )
+
+        config = Configuration(active="test", contexts={"test": custom_context})
+
+        client = skaha_client_fixture(config=config)
+        with pytest.raises(ValueError, match="Server not found in auth context"):
+            client._get_base_url()
+
+
 class TestCertificateValidation:
     """Test certificate validation functionality."""
 
     def test_certificate_validation_with_token_skips_validation(self, tmp_path):
-        """Test certificate validation skipped when token provided (line 148)."""
+        """Test certificate validation when token provided takes precedence."""
         # Create a valid certificate file for this test
         cert_path = tmp_path / "valid.pem"
         _create_test_certificate(cert_path)
 
         # Even with a valid certificate, when token is provided, it should use the token
-        client = SkahaClient(token=SecretStr("test-token"), certificate=cert_path)
+        client = SkahaClient(
+            token=SecretStr("test-token"),
+            certificate=cert_path,
+            url="https://example.com",
+        )
         assert client.token is not None
-        assert client.certificate == cert_path
+        assert client.certificate is None  # Certificate should be nullified
 
         # Verify that the client uses token authentication
-        headers = client._get_headers()
+        headers = client._get_http_headers()
         assert "Authorization" in headers
         assert headers["Authorization"] == "Bearer test-token"
+        assert headers["X-Skaha-Authentication-Type"] == "RUNTIME-TOKEN"
 
     def test_certificate_file_not_exists(self, tmp_path):
-        """Test certificate validation when file doesn't exist (lines 154-155)."""
+        """Test certificate validation when file doesn't exist."""
         cert_path = tmp_path / "nonexistent.pem"
 
-        # The resolve(strict=True) call happens first, so we get a FileNotFoundError
         with pytest.raises(FileNotFoundError):
-            SkahaClient(certificate=cert_path)
+            SkahaClient(certificate=cert_path, url="https://example.com")
 
     def test_certificate_not_readable(self, tmp_path):
         """Test certificate validation when file is not readable."""
@@ -178,280 +367,255 @@ class TestCertificateValidation:
         # Create a valid certificate file first
         _create_test_certificate(cert_path)
 
+        # Mock the x509.inspect to raise PermissionError
         with (
-            patch("skaha.client.access", return_value=False),
-            pytest.raises(PermissionError, match="cert file .* is not readable"),
+            patch(
+                "skaha.auth.x509.inspect",
+                side_effect=PermissionError("Permission denied"),
+            ),
+            pytest.raises(PermissionError),
         ):
-            SkahaClient(certificate=cert_path)
+            SkahaClient(certificate=cert_path, url="https://example.com")
 
     def test_certificate_expired(self, tmp_path):
-        """Test certificate validation with expired certificate (lines 166-168)."""
+        """Test certificate validation with expired certificate."""
         cert_path = tmp_path / "expired.pem"
         _create_test_certificate(cert_path, expired=True)
 
-        with pytest.raises(ValueError, match="cert .* expired"):
-            SkahaClient(certificate=cert_path)
-
-    def test_certificate_not_yet_valid(self, tmp_path):
-        """Test certificate validation with not-yet-valid cert (lines 169-171)."""
-        cert_path = tmp_path / "future.pem"
-        _create_test_certificate(cert_path, not_yet_valid=True)
-
-        with pytest.raises(ValueError, match="cert .* not valid yet"):
-            SkahaClient(certificate=cert_path)
+        # The actual certificate created is expired, so x509.inspect should detect it
+        # and the validation should fail during SkahaClient initialization
+        with pytest.raises(ValueError, match="expired"):
+            SkahaClient(certificate=cert_path, url="https://example.com")
 
     def test_certificate_valid(self, tmp_path):
-        """Test certificate validation with valid certificate (line 172)."""
+        """Test certificate validation with valid certificate."""
         cert_path = tmp_path / "valid.pem"
         _create_test_certificate(cert_path)
 
         # Should not raise an error
-        client = SkahaClient(certificate=cert_path)
+        client = SkahaClient(certificate=cert_path, url="https://example.com")
         assert client.certificate == cert_path
 
 
-class TestExpiryProperty:
-    """Test the expiry property for different authentication modes."""
+class TestHTTPClientCreationAndHeaders:
+    """Test HTTP client creation and header generation."""
 
-    def test_expiry_with_user_token(self):
-        """Test expiry returns None when user provides token (lines 209-211)."""
-        client = SkahaClient(token=SecretStr("test-token"))
-        assert client.expiry is None
+    def test_lazy_client_initialization(self, skaha_client_fixture):
+        """Test that httpx clients are created only on first access."""
+        client = skaha_client_fixture(
+            token=SecretStr("test-token"), url="https://example.com"
+        )
 
-    def test_expiry_with_user_certificate(self, tmp_path):
-        """Test expiry returns None when user provides certificate (lines 209-211)."""
+        # Initially, private attributes should be None
+        assert client._client is None
+        assert client._asynclient is None
+
+        # Access client property to trigger creation
+        sync_client = client.client
+        assert client._client is not None
+        assert isinstance(sync_client, httpx.Client)
+
+        # Access asynclient property to trigger creation
+        async_client = client.asynclient
+        assert client._asynclient is not None
+        assert isinstance(async_client, httpx.AsyncClient)
+
+    def test_default_headers_present(self, skaha_client_fixture):
+        """Test that common headers are present."""
+        client = skaha_client_fixture(
+            token=SecretStr("test-token"), url="https://example.com"
+        )
+        headers = client._get_http_headers()
+
+        assert "Content-Type" in headers
+        assert "Accept" in headers
+        assert "User-Agent" in headers
+        assert "Date" in headers
+        assert headers["Content-Type"] == "application/x-www-form-urlencoded"
+        assert headers["Accept"] == "application/json"
+        assert "python-skaha" in headers["User-Agent"]
+
+    def test_runtime_token_headers(self, skaha_client_fixture):
+        """Test headers for runtime token authentication."""
+        client = skaha_client_fixture(
+            token=SecretStr("test-token"), url="https://example.com"
+        )
+        headers = client._get_http_headers()
+
+        assert headers["Authorization"] == "Bearer test-token"
+        assert headers["X-Skaha-Authentication-Type"] == "RUNTIME-TOKEN"
+
+    def test_runtime_certificate_headers(self, skaha_client_fixture, tmp_path):
+        """Test headers for runtime certificate authentication."""
         cert_path = tmp_path / "test.pem"
         _create_test_certificate(cert_path)
 
-        client = SkahaClient(certificate=cert_path)
-        assert client.expiry is None
+        client = skaha_client_fixture(certificate=cert_path, url="https://example.com")
+        headers = client._get_http_headers()
 
-    @patch("skaha.client.SkahaClient._check_certificate")
-    def test_expiry_oidc_mode(self, mock_check_cert):
-        """Test expiry returns OIDC access token expiry (lines 214-217)."""
-        mock_check_cert.return_value = None
+        assert headers["X-Skaha-Authentication-Type"] == "RUNTIME-X509"
+        assert "Authorization" not in headers
 
-        # Create mock auth with OIDC mode
-        mock_auth = Mock()
-        mock_auth.mode = "oidc"
-        mock_auth.oidc.expiry.access = 1234567890
+    def test_oidc_context_headers(self, skaha_client_fixture):
+        """Test headers for OIDC context authentication."""
+        from pydantic import AnyHttpUrl, AnyUrl
 
-        client = SkahaClient()
-        client.auth = mock_auth
+        # Create a real OIDC context
+        oidc_context = OIDC(
+            server=Server(
+                name="Test OIDC",
+                uri=AnyUrl("ivo://test.org/skaha"),
+                url=AnyHttpUrl("https://oidc.example.com"),
+                version="v1",
+            ),
+            endpoints=Endpoint(
+                discovery="https://oidc.example.com/.well-known/openid-configuration",
+                token="https://oidc.example.com/token",
+            ),
+            client=Client(identity="test-client", secret="test-secret"),
+            token=Token(access="oidc-access-token", refresh="refresh-token"),
+            expiry=Expiry(access=9999999999.0, refresh=9999999999.0),
+        )
 
-        assert client.expiry == 1234567890
+        config = Configuration(active="oidc", contexts={"oidc": oidc_context})
 
-    @patch("skaha.client.SkahaClient._check_certificate")
-    def test_expiry_x509_mode(self, mock_check_cert):
-        """Test expiry returns X509 expiry (lines 218-221)."""
-        mock_check_cert.return_value = None
+        client = skaha_client_fixture(config=config)
+        headers = client._get_http_headers()
 
-        # Create mock auth with X509 mode
-        mock_auth = Mock()
-        mock_auth.mode = "x509"
-        mock_auth.x509.expiry = 9876543210
+        assert headers["Authorization"] == "Bearer oidc-access-token"
+        assert headers["X-Skaha-Authentication-Type"] == "OIDC"
 
-        client = SkahaClient()
-        client.auth = mock_auth
+    def test_x509_context_headers(self, skaha_client_fixture):
+        """Test headers for X509 context authentication."""
+        from pydantic import AnyHttpUrl, AnyUrl
 
-        assert client.expiry == 9876543210
+        # Create a real X509 context
+        x509_context = X509(
+            path=Path("/test/cert.pem"),
+            expiry=9999999999.0,
+            server=Server(
+                name="Test X509",
+                uri=AnyUrl("ivo://test.org/skaha"),
+                url=AnyHttpUrl("https://x509.example.com"),
+                version="v1",
+            ),
+        )
 
-    @patch("skaha.client.SkahaClient._check_certificate")
-    def test_expiry_default_mode(self, mock_check_cert):
-        """Test expiry returns default expiry (lines 222-225)."""
-        mock_check_cert.return_value = None
+        config = Configuration(active="x509", contexts={"x509": x509_context})
 
-        # Create mock auth with default mode
-        mock_auth = Mock()
-        mock_auth.mode = "default"
-        mock_auth.default.expiry = 5555555555
+        client = skaha_client_fixture(config=config)
+        headers = client._get_http_headers()
 
-        client = SkahaClient()
-        client.auth = mock_auth
+        assert headers["X-Skaha-Authentication-Type"] == "X509"
+        assert "Authorization" not in headers
 
-        assert client.expiry == 5555555555
-
-    @patch("skaha.client.SkahaClient._check_certificate")
-    def test_expiry_unknown_mode(self, mock_check_cert):
-        """Test expiry returns None for unknown auth mode (lines 226-227)."""
-        mock_check_cert.return_value = None
-
-        # Create mock auth with unknown mode
-        mock_auth = Mock()
-        mock_auth.mode = "unknown"
-
-        client = SkahaClient()
-        client.auth = mock_auth
-
-        assert client.expiry is None
-
-
-class TestSSLContextAndClientKwargs:
-    """Test SSL context creation and client kwargs generation."""
-
-    @patch("skaha.client.SkahaClient._check_certificate")
-    def test_get_client_kwargs_with_certificate(self, mock_check_cert, tmp_path):
-        """Test client kwargs with certificate authentication (lines 269-272)."""
-        mock_check_cert.return_value = None
-        cert_path = tmp_path / "test.pem"
-        _create_test_certificate(cert_path)
-
-        client = SkahaClient(certificate=cert_path)
-        kwargs = client._get_client_kwargs(is_async=False)
-
-        assert "verify" in kwargs
-        assert isinstance(kwargs["verify"], ssl.SSLContext)
-
-    @patch("skaha.client.SkahaClient._check_certificate")
-    def test_get_client_kwargs_default_mode(self, mock_check_cert, tmp_path):
-        """Test client kwargs with default authentication mode (lines 273-279)."""
-        mock_check_cert.return_value = None
-        cert_path = tmp_path / "test.pem"
-        _create_test_certificate(cert_path)
-
-        # Create mock auth with default mode
-        mock_auth = Mock()
-        mock_auth.mode = "default"
-        mock_auth.default.path = cert_path
-
-        client = SkahaClient()
-        client.auth = mock_auth
-
-        kwargs = client._get_client_kwargs(is_async=False)
-
-        assert "verify" in kwargs
-        assert isinstance(kwargs["verify"], ssl.SSLContext)
-
-    @patch("skaha.client.SkahaClient._check_certificate")
-    def test_get_ssl_context_file_not_exists(self, mock_check_cert, tmp_path):
-        """Test SSL context creation when cert file doesn't exist (lines 336-338)."""
-        mock_check_cert.return_value = None
-        cert_path = tmp_path / "nonexistent.pem"
-
-        client = SkahaClient()
-
-        with pytest.raises(FileNotFoundError, match="Certificate path .* does not"):
-            client._get_ssl_context(cert_path)
-
-    @patch("skaha.client.SkahaClient._check_certificate")
-    def test_get_ssl_context_valid_certificate(self, mock_check_cert, tmp_path):
-        """Test SSL context creation with valid certificate."""
-        mock_check_cert.return_value = None
-        cert_path = tmp_path / "test.pem"
-        _create_test_certificate(cert_path)
-
-        client = SkahaClient()
-        ssl_context = client._get_ssl_context(cert_path)
-
-        assert isinstance(ssl_context, ssl.SSLContext)
-        assert ssl_context.minimum_version == ssl.TLSVersion.TLSv1_2
-
-
-class TestHeaderGeneration:
-    """Test HTTP header generation for different authentication modes."""
-
-    @patch("skaha.client.SkahaClient._check_certificate")
-    def test_get_headers_oidc_no_token_error(self, mock_check_cert):
-        """Test header generation error when OIDC has no token (lines 406-408)."""
-        mock_check_cert.return_value = None
-
-        # Create mock auth with OIDC mode but no token
-        mock_auth = Mock()
-        mock_auth.mode = "oidc"
-        mock_auth.oidc.token.access = None
-
-        client = SkahaClient()
-        client.auth = mock_auth
-
-        with pytest.raises(ValueError, match="OIDC mode selected but no access token"):
-            client._get_headers()
-
-    @patch("skaha.client.SkahaClient._check_certificate")
-    def test_get_headers_x509_mode(self, mock_check_cert):
-        """Test header generation for X509 mode (lines 409-414)."""
-        mock_check_cert.return_value = None
-
-        # Create mock auth with X509 mode
-        mock_auth = Mock()
-        mock_auth.mode = "x509"
-
-        client = SkahaClient()
-        client.auth = mock_auth
-
-        headers = client._get_headers()
-        assert headers["X-Skaha-Authentication-Type"] == "certificate"
-
-    @patch("skaha.client.SkahaClient._check_certificate")
-    def test_get_headers_default_mode(self, mock_check_cert):
-        """Test header generation for default mode (lines 409-414)."""
-        mock_check_cert.return_value = None
-
-        # Create mock auth with default mode
-        mock_auth = Mock()
-        mock_auth.mode = "default"
-
-        client = SkahaClient()
-        client.auth = mock_auth
-
-        headers = client._get_headers()
-        assert headers["X-Skaha-Authentication-Type"] == "certificate"
-
-    @patch("skaha.client.SkahaClient._check_certificate")
-    def test_get_headers_with_certificate(self, mock_check_cert, tmp_path):
-        """Test header generation with user-provided certificate (lines 409-414)."""
-        mock_check_cert.return_value = None
-        cert_path = tmp_path / "test.pem"
-        _create_test_certificate(cert_path)
-
-        client = SkahaClient(certificate=cert_path)
-        headers = client._get_headers()
-
-        assert headers["X-Skaha-Authentication-Type"] == "certificate"
-
-    @patch("skaha.client.SkahaClient._check_certificate")
-    def test_get_headers_with_registry(self, mock_check_cert):
-        """Test header generation with registry authentication (lines 416-422)."""
-        mock_check_cert.return_value = None
-
+    def test_registry_headers(self, skaha_client_fixture):
+        """Test headers with registry authentication."""
         registry = ContainerRegistry(username="test", secret="test")
-        client = SkahaClient(registry=registry, token=SecretStr("test-token"))
+        config = Configuration()
+        config.registry = registry
 
-        headers = client._get_headers()
+        client = skaha_client_fixture(
+            token=SecretStr("test-token"), url="https://example.com", config=config
+        )
+        headers = client._get_http_headers()
+
         assert "X-Skaha-Registry-Auth" in headers
 
+    def test_client_kwargs_timeout_and_concurrency(self, skaha_client_fixture):
+        """Test that httpx clients are initialized with correct timeout and limits."""
+        client = skaha_client_fixture(
+            token=SecretStr("test-token"),
+            url="https://example.com",
+            timeout=45,
+            concurrency=16,
+        )
 
-class TestContextManagers:
+        # Test sync client kwargs
+        sync_kwargs = client._get_client_kwargs(asynchronous=False)
+        assert "timeout" in sync_kwargs
+        # httpx.Timeout doesn't have a .timeout attribute, it's the object itself
+        assert isinstance(sync_kwargs["timeout"], httpx.Timeout)
+        assert "limits" not in sync_kwargs  # Only for async
+
+        # Test async client kwargs
+        async_kwargs = client._get_client_kwargs(asynchronous=True)
+        assert "timeout" in async_kwargs
+        assert isinstance(async_kwargs["timeout"], httpx.Timeout)
+        assert "limits" in async_kwargs
+        assert async_kwargs["limits"].max_connections == 16
+
+    def test_oidc_refresh_hook_added(self, skaha_client_fixture):
+        """Test that OIDC refresh hook is added for OIDC contexts."""
+        from pydantic import AnyHttpUrl, AnyUrl
+
+        # Create a real OIDC context
+        oidc_context = OIDC(
+            server=Server(
+                name="Test OIDC",
+                uri=AnyUrl("ivo://test.org/skaha"),
+                url=AnyHttpUrl("https://oidc.example.com"),
+                version="v1",
+            ),
+            endpoints=Endpoint(
+                discovery="https://oidc.example.com/.well-known/openid-configuration",
+                token="https://oidc.example.com/token",
+            ),
+            client=Client(identity="test-client", secret="test-secret"),
+            token=Token(access="oidc-access-token", refresh="refresh-token"),
+            expiry=Expiry(access=9999999999.0, refresh=9999999999.0),
+        )
+
+        config = Configuration(active="oidc", contexts={"oidc": oidc_context})
+
+        client = skaha_client_fixture(config=config)
+
+        # Test sync client kwargs
+        sync_kwargs = client._get_client_kwargs(asynchronous=False)
+        assert "event_hooks" in sync_kwargs
+        assert "request" in sync_kwargs["event_hooks"]
+
+        # Test async client kwargs
+        async_kwargs = client._get_client_kwargs(asynchronous=True)
+        assert "event_hooks" in async_kwargs
+        assert "request" in async_kwargs["event_hooks"]
+
+
+class TestContextManagerBehavior:
     """Test context manager functionality."""
 
-    @patch("skaha.client.SkahaClient._check_certificate")
-    def test_sync_context_manager_enter_exit(self, mock_check_cert):
-        """Test synchronous context manager entry and exit (lines 439-440, 449-450)."""
-        mock_check_cert.return_value = None
-
-        client = SkahaClient(token=SecretStr("test-token"))
+    def test_sync_context_manager_enter_exit(self, skaha_client_fixture):
+        """Test synchronous context manager entry and exit."""
+        client = skaha_client_fixture(
+            token=SecretStr("test-token"), url="https://example.com"
+        )
 
         # Test __enter__
         with client as ctx_client:
             assert ctx_client is client
+            # Verify client is created
+            assert isinstance(ctx_client.client, httpx.Client)
 
-        # __exit__ is called automatically
+        # After exit, client should be closed
+        assert client._client is None
 
-    @patch("skaha.client.SkahaClient._check_certificate")
-    def test_sync_session_context(self, mock_check_cert):
-        """Test synchronous session context manager (lines 430-435)."""
-        mock_check_cert.return_value = None
-
-        client = SkahaClient(token=SecretStr("test-token"))
+    def test_sync_session_context(self, skaha_client_fixture):
+        """Test synchronous session context manager."""
+        client = skaha_client_fixture(
+            token=SecretStr("test-token"), url="https://example.com"
+        )
 
         with client._session() as session:
             assert isinstance(session, httpx.Client)
 
-    @patch("skaha.client.SkahaClient._check_certificate")
-    def test_close_sync_client(self, mock_check_cert):
-        """Test closing synchronous client (lines 454-460)."""
-        mock_check_cert.return_value = None
+        # After exit, client should be closed
+        assert client._client is None
 
-        client = SkahaClient(token=SecretStr("test-token"))
+    def test_close_sync_client(self, skaha_client_fixture):
+        """Test closing synchronous client."""
+        client = skaha_client_fixture(
+            token=SecretStr("test-token"), url="https://example.com"
+        )
 
         # Access client to create it
         _ = client.client
@@ -461,12 +625,11 @@ class TestContextManagers:
         client._close()
         assert client._client is None
 
-    @patch("skaha.client.SkahaClient._check_certificate")
-    def test_close_sync_client_when_none(self, mock_check_cert):
-        """Test closing synchronous client when it's None (lines 459-460)."""
-        mock_check_cert.return_value = None
-
-        client = SkahaClient(token=SecretStr("test-token"))
+    def test_close_sync_client_when_none(self, skaha_client_fixture):
+        """Test closing synchronous client when it's None."""
+        client = skaha_client_fixture(
+            token=SecretStr("test-token"), url="https://example.com"
+        )
 
         # Don't access client, so it remains None
         assert client._client is None
@@ -475,35 +638,38 @@ class TestContextManagers:
         client._close()
         assert client._client is None
 
-    @patch("skaha.client.SkahaClient._check_certificate")
-    async def test_async_context_manager_enter_exit(self, mock_check_cert):
-        """Test asynchronous context manager entry and exit (lines 474-475, 484-485)."""
-        mock_check_cert.return_value = None
-
-        client = SkahaClient(token=SecretStr("test-token"))
+    async def test_async_context_manager_enter_exit(self, skaha_client_fixture):
+        """Test asynchronous context manager entry and exit."""
+        client = skaha_client_fixture(
+            token=SecretStr("test-token"), url="https://example.com"
+        )
 
         # Test __aenter__
         async with client as ctx_client:
             assert ctx_client is client
+            # Verify asynclient is created
+            assert isinstance(ctx_client.asynclient, httpx.AsyncClient)
 
-        # __aexit__ is called automatically
+        # After exit, asynclient should be closed
+        assert client._asynclient is None
 
-    @patch("skaha.client.SkahaClient._check_certificate")
-    async def test_async_session_context(self, mock_check_cert):
-        """Test asynchronous session context manager (lines 465-470)."""
-        mock_check_cert.return_value = None
-
-        client = SkahaClient(token=SecretStr("test-token"))
+    async def test_async_session_context(self, skaha_client_fixture):
+        """Test asynchronous session context manager."""
+        client = skaha_client_fixture(
+            token=SecretStr("test-token"), url="https://example.com"
+        )
 
         async with client._asession() as session:
             assert isinstance(session, httpx.AsyncClient)
 
-    @patch("skaha.client.SkahaClient._check_certificate")
-    async def test_aclose_async_client(self, mock_check_cert):
-        """Test closing asynchronous client (lines 489-495)."""
-        mock_check_cert.return_value = None
+        # After exit, asynclient should be closed
+        assert client._asynclient is None
 
-        client = SkahaClient(token=SecretStr("test-token"))
+    async def test_aclose_async_client(self, skaha_client_fixture):
+        """Test closing asynchronous client."""
+        client = skaha_client_fixture(
+            token=SecretStr("test-token"), url="https://example.com"
+        )
 
         # Access asynclient to create it
         _ = client.asynclient
@@ -513,12 +679,11 @@ class TestContextManagers:
         await client._aclose()
         assert client._asynclient is None
 
-    @patch("skaha.client.SkahaClient._check_certificate")
-    async def test_aclose_async_client_when_none(self, mock_check_cert):
-        """Test closing asynchronous client when it's None (lines 494-495)."""
-        mock_check_cert.return_value = None
-
-        client = SkahaClient(token=SecretStr("test-token"))
+    async def test_aclose_async_client_when_none(self, skaha_client_fixture):
+        """Test closing asynchronous client when it's None."""
+        client = skaha_client_fixture(
+            token=SecretStr("test-token"), url="https://example.com"
+        )
 
         # Don't access asynclient, so it remains None
         assert client._asynclient is None
@@ -528,11 +693,37 @@ class TestContextManagers:
         assert client._asynclient is None
 
 
-def test_non_readible_certfile():
+class TestSSLContextAndClientKwargs:
+    """Test SSL context creation and client kwargs generation."""
+
+    def test_get_client_kwargs_with_certificate(self, skaha_client_fixture, tmp_path):
+        """Test client kwargs with certificate authentication."""
+        cert_path = tmp_path / "test.pem"
+        _create_test_certificate(cert_path)
+
+        client = skaha_client_fixture(certificate=cert_path, url="https://example.com")
+        kwargs = client._get_client_kwargs(asynchronous=False)
+
+        assert "verify" in kwargs
+        assert isinstance(kwargs["verify"], ssl.SSLContext)
+
+    def test_get_ssl_context_valid_certificate(self, skaha_client_fixture, tmp_path):
+        """Test SSL context creation with valid certificate."""
+        cert_path = tmp_path / "test.pem"
+        _create_test_certificate(cert_path)
+
+        client = skaha_client_fixture(certificate=cert_path, url="https://example.com")
+        ssl_context = client._get_ssl_context(cert_path)
+
+        assert isinstance(ssl_context, ssl.SSLContext)
+        assert ssl_context.minimum_version == ssl.TLSVersion.TLSv1_2
+
+
+def test_non_readable_certfile():
     """Test non-readable certificate file."""
     with tempfile.NamedTemporaryFile(delete=False) as temp:
         temp_path = temp.name
     # Change the permissions
     Path(temp_path).chmod(0o000)
     with pytest.raises(PermissionError):
-        SkahaClient(certificate=temp_path)
+        SkahaClient(certificate=temp_path, url="https://example.com")

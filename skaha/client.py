@@ -1,433 +1,312 @@
-"""Skaha Client."""
+"""HTTP Client Composition for Science Platform."""
 
 from __future__ import annotations
 
 import ssl
 from contextlib import asynccontextmanager, contextmanager
-from datetime import datetime, timezone
-from os import R_OK, access
+from pathlib import Path
 from time import asctime, gmtime
 from typing import TYPE_CHECKING, Any
 
-from cryptography import x509
-from cryptography.hazmat.backends import default_backend
-from httpx import URL, AsyncClient, Client, Limits
+from httpx import URL, AsyncClient, Client, Limits, Timeout
 from pydantic import (
+    AnyHttpUrl,
+    Field,
     PrivateAttr,
-    ValidationInfo,
+    SecretStr,
     field_validator,
+    model_validator,
 )
+from pydantic_settings import BaseSettings, SettingsConfigDict
 from typing_extensions import Self
 
 from skaha import __version__, get_logger, set_log_level
+from skaha.auth import x509
 from skaha.hooks.httpx import auth, errors
 from skaha.models.config import Configuration
 
 if TYPE_CHECKING:
     from collections.abc import AsyncIterator, Iterator
-    from pathlib import Path
     from types import TracebackType
 
+    from skaha.models.config import AuthContext
 
 log = get_logger(__name__)
 
 
-class SkahaClient(Configuration):
-    """Skaha Client for interacting with CANFAR Science Platform services.
+class SkahaClient(BaseSettings):
+    """Skaha Client for interacting with CANFAR Science Platform services (V2).
 
-    The SkahaClient provides both synchronous and asynchronous HTTP clients with
-    comprehensive authentication support including X.509 certificates, OIDC tokens,
-    and bearer tokens. It automatically configures SSL contexts, headers, and
-    connection settings based on the authentication mode.
+    This client uses a composition-based approach and inherits from Pydantic's
+    BaseSettings to allow for flexible configuration via arguments, environment
+    variables, or a configuration file.
 
-    Authentication Modes:
-        - **x509**: Uses X.509 certificate authentication from auth.x509 configuration
-        - **oidc**: Uses OIDC bearer token authentication from auth.oidc configuration
-        - **default**: Uses default X.509 certificate from auth.default configuration
-        - **token**: Uses user-provided bearer token (overrides configuration)
-
-    Args:
-        certificate (Path | None): Path to X.509 certificate file for authentication.
-            Overrides configuration-based authentication when provided.
-        timeout (int): HTTP request timeout in seconds. Default is 30.
-        registry (ContainerRegistry | None): Credentials for private container registry.
-        concurrency (int): Maximum number of concurrent connections for async client.
-            Default is 32.
-        token (SecretStr | None): Bearer token for authentication. When provided,
-            overrides all other authentication methods.
-        loglevel (int): Logging level (10=DEBUG, 20=INFO, 30=WARNING, etc.).
-            Default is 20 (INFO).
-        auth (Authentication): Authentication configuration containing mode and
-            credentials for different authentication types.
-
-    Attributes:
-        client (Client): Synchronous HTTPx client instance (lazy-loaded).
-        asynclient (AsyncClient): Asynchronous HTTPx client instance (lazy-loaded).
-        expiry (float | None): Expiry timestamp for current authentication method.
-            Returns None for user-provided credentials.
+    The client prioritizes credentials in the following order:
+    1.  **Runtime Arguments/Environment Variables**: A `token` or `certificate`
+        provided at instantiation (e.g., `SKAHA_TOKEN="..."`).
+    2.  **Active Configuration Context**: The context specified by `active_context`
+        in the loaded configuration file.
 
     Raises:
-        ValidationError: If the client configuration is invalid.
-        FileNotFoundError: If certificate file does not exist or is not readable.
-        PermissionError: If certificate file is not accessible.
-        ValueError: If certificate is expired or not yet valid.
-
-    Examples:
-        Basic usage with default authentication:
-
-        >>> from skaha.client import SkahaClient
-        >>> client = SkahaClient()
-        >>> response = client.client.get("/session")
-
-        Using with bearer token:
-
-        >>> from pydantic import SecretStr
-        >>> client = SkahaClient(token=SecretStr("your-token-here"))
-        >>> response = client.client.get("/session")
-
-        Using with custom certificate:
-
-        >>> from pathlib import Path
-        >>> client = SkahaClient(certificate=Path("/path/to/cert.pem"))
-        >>> response = client.client.get("/session")
-
-        Async usage:
-
-        >>> async with SkahaClient() as client:
-        ...     response = await client.asynclient.aget("/session")
-
-        Context manager usage:
-
-        >>> with SkahaClient() as client:
-        ...     response = client.client.get("/session")
-
-    Note:
-        The client automatically handles SSL context creation, header generation,
-        and connection pooling. Debug logging is available by setting loglevel=10
-        to trace client creation and authentication flow.
+        ValueError: If configuration is invalid.
     """
 
-    _client: Client | None = PrivateAttr(
-        default=None,
+    model_config = SettingsConfigDict(
+        title="Skaha Client V2",
+        env_prefix="SKAHA_",
+        env_nested_delimiter="__",
+        case_sensitive=False,
+        extra="ignore",  # Allow extra fields for config composition
     )
 
-    _asynclient: AsyncClient | None = PrivateAttr(
-        default=None,
+    # Runtime/environment variable settings
+    token: SecretStr | None = Field(
+        None,
+        title="Runtime Authentication Token",
+        description="Bearer token for runtime authentication.",
+        examples=["your-bearer-token-here"],
+        exclude=True,
+    )
+    certificate: Path | None = Field(
+        None,
+        title="Runtime X.509 Certificate",
+        description="Path to a runtime x509 certificate file.",
+        examples=[Path.home() / ".ssl" / "cadcproxy.pem"],
+    )
+    url: AnyHttpUrl | None = Field(
+        None,
+        title="Server URL",
+        description="The server URL for runtime credentials.",
+        examples=["https://ws-uv.canfar.net/skaha/v0/"],
+    )
+    timeout: int = Field(
+        30,
+        title="HTTP Timeout",
+        description="HTTP request timeout in seconds.",
+        gt=0,
+        le=300,
+    )
+    concurrency: int = Field(
+        32,
+        title="HTTP Concurrency",
+        description="Max concurrent connections for async client.",
+        ge=1,
+        le=128,
+    )
+    loglevel: int | str = Field(
+        default="INFO",
+        title="Logging level for the client.",
+        description="10=DEBUG, 20=INFO, 30=WARNING, 40=ERROR, 50=CRITICAL",
+        examples=["info", "10"],
+        validate_default=False,
     )
 
-    # Model Validation Methods
+    # Composed configuration object
+    config: Configuration = Field(
+        default_factory=Configuration,
+        title="Configuration Object",
+        description="The configuration object for the client.",
+    )
 
-    @field_validator("loglevel", mode="before")
-    @classmethod
-    def _set_log_level(cls, value: int) -> int:
-        """Set the log level for the client.
+    # Private attributes
+    _client: Client | None = PrivateAttr(default=None)
+    _asynclient: AsyncClient | None = PrivateAttr(default=None)
 
-        Args:
-            value (int): Logging level.
-
-        Returns:
-            int: Logging level.
-        """
-        set_log_level(value)
-        return value
-
-    @field_validator("certificate")
-    @classmethod
-    def _check_certificate(cls, value: Path, info: ValidationInfo) -> Path:
-        """Validate the certificate file.
-
-        Args:
-            value (Path): Path to the certificate file.
-            info (ValidationInfo): Validation context.
-
-        Returns:
-            Path: Validated Path to the certificate file.
-        """
-        # If token is provided, skip certificate validation
-        if info.data.get("token"):
-            return value
-
-        # Certificate Validation
-        destination = value.resolve(strict=True)
-
-        if not destination.is_file():
-            msg = f"cert file {value} does not exist."
-            raise FileNotFoundError(msg)
-
-        if not access(destination, R_OK):
-            msg = f"cert file {value} is not readable."
-            raise PermissionError(msg)
-
-        # Certifcation Date Validation
-        data = destination.read_bytes()
-        cert = x509.load_pem_x509_certificate(data, default_backend())
-        now_utc = datetime.now(timezone.utc)
-
-        if cert.not_valid_after_utc <= now_utc:
-            msg = f"cert {value} expired."
-            raise ValueError(msg)
-        if cert.not_valid_before_utc >= now_utc:
-            msg = f"cert {value} not valid yet."
-            raise ValueError(msg)
-        return value
-
-    # Model Properties
+    # Client Properties
     @property
     def client(self) -> Client:
-        """Get the HTTPx Client.
+        """Get the synchronous HTTPx Client.
 
         Returns:
-            Client: HTTPx Client.
+            Client: The synchronous HTTPx client.
         """
         if self._client is None:
-            self._client = self._create_client()
+            self._client = self._create_client(asynchronous=False)
             log.debug("Synchronous HTTPx client created successfully")
         return self._client
 
     @property
     def asynclient(self) -> AsyncClient:
-        """Get the HTTPx Async Client.
-
-        Returns:
-            AsyncClient: HTTPx Async Client.
-        """
+        """Get the asynchronous HTTPx Async Client."""
         if self._asynclient is None:
-            self._asynclient = self._create_asynclient()
+            self._asynclient = self._create_client(asynchronous=True)
             log.debug("Asynchronous HTTPx client created successfully")
         return self._asynclient
 
-    @property
-    def expiry(self) -> float | None:
-        """Get the expiry time for the current authentication method.
+    @field_validator("loglevel", mode="before")
+    @classmethod
+    def _validate_loglevel(cls, value: int | str) -> str:
+        """Validate and set the log level.
+
+        Args:
+            value (int | str): Log level as an integer or string.
 
         Returns:
-            float | None: Expiry time as Unix timestamp (seconds since epoch),
-                or None if no expiry is available or user-provided credentials
-                are being used.
+            str: Log level as a string.
         """
-        # If user passes cert or token, do not set expiry
-        if self.token or self.certificate:
-            log.debug("User-passed credentials detected, returning None for expiry")
-            return None
+        valid: dict[int, str] = {
+            0: "NOTSET",
+            10: "DEBUG",
+            20: "INFO",
+            30: "WARNING",
+            40: "ERROR",
+            50: "CRITICAL",
+        }
+        if isinstance(value, int):
+            value = valid[value]
+        value = value.upper()
+        assert value in valid.values(), f"Invalid log level: {value}"
+        set_log_level(value)
+        log.debug("Logging level set to %s", value)
+        return value
 
-        # Map to appropriate expiry based on auth mode
-        if self.auth.mode == "oidc":
-            expiry = self.auth.oidc.expiry.access
-            log.debug("OIDC mode: returning expiry %s", expiry)
-            return expiry
-        if self.auth.mode == "x509":
-            expiry = self.auth.x509.expiry
-            log.debug("X509 mode: returning expiry %s", expiry)
-            return expiry
-        if self.auth.mode == "default":
-            expiry = self.auth.default.expiry
-            log.debug("Default mode: returning expiry %s", expiry)
-            return expiry
-        log.debug("Unknown auth mode '%s', returning None for expiry", self.auth.mode)
-        return None
+    @model_validator(mode="after")
+    def _validate(self) -> Self:
+        """Configure the client based on the provided settings.
 
-    # Client Configuration Methods
-    def _get_client_kwargs(self, is_async: bool) -> dict[str, Any]:
+        Raises:
+            ValueError: If the configuration is invalid.
+
+        Returns:
+            Self: The configured client.
+        """
+        if self.token and self.certificate:
+            log.warning("Both runtime token and certificate values provided.")
+            log.warning("Runtime token takes precedence over certificate.")
+            log.warning("Certificate will be ignored in favor of the token.")
+            self.certificate = None  # Nullify certificate to ensure token is used
+
+        if (self.token or self.certificate) and not self.url:
+            msg = "Server URL must be provided when using runtime credentials."
+            raise ValueError(msg)
+
+        if self.certificate:
+            info = x509.inspect(self.certificate)
+            expiry = {asctime(gmtime(info["expiry"]))}
+            msg = f"{self.certificate} valid till {expiry}"
+            log.debug(msg)
+
+        return self
+
+    def _create_client(self, asynchronous: bool) -> Client | AsyncClient:
+        """Factory method to create and configure an HTTPx client."""
+        kwargs = self._get_client_kwargs(asynchronous=asynchronous)
+        headers = self._get_http_headers()
+
+        msg = f"Creating {'async' if asynchronous else 'sync'} client"
+        log.debug(msg)
+
+        client_class = AsyncClient if asynchronous else Client
+        client = client_class(**kwargs)
+
+        client.headers.update(headers)
+        return client
+
+    def _get_base_url(self) -> URL:
+        """Get the base URL for the client.
+
+        Returns:
+            URL: The base URL for the client.
+        """
+        if self.url:
+            return URL(str(self.url))
+        # Get the active context
+        ctx: AuthContext = self.config.context
+        if not ctx.server:
+            msg = f"Server not found in auth context: {ctx}"
+            raise ValueError(msg)
+        return URL(f"{ctx.server.url}/{ctx.server.version}")
+
+    def _get_client_kwargs(self, asynchronous: bool) -> dict[str, Any]:
         """Get the keyword arguments for creating an HTTPx client.
 
         Args:
-            is_async (bool): Whether the client is asynchronous.
+            asynchronous (bool): Whether the client is asynchronous.
 
         Returns:
             dict[str, Any]: Keyword arguments for creating an HTTPx client.
         """
-        # Set up event hooks
-        event_hooks: dict[str, list[Any]] = {
-            "response": [errors.acatch if is_async else errors.catch]
-        }
-
-        # Add auth hooks for automatic token refresh (OIDC only, no user credentials)
-        if self.auth.mode == "oidc" and not self.token and not self.certificate:
-            log.debug("Adding authentication refresh hook for OIDC mode")
-            refresh_access_token = auth.ahook(self) if is_async else auth.hook(self)
-            event_hooks["request"] = [refresh_access_token]
-
         kwargs: dict[str, Any] = {
-            "timeout": self.timeout,
-            "event_hooks": event_hooks,
+            "timeout": Timeout(self.timeout),
+            "event_hooks": {
+                "response": [errors.acatch if asynchronous else errors.catch]
+            },
+            "base_url": self._get_base_url(),
         }
-
-        if is_async:
+        # Configure connection pooling for async clients
+        if asynchronous:
             kwargs["limits"] = Limits(
                 max_connections=self.concurrency,
                 max_keepalive_connections=self.concurrency // 4,
-                keepalive_expiry=5,
             )
 
         # Prioritize user-provided credentials over configuration
+        if self.token:
+            return kwargs
         if self.certificate:
-            log.debug(
-                "Using certificate authentication with cert: %s", self.certificate
-            )
+            msg = "creating runtime ssl context with: {self.certificate}"
+            log.debug(msg)
             kwargs["verify"] = self._get_ssl_context(self.certificate)
-        elif self.token or self.auth.mode == "oidc":
-            log.debug("Using token/OIDC authentication - no SSL context required")
-        elif self.auth.mode == "x509":
-            assert self.auth.x509.path is not None
-            log.debug("Using X509 authentication with cert: %s", self.auth.x509.path)
-            kwargs["verify"] = self._get_ssl_context(self.auth.x509.path)
-        elif self.auth.mode == "default":
-            assert self.auth.default.path is not None
-            log.debug(
-                "Using default authentication with cert: %s", self.auth.default.path
-            )
-            kwargs["verify"] = self._get_ssl_context(self.auth.default.path)
+            return kwargs
+
+        # No user-provided credentials, use configured context
+        ctx: AuthContext = self.config.context
+        if ctx.mode == "oidc":
+            assert ctx.valid, "Invalid OIDC context provided."
+            refresher = auth.ahook(self) if asynchronous else auth.hook(self)
+            kwargs["event_hooks"]["request"] = [refresher]
+            return kwargs
+
+        if ctx.mode == "x509":
+            assert ctx.valid, "Invalid X509 context provided."
+            kwargs["verify"] = self._get_ssl_context(ctx.path)
+            return kwargs
         return kwargs
 
-    def _create_client(self) -> Client:
-        """Create and configure a synchronous HTTPx Client.
-
-        Returns:
-            Client: Configured synchronous HTTPx Client
-
-        Note:
-            This method is called lazily when the client property is first accessed.
-            The created client is cached and reused for subsequent requests.
-        """
-        log.debug("Creating synchronous client with auth mode: %s", self.auth.mode)
-        kwargs = self._get_client_kwargs(is_async=False)
-        client: Client = Client(**kwargs)
-        headers = self._get_headers()
-        client.headers.update(headers)
-        base_url = f"{self.url}/{self.version}"
-        log.debug("Setting client base URL: %s", base_url)
-        client.base_url = URL(base_url)
-        return client
-
-    def _create_asynclient(self) -> AsyncClient:
-        """Create and configure an asynchronous HTTPx Client.
-
-        Connection Pooling:
-            - max_connections: Set to configured concurrency level
-            - max_keepalive_connections: Set to 25% of max_connections
-            - keepalive_expiry: 5 seconds for connection reuse
-
-        Returns:
-            AsyncClient: Configured asynchronous HTTPx Client
-
-        Note:
-            This method is called lazily when the asynclient property is first accessed.
-            The created client is cached and reused for subsequent async requests.
-        """
-        log.debug("Creating asynchronous client with auth mode: %s", self.auth.mode)
-        kwargs = self._get_client_kwargs(is_async=True)
-        asynclient: AsyncClient = AsyncClient(**kwargs)
-        headers = self._get_headers()
-        asynclient.headers.update(headers)
-        base_url = f"{self.url}/{self.version}"
-        log.debug("Setting async client base URL: %s", base_url)
-        asynclient.base_url = URL(base_url)
-        return asynclient
-
-    def _get_ssl_context(self, certpath: Path) -> ssl.SSLContext:
-        """Get SSL Context from authentication configuration.
+    def _get_ssl_context(self, source: Path) -> ssl.SSLContext:
+        """Get SSL context from certificate file.
 
         Args:
-            certpath (Path): Path to the certificate file.
+            source (Path): Path to the certificate file.
 
         Returns:
-            ssl.SSLContext: SSL Context.
+            ssl.SSLContext: SSL context.
         """
-        if not certpath.exists():
-            msg = f"Certificate path {certpath} does not exist."
-            log.error(msg)
-            raise FileNotFoundError(msg)
-
-        certfile: str = str(certpath)
-        log.debug("Loading certificate chain from: %s", certfile)
+        certfile = source.as_posix()
         ctx = ssl.create_default_context(ssl.Purpose.SERVER_AUTH)
         ctx.minimum_version = ssl.TLSVersion.TLSv1_2
         ctx.load_cert_chain(certfile=certfile)
-        log.debug("SSL context created successfully")
         return ctx
 
-    def _get_headers(self) -> dict[str, str]:
+    def _get_http_headers(self) -> dict[str, str]:
         """Generate HTTP headers for the client based on authentication mode.
 
-        Standard Headers:
-            - X-Skaha-Server: Server name identifier
-            - Content-Type: application/x-www-form-urlencoded
-            - Accept: application/json
-            - Date: Current GMT timestamp
-            - User-Agent: Python client version
-
-        Authentication Headers:
-            - **token**: Authorization: Bearer <token>,
-              X-Skaha-Authentication-Type: token
-            - **oidc**: Authorization: Bearer <access_token>,
-              X-Skaha-Authentication-Type: oidc
-            - **x509/default/certificate**: X-Skaha-Authentication-Type: certificate
-
-        Registry Headers:
-            - X-Skaha-Registry-Auth: Base64 encoded registry credentials (if configured)
-
         Returns:
-            dict[str, str]: Complete HTTP headers dictionary ready for use with
-                HTTPx clients. Headers include authentication, content type,
-                and any configured registry authentication.
-
-        Note:
-            User-provided tokens take precedence over configuration-based
-            authentication. Registry authentication headers are only added if a
-            registry is configured.
+            dict[str, str]: HTTP headers.
         """
+        ctx: AuthContext = self.config.context
         headers: dict[str, str] = {
-            "X-Skaha-Server": str(self.name),
             "Content-Type": "application/x-www-form-urlencoded",
             "Accept": "application/json",
             "Date": asctime(gmtime()),
-            "User-Agent": f"python/{__version__}",
+            "User-Agent": f"python-skaha/{__version__}",
         }
 
-        # Handle user-passed credentials first (highest priority)
         if self.token:
-            assert self.token is not None
-            headers.update(
-                {
-                    "Authorization": f"Bearer {self.token.get_secret_value()}",
-                    "X-Skaha-Authentication-Type": "token",
-                },
-            )
+            headers["Authorization"] = f"Bearer {self.token.get_secret_value()}"
+            headers["X-Skaha-Authentication-Type"] = "RUNTIME-TOKEN"
         elif self.certificate:
-            headers.update(
-                {
-                    "X-Skaha-Authentication-Type": "certificate",
-                },
-            )
-        # Use authentication mode from configuration
-        elif self.auth.mode == "oidc":
-            # Use OIDC access token
-            if self.auth.oidc.token.access:
-                headers.update(
-                    {
-                        "Authorization": f"Bearer {self.auth.oidc.token.access}",
-                        "X-Skaha-Authentication-Type": "oidc",
-                    },
-                )
-            else:
-                msg = "OIDC mode selected but no access token available"
-                log.error(msg)
-                raise ValueError(msg)
-        elif self.auth.mode in ("x509", "default"):
-            headers.update(
-                {
-                    "X-Skaha-Authentication-Type": "certificate",
-                },
-            )
+            headers["X-Skaha-Authentication-Type"] = "RUNTIME-X509"
+        elif ctx.mode == "oidc":
+            assert ctx.valid, "Invalid OIDC context provided."
+            headers["Authorization"] = f"Bearer {ctx.token.access}"
+            headers["X-Skaha-Authentication-Type"] = "OIDC"
+        elif ctx.mode == "x509":
+            headers["X-Skaha-Authentication-Type"] = "X509"
+        # Add container registry authentication if configured
+        if self.config.registry.username:
+            headers["X-Skaha-Registry-Auth"] = self.config.registry.encoded()
 
-        if self.registry:
-            headers.update(
-                {
-                    "X-Skaha-Registry-Auth": self.registry.encoded(),
-                },
-            )
-
-        log.debug("Generated headers: %s", list(headers.keys()))
         return headers
 
     # Context Manager Methods

@@ -1,7 +1,4 @@
-"""Tests for HTTPx authentication hooks."""
-# ruff: noqa: ARG002
-
-from __future__ import annotations
+"""Tests for the refactored HTTPx authentication hooks."""
 
 import time
 from unittest.mock import Mock, patch
@@ -11,268 +8,182 @@ import pytest
 from pydantic import SecretStr
 
 from skaha.client import SkahaClient
-from skaha.hooks.httpx.auth import (
-    AuthenticationError,
-    ahook,
-    hook,
-)
+from skaha.hooks.httpx.auth import AuthenticationError, ahook, hook
+from skaha.models.auth import OIDC, X509
+from skaha.models.config import Configuration
+from skaha.models.http import Server
+from tests.test_auth_x509 import generate_cert
 
 
-class TestAuthenticationError:
-    """Test the AuthenticationError exception."""
+@pytest.fixture
+def oidc_client() -> SkahaClient:
+    """Returns a SkahaClient configured with an expired OIDC context.
 
-    def test_authentication_error_creation(self):
-        """Test creating AuthenticationError."""
-        error = AuthenticationError("Test error message")
-        assert str(error) == "Test error message"
-        assert isinstance(error, Exception)
+    The OIDC context is set up to be ready for a token refresh:
+    - Access token is expired.
+    - Refresh token is valid and present.
+    """
+    oidc_context = OIDC(
+        server=Server(name="TestOIDC", url="https://oidc.example.com", version="v1"),
+        endpoints={
+            "discovery": "https://oidc.example.com/.well-known/openid-configuration",
+            "token": "https://oidc.example.com/token",
+        },
+        client={"identity": "test-client", "secret": "test-secret"},
+        token={"access": "expired-token", "refresh": "valid-refresh-token"},
+        expiry={
+            "access": time.time() - 60,  # Expired
+            "refresh": time.time() + 3600,  # Valid
+        },
+    )
+    config = Configuration(active="TestOIDC", contexts={"TestOIDC": oidc_context})
+    client = SkahaClient(config=config)
+    # Mock the internal httpx clients to check header updates
+    client._client = Mock(spec=httpx.Client, headers={})  # noqa: SLF001
+    client._asynclient = Mock(spec=httpx.AsyncClient, headers={})  # noqa: SLF001
+    return client
 
 
 class TestSyncHook:
-    """Test the synchronous hook function."""
+    """Tests for the synchronous `hook` function."""
 
-    @patch("skaha.hooks.httpx.auth.oidc.sync_refresh")
-    @patch("skaha.utils.jwt.expiry")
-    def test_successful_token_refresh(self, mock_jwt_expiry, mock_sync_refresh):
-        """Test successful token refresh in sync hook."""
-        # Setup mocks
-        mock_jwt_expiry.return_value = 1234567890
-        mock_sync_refresh.return_value = SecretStr("new-access-token")
+    @patch("skaha.models.config.Configuration.save")
+    @patch("skaha.utils.jwt.expiry", return_value=time.time() + 3600)
+    @patch("skaha.auth.oidc.sync_refresh", return_value=SecretStr("new-access-token"))
+    def test_successful_refresh(
+        self,
+        mock_refresh,
+        mock_expiry,  # noqa: ARG002
+        mock_save,
+        oidc_client,
+    ):
+        """Verify a successful token refresh updates state and headers."""
+        hook_func = hook(oidc_client)
+        request = httpx.Request("GET", "https://oidc.example.com")
 
-        # Create mock client
-        client = Mock(spec=SkahaClient)
-        client.auth = Mock()
-        client.auth.expired = True
-        client.auth.oidc = Mock()
-        client.auth.oidc.expiry = Mock()
-        client.auth.oidc.expiry.refresh = time.time() + 3600  # Valid refresh token
-        client.auth.oidc.endpoints = Mock()
-        client.auth.oidc.endpoints.token = "https://example.com/token"
-        client.auth.oidc.client = Mock()
-        client.auth.oidc.client.identity = "client_id"
-        client.auth.oidc.client.secret = "client_secret"
-        client.auth.oidc.token = Mock()
-        client.auth.oidc.token.refresh = "refresh_token"
-        client.client = Mock()
-        client.client.headers = {}
-        client.save = Mock()
-
-        # Create hook and request
-        hook_func = hook(client)
-        request = Mock(spec=httpx.Request)
-        request.headers = {}
-
-        # Execute hook
         hook_func(request)
 
-        # Verify token refresh was called
-        mock_sync_refresh.assert_called_once_with(
-            url="https://example.com/token",
-            identity="client_id",
-            secret="client_secret",
-            token="refresh_token",
-        )
+        mock_refresh.assert_called_once()
+        mock_save.assert_called_once()
 
-        # Verify token was updated
-        assert client.auth.oidc.token.access == "new-access-token"
-        assert client.auth.oidc.expiry.access == 1234567890
-
-        # Verify save was called
-        client.save.assert_called_once()
-
-        # Verify headers were updated
+        # Verify the request header was updated
         assert request.headers["Authorization"] == "Bearer new-access-token"
-        assert client.client.headers["Authorization"] == "Bearer new-access-token"
 
-    def test_skip_refresh_when_not_expired(self):
-        """Test that hook skips refresh when auth is not expired."""
-        client = Mock(spec=SkahaClient)
-        client.auth = Mock()
-        client.auth.expired = False
+        # Verify the main client's headers were updated
+        assert oidc_client.client.headers["Authorization"] == "Bearer new-access-token"
 
+        # Verify the context in the config was updated
+        new_context = oidc_client.config.context
+        assert isinstance(new_context, OIDC)
+        assert new_context.token.access == "new-access-token"
+        assert new_context.expiry.access > time.time()
+
+    @patch("skaha.auth.oidc.sync_refresh")
+    def test_skip_if_not_oidc_context(self, mock_refresh, tmp_path):
+        """Verify the hook does nothing if the active context is not OIDC."""
+        cert_path = tmp_path / "cert.pem"
+        generate_cert(cert_path)
+        x509_context = X509(
+            server=Server(
+                name="TestX509", url="https://x509.example.com", version="v0"
+            ),
+            path=cert_path,
+        )
+        config = Configuration(active="TestX509", contexts={"TestX509": x509_context})
+        client = SkahaClient(config=config)
         hook_func = hook(client)
-        request = Mock(spec=httpx.Request)
+        request = httpx.Request("GET", "/")
 
-        # Should not raise any exceptions and should not call any refresh methods
         hook_func(request)
+        mock_refresh.assert_not_called()
 
-    def test_refresh_token_expired_error(self):
-        """Test error when refresh token is expired."""
-        client = Mock(spec=SkahaClient)
-        client.auth = Mock()
-        client.auth.expired = True
-        client.auth.oidc = Mock()
-        client.auth.oidc.expiry = Mock()
-        client.auth.oidc.expiry.refresh = time.time() - 3600  # Expired refresh token
-
+    @patch("skaha.auth.oidc.sync_refresh")
+    def test_skip_if_runtime_credentials_used(self, mock_refresh):
+        """Verify the hook does nothing if runtime credentials are provided."""
+        client = SkahaClient(
+            token=SecretStr("runtime-token"), url="https://runtime.com"
+        )
         hook_func = hook(client)
-        request = Mock(spec=httpx.Request)
+        request = httpx.Request("GET", "/")
 
-        with pytest.raises(AuthenticationError, match="refresh token expired"):
-            hook_func(request)
+        hook_func(request)
+        mock_refresh.assert_not_called()
 
-    def test_refresh_token_none_error(self):
-        """Test error when refresh token is None."""
-        client = Mock(spec=SkahaClient)
-        client.auth = Mock()
-        client.auth.expired = True
-        client.auth.oidc = Mock()
-        client.auth.oidc.expiry = Mock()
-        client.auth.oidc.expiry.refresh = None
+    @patch("skaha.auth.oidc.sync_refresh")
+    def test_skip_if_token_not_expired(self, mock_refresh, oidc_client):
+        """Verify the hook does nothing if the access token is not expired."""
+        oidc_client.config.context.expiry.access = time.time() + 3600  # Make it valid
+        hook_func = hook(oidc_client)
+        request = httpx.Request("GET", "/")
 
-        hook_func = hook(client)
-        request = Mock(spec=httpx.Request)
+        hook_func(request)
+        mock_refresh.assert_not_called()
 
-        with pytest.raises(AuthenticationError, match="refresh token expired"):
-            hook_func(request)
+    @patch("skaha.auth.oidc.sync_refresh", side_effect=Exception("Network Error"))
+    def test_refresh_failure_raises_error(self, mock_refresh, oidc_client):  # noqa: ARG002
+        """Verify that a failure during refresh raises AuthenticationError."""
+        hook_func = hook(oidc_client)
+        request = httpx.Request("GET", "/")
 
-    @patch("skaha.hooks.httpx.auth.log")
-    @patch("skaha.hooks.httpx.auth.oidc.sync_refresh")
-    def test_refresh_failure_error(self, mock_sync_refresh, mock_log):
-        """Test error handling when token refresh fails."""
-        mock_sync_refresh.side_effect = Exception("Network error")
-
-        client = Mock(spec=SkahaClient)
-        client.auth = Mock()
-        client.auth.expired = True
-        client.auth.oidc = Mock()
-        client.auth.oidc.expiry = Mock()
-        client.auth.oidc.expiry.refresh = time.time() + 3600
-        client.auth.oidc.endpoints = Mock()
-        client.auth.oidc.endpoints.token = "https://example.com/token"
-        client.auth.oidc.client = Mock()
-        client.auth.oidc.client.identity = "client_id"
-        client.auth.oidc.client.secret = "client_secret"
-        client.auth.oidc.token = Mock()
-        client.auth.oidc.token.refresh = "refresh_token"
-
-        hook_func = hook(client)
-        request = Mock(spec=httpx.Request)
-
-        with pytest.raises(AuthenticationError, match="Failed to refresh"):
+        with pytest.raises(AuthenticationError, match="Failed to refresh OIDC token"):
             hook_func(request)
 
 
 class TestAsyncHook:
-    """Test the asynchronous hook function."""
+    """Tests for the asynchronous `ahook` function."""
 
-    @patch("skaha.hooks.httpx.auth.oidc.refresh")
-    @patch("skaha.utils.jwt.expiry")
-    async def test_successful_token_refresh(self, mock_jwt_expiry, mock_refresh):
-        """Test successful token refresh in async hook."""
-        # Setup mocks
-        mock_jwt_expiry.return_value = 1234567890
-        mock_refresh.return_value = SecretStr("new-access-token")
+    @patch("skaha.models.config.Configuration.save")
+    @patch("skaha.utils.jwt.expiry", return_value=time.time() + 3600)
+    @patch("skaha.auth.oidc.refresh", return_value=SecretStr("new-async-token"))
+    async def test_successful_async_refresh(
+        self,
+        mock_refresh,
+        mock_expiry,  # noqa: ARG002
+        mock_save,
+        oidc_client,
+    ):
+        """Verify a successful async token refresh updates state and headers."""
+        hook_func = ahook(oidc_client)
+        request = httpx.Request("GET", "https://oidc.example.com")
 
-        # Create mock client
-        client = Mock(spec=SkahaClient)
-        client.auth = Mock()
-        client.auth.expired = True
-        client.auth.oidc = Mock()
-        client.auth.oidc.expiry = Mock()
-        client.auth.oidc.expiry.refresh = time.time() + 3600  # Valid refresh token
-        client.auth.oidc.endpoints = Mock()
-        client.auth.oidc.endpoints.token = "https://example.com/token"
-        client.auth.oidc.client = Mock()
-        client.auth.oidc.client.identity = "client_id"
-        client.auth.oidc.client.secret = "client_secret"
-        client.auth.oidc.token = Mock()
-        client.auth.oidc.token.refresh = "refresh_token"
-        client.client = Mock()
-        client.client.headers = {}
-        client.save = Mock()
-
-        # Create hook and request
-        hook_func = ahook(client)
-        request = Mock(spec=httpx.Request)
-        request.headers = {}
-
-        # Execute hook
         await hook_func(request)
 
-        # Verify token refresh was called
-        mock_refresh.assert_called_once_with(
-            url="https://example.com/token",
-            identity="client_id",
-            secret="client_secret",
-            token="refresh_token",
+        mock_refresh.assert_called_once()
+        mock_save.assert_called_once()
+
+        assert request.headers["Authorization"] == "Bearer new-async-token"
+        assert (
+            oidc_client.asynclient.headers["Authorization"] == "Bearer new-async-token"
         )
 
-        # Verify token was updated
-        assert client.auth.oidc.token.access == "new-access-token"
-        assert client.auth.oidc.expiry.access == 1234567890
+        new_context = oidc_client.config.context
+        assert isinstance(new_context, OIDC)
+        assert new_context.token.access == "new-async-token"
 
-        # Verify save was called
-        client.save.assert_called_once()
-
-        # Verify headers were updated
-        assert request.headers["Authorization"] == "Bearer new-access-token"
-        assert client.client.headers["Authorization"] == "Bearer new-access-token"
-
-    async def test_skip_refresh_when_not_expired(self):
-        """Test that async hook skips refresh when auth is not expired."""
-        client = Mock(spec=SkahaClient)
-        client.auth = Mock()
-        client.auth.expired = False
-
+    @patch("skaha.auth.oidc.refresh")
+    async def test_skip_if_not_oidc_context_async(self, mock_refresh, tmp_path):
+        """Verify the async hook does nothing for non-OIDC contexts."""
+        cert_path = tmp_path / "cert.pem"
+        generate_cert(cert_path)
+        x509_context = X509(
+            server=Server(
+                name="TestX509", url="https://x509.example.com", version="v0"
+            ),
+            path=cert_path,
+        )
+        config = Configuration(active="TestX509", contexts={"TestX509": x509_context})
+        client = SkahaClient(config=config)
         hook_func = ahook(client)
-        request = Mock(spec=httpx.Request)
+        request = httpx.Request("GET", "/")
 
-        # Should not raise any exceptions and should not call any refresh methods
         await hook_func(request)
+        mock_refresh.assert_not_called()
 
-    async def test_refresh_token_expired_error(self):
-        """Test error when refresh token is expired in async hook."""
-        client = Mock(spec=SkahaClient)
-        client.auth = Mock()
-        client.auth.expired = True
-        client.auth.oidc = Mock()
-        client.auth.oidc.expiry = Mock()
-        client.auth.oidc.expiry.refresh = time.time() - 3600  # Expired refresh token
+    @patch("skaha.auth.oidc.refresh", side_effect=Exception("Async Network Error"))
+    async def test_async_refresh_failure_raises_error(self, mock_refresh, oidc_client):  # noqa: ARG002
+        """Verify a failure during async refresh raises AuthenticationError."""
+        hook_func = ahook(oidc_client)
+        request = httpx.Request("GET", "/")
 
-        hook_func = ahook(client)
-        request = Mock(spec=httpx.Request)
-
-        with pytest.raises(AuthenticationError, match="Refresh token expired"):
-            await hook_func(request)
-
-    async def test_refresh_token_none_error(self):
-        """Test error when refresh token is None in async hook."""
-        client = Mock(spec=SkahaClient)
-        client.auth = Mock()
-        client.auth.expired = True
-        client.auth.oidc = Mock()
-        client.auth.oidc.expiry = Mock()
-        client.auth.oidc.expiry.refresh = None
-
-        hook_func = ahook(client)
-        request = Mock(spec=httpx.Request)
-
-        with pytest.raises(AuthenticationError, match="Refresh token expired"):
-            await hook_func(request)
-
-    @patch("skaha.hooks.httpx.auth.log")
-    @patch("skaha.hooks.httpx.auth.oidc.refresh")
-    async def test_refresh_failure_error(self, mock_refresh, mock_log):
-        """Test error handling when token refresh fails in async hook."""
-        mock_refresh.side_effect = Exception("Network error")
-
-        client = Mock(spec=SkahaClient)
-        client.auth = Mock()
-        client.auth.expired = True
-        client.auth.oidc = Mock()
-        client.auth.oidc.expiry = Mock()
-        client.auth.oidc.expiry.refresh = time.time() + 3600
-        client.auth.oidc.endpoints = Mock()
-        client.auth.oidc.endpoints.token = "https://example.com/token"
-        client.auth.oidc.client = Mock()
-        client.auth.oidc.client.identity = "client_id"
-        client.auth.oidc.client.secret = "client_secret"
-        client.auth.oidc.token = Mock()
-        client.auth.oidc.token.refresh = "refresh_token"
-
-        hook_func = ahook(client)
-        request = Mock(spec=httpx.Request)
-
-        with pytest.raises(AuthenticationError, match="Failed to refresh"):
+        with pytest.raises(AuthenticationError, match="Failed to refresh OIDC token"):
             await hook_func(request)

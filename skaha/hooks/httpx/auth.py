@@ -34,6 +34,7 @@ from typing import TYPE_CHECKING, Callable
 
 from skaha import get_logger
 from skaha.auth import oidc
+from skaha.models.auth import OIDC
 from skaha.utils import jwt
 
 if TYPE_CHECKING:
@@ -55,7 +56,7 @@ def hook(client: SkahaClient) -> Callable[[httpx.Request], None]:
     """Create an authentication refresh hook for httpx clients.
 
     Args:
-        client (SkahaClient): The SkahaClient instance containing auth configuration.
+        client (SkahaClient): The SkahaClient instance.
 
     Returns:
         Callable[[httpx.Request], None]: The auth hook function.
@@ -67,42 +68,58 @@ def hook(client: SkahaClient) -> Callable[[httpx.Request], None]:
         Args:
             request (httpx.Request): The outgoing HTTP request.
         """
-        if client.auth.expired:
-            if (
-                not client.auth.oidc.expiry.refresh
-                or client.auth.oidc.expiry.refresh < time.time()
-            ):
-                log.debug("refresh token expired, skipping refresh")
-                msg = "refresh token expired, run `skaha auth login` to re-authenticate"
-                raise AuthenticationError(msg)
+        ctx = client.config.context
+        if not isinstance(ctx, OIDC):
+            log.debug("Skipping auth refresh for non-OIDC context.")
+            return
 
-            try:
-                log.debug("Starting synchronous OIDC token refresh")
-                token: SecretStr = oidc.sync_refresh(
-                    url=str(client.auth.oidc.endpoints.token),
-                    identity=str(client.auth.oidc.client.identity),
-                    secret=str(client.auth.oidc.client.secret),
-                    token=str(client.auth.oidc.token.refresh),
-                )
-                log.debug("Synchronous OIDC token refresh successful")
-                client.auth.oidc.token.access = token.get_secret_value()
-                client.auth.oidc.expiry.access = jwt.expiry(
-                    client.auth.oidc.token.access
-                )
-                client.save()
-                log.debug("Authentication refreshed and configuration saved")
-                client.client.headers.update(
-                    {"Authorization": f"Bearer {client.auth.oidc.token.access}"}
-                )
-                request.headers.update(
-                    {"Authorization": f"Bearer {client.auth.oidc.token.access}"}
-                )
-                log.debug("HTTP request headers updated with new authentication")
-                log.info("OIDC Access Token Refreshed")
-            except Exception as err:
-                msg = f"Failed to refresh authentication: {err}"
-                log.exception(msg)
-                raise AuthenticationError(msg) from err
+        # Skip if the access token is not expired
+        if not ctx.expired:
+            log.debug("Skipping auth refresh, access token is not expired.")
+            return
+
+        if not ctx.valid:
+            log.warning("OIDC context is not valid.")
+            return
+
+        if not ctx.token.refresh or (
+            ctx.expiry.refresh and ctx.expiry.refresh < time.time()
+        ):
+            log.warning("OIDC refresh token is missing or expired.")
+            return
+
+        try:
+            log.debug("Starting synchronous OIDC token refresh.")
+            token: SecretStr = oidc.sync_refresh(
+                url=str(ctx.endpoints.token),
+                identity=str(ctx.client.identity),
+                secret=str(ctx.client.secret),
+                token=str(ctx.token.refresh),
+            )
+            log.debug("Synchronous OIDC token refresh successful.")
+
+            # Create a new context with the updated token
+            data = ctx.model_dump()
+            data["token"]["access"] = token.get_secret_value()
+            data["expiry"]["access"] = jwt.expiry(token.get_secret_value())
+            context = OIDC(**data)
+
+            # Update the configuration and save it
+            client.config.contexts[client.config.active] = context
+            client.config.save()
+            log.debug("Authentication refreshed and configuration saved.")
+
+            # Update headers
+            header = f"Bearer {token.get_secret_value()}"
+            client.client.headers["Authorization"] = header
+            request.headers["Authorization"] = header
+            log.debug("HTTP request headers updated with new token.")
+            log.info("OIDC Access Token Refreshed.")
+
+        except Exception as err:
+            msg = f"Failed to refresh OIDC token: {err}"
+            log.exception(msg)
+            raise AuthenticationError(msg) from err
 
     return refresh
 
@@ -111,10 +128,10 @@ def ahook(client: SkahaClient) -> Callable[[httpx.Request], Awaitable[None]]:
     """Create an asynchronous authentication refresh hook for httpx clients.
 
     Args:
-        client (SkahaClient): The SkahaClient instance containing auth configuration.
+        client (SkahaClient): The SkahaClient instance.
 
     Returns:
-        Callable[[httpx.Request], Awaitable[None]]: The asynchronous auth hook function.
+        Callable[[httpx.Request], Awaitable[None]]: The async auth hook.
     """
 
     async def refresh(request: httpx.Request) -> None:
@@ -123,40 +140,51 @@ def ahook(client: SkahaClient) -> Callable[[httpx.Request], Awaitable[None]]:
         Args:
             request (httpx.Request): The outgoing HTTP request.
         """
-        # Skip refresh for user-provided credentials
-        if client.auth.expired:
-            if (
-                not client.auth.oidc.expiry.refresh
-                or client.auth.oidc.expiry.refresh < time.time()
-            ):
-                msg = "Refresh token expired, run `skaha auth login` to re-authenticate"
-                raise AuthenticationError(msg)
+        ctx = client.config.context
+        if not isinstance(ctx, OIDC):
+            log.debug("Skipping auth refresh for non-OIDC context.")
+            return
 
-            try:
-                log.debug("starting oidc async refresh")
-                token: SecretStr = await oidc.refresh(
-                    url=str(client.auth.oidc.endpoints.token),
-                    identity=str(client.auth.oidc.client.identity),
-                    secret=str(client.auth.oidc.client.secret),
-                    token=str(client.auth.oidc.token.refresh),
-                )
-                client.auth.oidc.token.access = token.get_secret_value()
-                client.auth.oidc.expiry.access = jwt.expiry(
-                    client.auth.oidc.token.access
-                )
-                client.save()
-                log.debug("authentication refreshed and configuration saved")
-                client.client.headers.update(
-                    {"Authorization": f"Bearer {client.auth.oidc.token.access}"}
-                )
-                request.headers.update(
-                    {"Authorization": f"Bearer {client.auth.oidc.token.access}"}
-                )
-                log.debug("request headers updated with new authentication")
-                log.info("oidc authentication token refreshed")
-            except Exception as err:
-                msg = f"Failed to refresh authentication: {err}"
-                log.exception(msg)
-                raise AuthenticationError(msg) from err
+        if not ctx.expired:
+            return
+
+        if not ctx.token.refresh or (
+            ctx.expiry.refresh and ctx.expiry.refresh < time.time()
+        ):
+            log.warning("OIDC refresh token is missing or expired.")
+            return
+
+        try:
+            log.debug("Starting asynchronous OIDC token refresh.")
+            token: SecretStr = await oidc.refresh(
+                url=str(ctx.endpoints.token),
+                identity=str(ctx.client.identity),
+                secret=str(ctx.client.secret),
+                token=str(ctx.token.refresh),
+            )
+            log.debug("Asynchronous OIDC token refresh successful.")
+
+            # Create a new context with the updated token
+            data = ctx.model_dump()
+            data["token"]["access"] = token.get_secret_value()
+            data["expiry"]["access"] = jwt.expiry(token.get_secret_value())
+            context = OIDC(**data)
+
+            # Update the configuration and save it
+            client.config.contexts[client.config.active] = context
+            client.config.save()
+            log.debug("Authentication refreshed and configuration saved.")
+
+            # Update headers
+            header = f"Bearer {token.get_secret_value()}"
+            client.asynclient.headers["Authorization"] = header
+            request.headers["Authorization"] = header
+            log.debug("HTTP request headers updated with new token.")
+            log.info("OIDC Access Token Refreshed.")
+
+        except Exception as err:
+            msg = f"Failed to refresh OIDC token: {err}"
+            log.exception(msg)
+            raise AuthenticationError(msg) from err
 
     return refresh
