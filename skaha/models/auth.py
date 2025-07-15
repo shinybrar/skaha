@@ -4,7 +4,8 @@ from __future__ import annotations
 
 import math
 import time
-from typing import TYPE_CHECKING, Annotated, Literal
+from pathlib import Path  # noqa: TC003
+from typing import Annotated, Literal
 
 from pydantic import BaseModel, Field, model_validator
 from typing_extensions import Self
@@ -12,9 +13,6 @@ from typing_extensions import Self
 from skaha import get_logger
 from skaha.auth import x509
 from skaha.models.http import Server
-
-if TYPE_CHECKING:
-    from pathlib import Path
 
 log = get_logger(__name__)
 
