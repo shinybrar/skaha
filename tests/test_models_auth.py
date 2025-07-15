@@ -5,19 +5,15 @@ import time
 from pathlib import Path
 from tempfile import NamedTemporaryFile
 
-import pytest
-from pydantic import ValidationError
-
 from skaha.models.auth import (
     OIDC,
     X509,
-    Authentication,
     Client,
     Endpoint,
     Expiry,
-    Server,
     Token,
 )
+from skaha.models.http import Server
 
 
 class TestOIDCURLConfig:
@@ -197,12 +193,6 @@ class TestX509:
         config = X509()
         assert not config.valid
 
-    def test_valid_path_exists_no_expiry(self) -> None:
-        """Test valid method when path exists but expiry is default."""
-        with NamedTemporaryFile() as temp_file:
-            config = X509(path=Path(temp_file.name))
-            assert config.valid  # Should be valid if file exists
-
     def test_valid_path_exists_with_expiry(self) -> None:
         """Test valid method when path exists and expiry is set."""
         future_time = time.time() + 3600
@@ -223,90 +213,11 @@ class TestX509:
 
     def test_expired_certificate_valid(self) -> None:
         """Test expired property when certificate is still valid."""
-        future_time = time.time() + 3600
-        config = X509(expiry=future_time)
+
+    future_time = time.time() + 3600
+    with NamedTemporaryFile() as temp_file:
+        config = X509(path=Path(temp_file.name), expiry=future_time)
         assert config.expired is False
-
-
-class TestAuthConfig:
-    """Test authentication configuration."""
-
-    def test_default_values(self) -> None:
-        """Test that AuthConfig can be instantiated with default values."""
-        config = Authentication()
-        assert config.mode == "default"
-        assert isinstance(config.oidc, OIDC)
-        assert isinstance(config.x509, X509)
-        assert isinstance(config.default, X509)
-
-    def test_with_oidc_mode(self) -> None:
-        """Test AuthConfig with OIDC mode."""
-        config = Authentication(mode="oidc")
-        assert config.mode == "oidc"
-
-    def test_with_x509_mode(self) -> None:
-        """Test AuthConfig with X.509 mode."""
-        config = Authentication(mode="x509")
-        assert config.mode == "x509"
-
-    def test_valid_oidc_mode_invalid_config(self) -> None:
-        """Test valid method with OIDC mode but invalid OIDC configuration."""
-        config = Authentication(mode="oidc")
-        assert config.valid is False
-
-    def test_valid_x509_mode_invalid_config(self) -> None:
-        """Test valid method with X.509 mode but invalid X.509 configuration."""
-        config = Authentication(mode="x509")
-        assert config.valid is False
-
-    def test_valid_oidc_mode_valid_config(self) -> None:
-        """Test valid method with OIDC mode and valid OIDC configuration."""
-        config = Authentication(mode="oidc")
-        config.oidc.endpoints.discovery = (
-            "https://example.com/.well-known/openid-configuration"
-        )
-        config.oidc.endpoints.token = "https://example.com/token"  # nosec B105
-        config.oidc.client.identity = "test_client_id"
-        config.oidc.client.secret = "test_client_secret"  # nosec B105
-        config.oidc.token.refresh = "test_refresh_token"
-        assert config.valid is True
-
-    def test_valid_x509_mode_valid_config(self) -> None:
-        """Test valid method with X.509 mode and valid X.509 configuration."""
-        future_time = time.time() + 3600
-        with NamedTemporaryFile() as temp_file:
-            config = Authentication(mode="x509")
-            config.x509.path = Path(temp_file.name)
-            config.x509.expiry = future_time
-            assert config.valid is True
-
-    def test_expired_oidc_mode(self) -> None:
-        """Test expired method with OIDC mode."""
-        config = Authentication(mode="oidc")
-        # OIDC config is expired by default (no refresh token)
-        assert config.expired is True
-
-        # Set valid refresh token
-        future_time = time.time() + 3600
-        config.oidc.token.access = "test_refresh_token"
-        config.oidc.expiry.access = future_time
-        assert config.expired is False
-
-    def test_expired_x509_mode(self) -> None:
-        """Test expired method with X.509 mode."""
-        config = Authentication(mode="x509")
-        # X.509 config is expired by default (no expiry)
-        assert config.expired is True
-
-        # Set valid expiry
-        future_time = time.time() + 3600
-        config.x509.expiry = future_time
-        assert config.expired is False
-
-    def test_expired_unknown_mode(self) -> None:
-        """Test expired method with unknown mode."""
-        with pytest.raises(ValidationError):
-            Authentication(mode="unknown")
 
 
 class TestServerInfo:
@@ -321,10 +232,12 @@ class TestServerInfo:
 
     def test_with_values(self) -> None:
         """Test ServerInfo with custom values."""
+        from pydantic import AnyHttpUrl, AnyUrl
+
         server = Server(
             name="Test Server",
-            uri="ivo://test.example.com/skaha",
-            url="https://test.example.com/skaha",
+            uri=AnyUrl("ivo://test.example.com/skaha"),
+            url=AnyHttpUrl("https://test.example.com/skaha"),
         )
         assert server.name == "Test Server"
         assert str(server.uri) == "ivo://test.example.com/skaha"
@@ -351,10 +264,12 @@ class TestOIDCWithServer:
 
     def test_with_server_info(self) -> None:
         """Test OIDC with server information."""
+        from pydantic import AnyHttpUrl, AnyUrl
+
         server_info = Server(
             name="Canada",
-            uri="ivo://canfar.net/src/skaha",
-            url="https://ws-uv.canfar.net/skaha",
+            uri=AnyUrl("ivo://canfar.net/src/skaha"),
+            url=AnyHttpUrl("https://ws-uv.canfar.net/skaha"),
         )
         oidc = OIDC(server=server_info)
         assert oidc.server.name == "Canada"
@@ -363,10 +278,12 @@ class TestOIDCWithServer:
 
     def test_server_field_serialization(self) -> None:
         """Test that OIDC server field is properly serialized."""
+        from pydantic import AnyHttpUrl, AnyUrl
+
         server_info = Server(
             name="Test Server",
-            uri="ivo://test.example.com/skaha",
-            url="https://test.example.com/skaha",
+            uri=AnyUrl("ivo://test.example.com/skaha"),
+            url=AnyHttpUrl("https://test.example.com/skaha"),
         )
         oidc = OIDC(server=server_info)
 
@@ -417,64 +334,3 @@ class TestX509WithServer:
         assert data["server"]["name"] == "Test Server"
         assert str(data["server"]["uri"]) == "ivo://test.example.com/skaha"
         assert str(data["server"]["url"]) == "https://test.example.com/skaha"
-
-
-class TestAuthConfigWithMethodSpecificServers:
-    """Test authentication configuration with method-specific server information."""
-
-    def test_oidc_server_access(self) -> None:
-        """Test accessing server info through OIDC method."""
-        from pydantic import AnyHttpUrl, AnyUrl
-
-        server_info = Server(
-            name="Test OIDC Server",
-            uri=AnyUrl("ivo://test.example.com/skaha"),
-            url=AnyHttpUrl("https://test.example.com/skaha"),
-        )
-        config = Authentication(mode="oidc")
-        config.oidc.server = server_info
-
-        assert config.oidc.server.name == "Test OIDC Server"
-        assert str(config.oidc.server.uri) == "ivo://test.example.com/skaha"
-        assert str(config.oidc.server.url) == "https://test.example.com/skaha"
-
-    def test_x509_server_access(self) -> None:
-        """Test accessing server info through X509 method."""
-        from pydantic import AnyHttpUrl, AnyUrl
-
-        server_info = Server(
-            name="Test X509 Server",
-            uri=AnyUrl("ivo://cadc.nrc.ca/skaha"),
-            url=AnyHttpUrl("https://ws-uv.canfar.net/skaha"),
-        )
-        config = Authentication(mode="x509")
-        config.x509.server = server_info
-
-        assert config.x509.server.name == "Test X509 Server"
-        assert str(config.x509.server.uri) == "ivo://cadc.nrc.ca/skaha"
-        assert str(config.x509.server.url) == "https://ws-uv.canfar.net/skaha"
-
-    def test_both_methods_with_different_servers(self) -> None:
-        """Test that both auth methods can have different server info."""
-        from pydantic import AnyHttpUrl, AnyUrl
-
-        oidc_server = Server(
-            name="OIDC Server",
-            uri=AnyUrl("ivo://oidc.example.com/skaha"),
-            url=AnyHttpUrl("https://oidc.example.com/skaha"),
-        )
-        x509_server = Server(
-            name="X509 Server",
-            uri=AnyUrl("ivo://x509.example.com/skaha"),
-            url=AnyHttpUrl("https://x509.example.com/skaha"),
-        )
-
-        config = Authentication()
-        config.oidc.server = oidc_server
-        config.x509.server = x509_server
-
-        # Verify both servers are stored independently
-        assert config.oidc.server.name == "OIDC Server"
-        assert str(config.oidc.server.url) == "https://oidc.example.com/skaha"
-        assert config.x509.server.name == "X509 Server"
-        assert str(config.x509.server.url) == "https://x509.example.com/skaha"

@@ -4,18 +4,17 @@ from __future__ import annotations
 
 import math
 import time
-from os import R_OK, access
-from pathlib import Path
-from typing import Annotated
+from typing import TYPE_CHECKING, Annotated, Literal
 
-from cryptography import x509
-from cryptography.hazmat.backends import default_backend
-from pydantic import AnyHttpUrl, AnyUrl, BaseModel, Field, model_validator
+from pydantic import BaseModel, Field, model_validator
 from typing_extensions import Self
 
 from skaha import get_logger
+from skaha.auth import x509
 from skaha.models.http import Server
-from skaha.models.types import Mode  # noqa: TC001
+
+if TYPE_CHECKING:
+    from pathlib import Path
 
 log = get_logger(__name__)
 
@@ -61,6 +60,7 @@ class Expiry(BaseModel):
 class OIDC(BaseModel):
     """Complete OIDC configuration."""
 
+    mode: Literal["oidc"] = "oidc"
     endpoints: Annotated[
         Endpoint,
         Field(default_factory=Endpoint, description="OIDC Endpoints."),
@@ -99,7 +99,9 @@ class OIDC(BaseModel):
 
         # Check if all required fields are defined
         if not all(required):
-            log.debug("Missing required OIDC configuration.")
+            missing = [field for field, value in zip(required, required) if not value]
+            log.warning("Missing required OIDC configuration: %s", missing)
+            log.warning("Invalid OIDC configuration.")
             return False
 
         return True
@@ -112,6 +114,7 @@ class OIDC(BaseModel):
             bool: True if the access token is active, False otherwise.
         """
         if self.expiry.access is None:
+            log.warning("OIDC access token expiry is not set.")
             return True
         return self.expiry.access < time.time()
 
@@ -119,6 +122,7 @@ class OIDC(BaseModel):
 class X509(BaseModel):
     """X.509 certificate configuration."""
 
+    mode: Literal["x509"] = "x509"
     path: Annotated[
         Path | None,
         Field(
@@ -143,25 +147,11 @@ class X509(BaseModel):
     def _compute_expiry(self) -> Self:
         """Compute expiry from certificate file if not already set."""
         # Only compute if expiry is still the default value (0.0)
-        if math.isclose(self.expiry, 0.0, abs_tol=1e-9):
-            self.expiry = self._read_expiry_from_cert()
+        if self.path and math.isclose(self.expiry, 0.0, abs_tol=1e-9):
+            log.debug("Computing expiry from certificate file.")
+            results = x509.inspect(self.path)
+            self.expiry = results["expiry"]
         return self
-
-    def _read_expiry_from_cert(self) -> float:
-        """Read expiry time from the certificate file.
-
-        Returns:
-            float: expiry utc in ctime or 0.0 if cert doesn't exist/can't be read.
-        """
-        if self.path is None:
-            return 0.0
-        try:
-            data = self.path.read_bytes()
-            cert = x509.load_pem_x509_certificate(data, default_backend())
-            return cert.not_valid_after_utc.timestamp()
-        except (FileNotFoundError, PermissionError, ValueError) as err:
-            log.debug("Failed to read expiry from certificate: %s", err)
-            return 0.0
 
     @property
     def valid(self) -> bool:
@@ -172,13 +162,12 @@ class X509(BaseModel):
         """
         if self.path is None:
             return False
-        destination = self.path.resolve(strict=True)
-        if not destination.is_file():
-            msg = f"cert file {destination} does not exist."
-            raise FileNotFoundError(msg)
-        if not access(destination, R_OK):
-            msg = f"cert file {destination} is not readable."
-            raise PermissionError(msg)
+        try:
+            x509.valid(self.path)
+        except (FileNotFoundError, ValueError) as err:
+            msg = "Failed to validate x509 certificate: %s", err
+            log.exception(msg)
+            return False
         return True
 
     @property
@@ -188,14 +177,17 @@ class X509(BaseModel):
         Returns:
             bool: True if the certificate is expired, False otherwise.
         """
+        if self.path is None:
+            return True
         if math.isclose(self.expiry, 0.0, abs_tol=1e-9):
-            self.expiry = self._read_expiry_from_cert()
+            self.expiry = x509.expiry(self.path)
         return self.expiry < time.time()
 
 
 class TokenAuth(BaseModel):
     """Token authentication configuration."""
 
+    mode: Literal["token"] = "token"
     token: Annotated[
         str | None,
         Field(
@@ -203,99 +195,8 @@ class TokenAuth(BaseModel):
             title="Authentication Token",
             description="Authentication token for the server.",
         ),
-    ]
+    ] = None
     server: Annotated[
         Server | None,
         Field(description="Token server information"),
-    ]
-
-
-class Authentication(BaseModel):
-    """Science Platform Authentication Configuration."""
-
-    mode: Annotated[Mode, Field(description="Authentication Mode.")] = "default"
-    oidc: Annotated[
-        OIDC,
-        Field(
-            default_factory=lambda: OIDC(),
-            description="OIDC settings",
-        ),
-    ]
-    x509: Annotated[
-        X509,
-        Field(
-            default_factory=lambda: X509(),
-            description="X.509 certificate settings",
-        ),
-    ]
-    default: Annotated[
-        X509,
-        Field(
-            default=False,
-            description="Use default authentication mode.",
-        ),
-    ] = X509(
-        path=Path.home() / ".ssl" / "cadcproxy.pem",
-        expiry=0.0,
-        server=Server(
-            name="CADC-CANFAR",
-            uri=AnyUrl("ivo://cadc.nrc.ca/skaha"),
-            url=AnyHttpUrl("https://ws-uv.canfar.net/skaha"),
-            version="v0",
-        ),
-    )
-
-    @property
-    def valid(self) -> bool:
-        """Validate that the selected authentication mode has valid configuration.
-
-        Returns:
-            bool: The validated configuration.
-
-        Raises:
-            ValueError: If the selected mode's configuration is invalid.
-        """
-        match self.mode:
-            case "oidc":
-                return self.oidc.valid
-            case "x509":
-                return self.x509.valid
-            case "default":
-                return self.default.valid
-            case _:
-                return False
-
-    @property
-    def expired(self) -> bool:
-        """Check if the authentication configuration is expired.
-
-        Returns:
-            bool: True if the authentication configuration is expired, False otherwise.
-        """
-        match self.mode:
-            case "oidc":
-                return self.oidc.expired
-            case "x509":
-                return self.x509.expired
-            case "default":
-                return self.default.expired
-            case _:
-                return True
-
-    @property
-    def expiry(self) -> float | None:
-        """Get the expiry time for the current authentication method.
-
-        Returns:
-            float | None: Expiry time as Unix timestamp (seconds since epoch),
-                or None if no expiry is available.
-        """
-        match self.mode:
-            case "oidc":
-                return self.oidc.expiry.access
-            case "x509":
-                return self.x509.expiry
-            case "default":
-                return self.default.expiry
-            case _:
-                return None
+    ] = None
