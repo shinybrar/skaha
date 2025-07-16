@@ -3,6 +3,7 @@
 from __future__ import annotations
 
 import datetime
+import math
 import tempfile
 from pathlib import Path
 from unittest.mock import patch
@@ -224,7 +225,7 @@ def test_gather_happy_path(mock_inspect, mock_get_cert, tmp_path) -> None:
     result = x509_auth.gather(username="testuser", cert_path=cert_path)
 
     assert result["path"] == str(cert_path)
-    assert result["expiry"] == 12345.67
+    assert math.isclose(result["expiry"], 12345.67, abs_tol=1e-9)
     mock_get_cert.assert_called_once()
     assert cert_path.exists()
     assert cert_path.read_text() == "---BEGIN CERT---...---END CERT---"
