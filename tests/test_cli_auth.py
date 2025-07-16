@@ -8,9 +8,6 @@ import pytest
 from typer.testing import CliRunner
 
 from skaha.cli.auth import auth
-from skaha.models.auth import OIDC, X509
-from skaha.models.config import Configuration
-from skaha.models.http import Server
 
 runner = CliRunner()
 
@@ -27,6 +24,7 @@ def test_auth_list_no_config():
     with patch("skaha.CONFIG_PATH", Path("/tmp/nonexistent_config.yaml")):
         result = runner.invoke(auth, ["list"])
         assert result.exit_code == 0
+
 
 def test_auth_commands():
     """Test `skaha auth` commands."""
@@ -52,5 +50,5 @@ def test_auth_commands():
     assert result.exit_code == 1
     results = runner.invoke(auth, ["purge", "--help"])
     assert results.exit_code == 0
-    result = runner.invoke(auth, ["purge" , "-y"])
+    result = runner.invoke(auth, ["purge", "-y"])
     assert result.exit_code == 0
