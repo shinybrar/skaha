@@ -7,11 +7,14 @@ from typing import Annotated
 
 import typer
 from pydantic import AnyHttpUrl, AnyUrl
+from rich import box
 from rich.console import Console
 from rich.prompt import Confirm
+from rich.table import Table
 
 from skaha import CONFIG_PATH, get_logger, set_log_level
 from skaha.auth import oidc, x509
+from skaha.hooks.typer.aliases import AliasGroup
 from skaha.models.auth import (
     OIDC,
     X509,
@@ -33,6 +36,7 @@ auth = typer.Typer(
     help="Authentication Commands",
     no_args_is_help=True,
     rich_help_panel="Authentication",
+    cls=AliasGroup,
 )
 
 
@@ -150,24 +154,106 @@ def login(
         raise typer.Exit(1) from error
 
 
-@auth.command("logout")
-def logout(
+@auth.command("list, ls")
+def show() -> None:
+    """Show all available auth contexts."""
+    config = Configuration()
+    table = Table(
+        title="Available Authentication Contexts", show_lines=True, box=box.MINIMAL
+    )
+    table.add_column("Active", justify="center", style="cyan")
+    table.add_column("Name", style="magenta")
+    table.add_column("Auth Mode", justify="center", style="green")
+    table.add_column("Server URL", style="blue")
+
+    for name, context in config.contexts.items():
+        is_active = "✅" if name == config.active else ""
+        table.add_row(
+            is_active,
+            name,
+            context.mode,
+            str(context.server.url) if context.server else "N/A",
+        )
+    console.print(table)
+
+
+@auth.command("switch, use")
+def switch_context(
+    context: Annotated[
+        str,
+        typer.Argument(help="The name of the context to activate."),
+    ],
+) -> None:
+    """Switch the active auth context."""
+    config = Configuration()
+    if context not in config.contexts:
+        console.print(
+            f"[bold red]Context [italic]{context}[/italic] not found.[/bold red]"
+        )
+        console.print(f"Available contexts are: {list(config.contexts.keys())}")
+        raise typer.Exit(1)
+
+    config.active = context
+    config.save()
+    console.print(f"[green]✓[/green] Switched active context to [bold]{context}[/bold]")
+
+
+@auth.command("remove, rm")
+def remove_context(
+    context: Annotated[
+        str,
+        typer.Argument(help="The name of the context to remove."),
+    ],
+) -> None:
+    """Remove specific auth context."""
+    try:
+        config = Configuration()
+    except Exception as error:
+        console.print(f"[bold red]Error: {error}[/bold red]")
+        raise typer.Exit(1) from error
+
+    if context not in config.contexts:
+        console.print(f"[bold red]Error:[/bold red] Context '{context}' not found.")
+        console.print(f"Available contexts are: {list(config.contexts.keys())}")
+        raise typer.Exit(1)
+
+    if context == "default":
+        console.print(
+            "[bold red]Cannot remove the default context. Its always there![/bold red] "
+        )
+        raise typer.Exit(1)
+
+    if context == config.active:
+        console.print(
+            f"[bold red]Cannot remove the active context '{context}'[/bold red] ."
+        )
+        console.print(
+            "Please switch to another context first with 'skaha auth switch <CONTEXT>'."
+        )
+        raise typer.Exit(1)
+
+    del config.contexts[context]
+    config.save()
+    console.print(f"[green]✓[/green] Removed context [bold]{context}[/bold]")
+
+
+@auth.command("purge")
+def purge(
     confirm: Annotated[
         bool,
         typer.Option(
             "--yes",
             "-y",
             help="Skip confirmation prompt",
-            rich_help_panel="Confirmation",
         ),
     ] = False,
 ) -> None:
-    """Logout of Science Platform."""
+    """Remove all auth contexts."""
     if not confirm:
-        should_logout = Confirm.ask(
+        should_purge = Confirm.ask(
             "This will remove all stored authentication credentials. Continue?"
         )
-        if not should_logout:
+        if not should_purge:
             console.print("[yellow]Logout cancelled[/yellow]")
             raise typer.Exit(0)
 
@@ -178,7 +264,7 @@ def logout(
     except FileNotFoundError:
         console.print("[yellow]No configuration found to clear[/yellow]")
     except Exception as error:
-        console.print(f"[bold red]Error during logout: {error}[/bold red]")
+        console.print(f"[bold red]Error during purge: {error}[/bold red]")
         raise typer.Exit(1) from error
 
 
