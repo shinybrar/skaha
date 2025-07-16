@@ -97,9 +97,7 @@ class OIDC(BaseModel):
 
         # Check if all required fields are defined
         if not all(required):
-            missing = [field for field, value in zip(required, required) if not value]
-            log.warning("Missing required OIDC configuration: %s", missing)
-            log.warning("Invalid OIDC configuration.")
+            log.warning("Missing required OIDC configuration.")
             return False
 
         return True
