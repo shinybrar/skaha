@@ -233,7 +233,9 @@ def test_gather_happy_path(mock_inspect, mock_get_cert, tmp_path) -> None:
 @patch("builtins.input")
 @patch("skaha.auth.x509.get_cert")
 @patch("skaha.auth.x509.inspect")
-def test_gather_prompts_for_username(mock_inspect, mock_get_cert, mock_input, tmp_path) -> None:
+def test_gather_prompts_for_username(
+    mock_inspect, mock_get_cert, mock_input, tmp_path
+) -> None:
     """Test that `gather` prompts for a username if not provided."""
     mock_input.return_value = "prompted_user"
     mock_get_cert.return_value = "---BEGIN CERT---...---END CERT---"
@@ -250,7 +252,9 @@ def test_gather_prompts_for_username(mock_inspect, mock_get_cert, mock_input, tm
 @patch("pathlib.Path.home")
 @patch("skaha.auth.x509.get_cert")
 @patch("skaha.auth.x509.inspect")
-def test_gather_uses_default_path(mock_inspect, mock_get_cert, mock_home, tmp_path) -> None:
+def test_gather_uses_default_path(
+    mock_inspect, mock_get_cert, mock_home, tmp_path
+) -> None:
     """Test that `gather` uses the default certificate path if none is provided."""
     # Point Path.home() to the pytest temporary directory
     mock_home.return_value = tmp_path

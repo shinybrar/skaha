@@ -1,79 +1,49 @@
-"""Tests for the refactored auth CLI commands."""
+"""Tests for the `skaha auth` CLI commands."""
 
-from __future__ import annotations
+from pathlib import Path
+from unittest.mock import patch
 
-from typing import TYPE_CHECKING
-from unittest.mock import Mock, patch
-
-import pytest
 from typer.testing import CliRunner
 
 from skaha.cli.auth import auth
 from skaha.models.auth import OIDC, X509
-from skaha.models.registry import Server as RegistryServer
+from skaha.models.config import Configuration
+from skaha.models.http import Server
 
-if TYPE_CHECKING:
-    from pathlib import Path
+runner = CliRunner()
 
 
-class TestAuthCLI:
-    """Test cases for the auth CLI functionality."""
-
-    @pytest.fixture
-    def runner(self) -> CliRunner:
-        """Create a CLI test runner."""
-        return CliRunner()
-
-    @pytest.fixture
-    def mock_config_path(self, tmp_path: Path):
-        """Mock CONFIG_PATH to use a temporary directory."""
-        config_path = tmp_path / "config.yaml"
-        with patch("skaha.cli.auth.CONFIG_PATH", config_path):
-            yield config_path
-
-    def test_logout_with_existing_config(
-        self, runner: CliRunner, mock_config_path: Path
-    ) -> None:
-        """Test logout command when config file exists."""
-        # Create a config file
-        mock_config_path.write_text("test: config")
-
-        result = runner.invoke(auth, ["logout", "--yes"])
-
+def test_auth_list_no_config():
+    """Test `skaha auth list` when no config file exists."""
+    with patch("skaha.config.CONFIG_PATH", Path("/tmp/nonexistent_config.yaml")):
+        result = runner.invoke(auth, ["list"])
         assert result.exit_code == 0
-        assert "Authentication credentials cleared" in result.stdout
-        assert not mock_config_path.exists()
+        assert "No contexts configured" in result.stdout
 
-    def test_logout_with_no_config(
-        self, runner: CliRunner, mock_config_path: Path
-    ) -> None:
-        """Test logout command when no config file exists."""
-        result = runner.invoke(auth, ["logout", "--yes"])
 
-        assert result.exit_code == 0
-        assert "No configuration found to clear" in result.stdout
+def test_auth_list_with_config(tmp_path):
+    """Test `skaha auth list` with a valid config file."""
+    config_path = tmp_path / "config.yaml"
+    oidc_context = OIDC(
+        server=Server(name="OIDC-Server", url="https://oidc.example.com", version="v1")
+    )
+    x509_context = X509(
+        server=Server(name="X509-Server", url="https://x509.example.com", version="v0"),
+        path=Path("/tmp/cert.pem"),
+    )
+    config = Configuration(
+        active="X509-Server",
+        contexts={"OIDC-Server": oidc_context, "X509-Server": x509_context},
+    )
 
-    def test_logout_cancelled(self, runner: CliRunner, mock_config_path: Path) -> None:
-        """Test logout command when user cancels."""
-        result = runner.invoke(auth, ["logout"], input="n\n")
+    with patch("skaha.config.CONFIG_PATH", config_path):
+        config.save()
+        result = runner.invoke(auth, ["list"])
 
-        assert result.exit_code == 0
-        assert "Logout cancelled" in result.stdout
-
-    @patch("skaha.cli.auth.Configuration")
-    def test_login_with_valid_credentials(
-        self, mock_config_class, runner: CliRunner
-    ) -> None:
-        """Test login command when valid credentials exist."""
-        # Mock configuration with valid, non-expired context
-        mock_config = Mock()
-        mock_config.context.expired = False
-        mock_config.context.server.name = "Test Server"
-        mock_config.context.server.url = "https://test.example.com"
-        mock_config_class.return_value = mock_config
-
-        result = runner.invoke(auth, ["login"])
-
-        assert result.exit_code == 0
-        assert "Credentials valid" in result.stdout
-        assert "Test Server" in result.stdout
+    assert result.exit_code == 0
+    assert "Available Authentication Contexts" in result.stdout
+    assert "OIDC-Server" in result.stdout
+    assert "X509-Server" in result.stdout
+    # Check that the active context is marked correctly
+    # This is a bit brittle, but checks for the checkmark in the right row
+    assert "✅      │ X509-Server" in result.stdout

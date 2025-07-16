@@ -107,7 +107,9 @@ class TestInitializationAndConfiguration:
         assert str(client.url) == "https://env.example.com/"
         assert client.loglevel == "WARNING"
 
-    def test_precedence_constructor_over_env(self, skaha_client_fixture, monkeypatch) -> None:
+    def test_precedence_constructor_over_env(
+        self, skaha_client_fixture, monkeypatch
+    ) -> None:
         """Test that constructor arguments take precedence over env variables."""
         monkeypatch.setenv("SKAHA_TIMEOUT", "45")
         monkeypatch.setenv("SKAHA_TOKEN", "env-token")
@@ -189,7 +191,9 @@ class TestRuntimeCredentialHandling:
         ):
             skaha_client_fixture(token=SecretStr("test-token"))
 
-    def test_certificate_without_url_raises_error(self, skaha_client_fixture, tmp_path) -> None:
+    def test_certificate_without_url_raises_error(
+        self, skaha_client_fixture, tmp_path
+    ) -> None:
         """Test that certificate without URL raises ValueError."""
         cert_path = tmp_path / "test.pem"
         _create_test_certificate(cert_path)
@@ -696,7 +700,9 @@ class TestContextManagerBehavior:
 class TestSSLContextAndClientKwargs:
     """Test SSL context creation and client kwargs generation."""
 
-    def test_get_client_kwargs_with_certificate(self, skaha_client_fixture, tmp_path) -> None:
+    def test_get_client_kwargs_with_certificate(
+        self, skaha_client_fixture, tmp_path
+    ) -> None:
         """Test client kwargs with certificate authentication."""
         cert_path = tmp_path / "test.pem"
         _create_test_certificate(cert_path)
@@ -707,7 +713,9 @@ class TestSSLContextAndClientKwargs:
         assert "verify" in kwargs
         assert isinstance(kwargs["verify"], ssl.SSLContext)
 
-    def test_get_ssl_context_valid_certificate(self, skaha_client_fixture, tmp_path) -> None:
+    def test_get_ssl_context_valid_certificate(
+        self, skaha_client_fixture, tmp_path
+    ) -> None:
         """Test SSL context creation with valid certificate."""
         cert_path = tmp_path / "test.pem"
         _create_test_certificate(cert_path)

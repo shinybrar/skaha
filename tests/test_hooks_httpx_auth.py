@@ -180,7 +180,11 @@ class TestAsyncHook:
         mock_refresh.assert_not_called()
 
     @patch("skaha.auth.oidc.refresh", side_effect=Exception("Async Network Error"))
-    async def test_async_refresh_failure_raises_error(self, mock_refresh, oidc_client) -> None:  # noqa: ARG002
+    async def test_async_refresh_failure_raises_error(
+        self,
+        mock_refresh,  # noqa: ARG002
+        oidc_client,
+    ) -> None:
         """Verify a failure during async refresh raises AuthenticationError."""
         hook_func = ahook(oidc_client)
         request = httpx.Request("GET", "/")
