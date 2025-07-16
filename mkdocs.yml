@@ -97,7 +97,9 @@ markdown_extensions:
 nav:
   - Skaha: index.md
 
-  - Get Started: get-started.md
+  - Get Started:
+    - Installation: get-started.md
+    - Authentication: authentication-contexts.md
   - Examples: examples.md
   - API Reference:
     - AsyncSession: async_session.md
