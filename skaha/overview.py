@@ -32,10 +32,10 @@ class Overview(SkahaClient):
         Returns:
             Self: The current object.
         """
-        url : str = str(self.client.base_url)
-        base : str = url.split("/v", maxsplit=1)[0]
+        url: str = str(self.client.base_url)
+        base: str = url.split("/v", maxsplit=1)[0]
         # The overview endpoint is not versioned, so need to remove it
-        self.client.base_url =URL(base)
+        self.client.base_url = URL(base)
         self.asynclient.base_url = URL(base)
         return self
 
