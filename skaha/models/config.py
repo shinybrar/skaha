@@ -30,6 +30,21 @@ log = get_logger(__name__)
 AuthContext = Annotated[OIDC | X509, Field(discriminator="mode")]
 """A discriminated union of all supported authentication contexts."""
 
+# Default authentication context
+# This is value that will be used if no configuration file is found
+default: dict[str, AuthContext] = {
+    "default": X509(
+        path=Path.home() / ".ssl" / "cadcproxy.pem",
+        expiry=0.0,
+        server=Server(
+            name="CADC-CANFAR",
+            uri=AnyUrl("ivo://cadc.nrc.ca/skaha"),
+            url=AnyHttpUrl("https://ws-uv.canfar.net/skaha"),
+            version="v0",
+        ),
+    )
+}
+
 
 class Configuration(BaseSettings):
     """Unified configuration settings for Skaha client and authentication (V2).
@@ -60,18 +75,7 @@ class Configuration(BaseSettings):
         description="The name of the context to use for authentication.",
     )
     contexts: dict[str, AuthContext] = Field(
-        default_factory=lambda: {
-            "default": X509(
-                path=Path.home() / ".ssl" / "cadcproxy.pem",
-                expiry=0.0,
-                server=Server(
-                    name="CADC-CANFAR",
-                    uri=AnyUrl("ivo://cadc.nrc.ca/skaha"),
-                    url=AnyHttpUrl("https://ws-uv.canfar.net/skaha"),
-                    version="v0",
-                ),
-            )
-        },
+        default_factory=lambda: default,
         description="A key-value mapping of available authentication contexts.",
     )
     registry: ContainerRegistry = Field(

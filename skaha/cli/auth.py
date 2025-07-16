@@ -10,13 +10,17 @@ from pydantic import AnyHttpUrl, AnyUrl
 from rich.console import Console
 from rich.prompt import Confirm
 
-from skaha import get_logger, set_log_level
+from skaha import CONFIG_PATH, get_logger, set_log_level
 from skaha.auth import oidc, x509
 from skaha.models.auth import (
     OIDC,
     X509,
+    Client,
+    Endpoint,
+    Expiry,
+    Token,
 )
-from skaha.models.config import Configuration
+from skaha.models.config import AuthContext, Configuration
 from skaha.models.http import Server
 from skaha.utils.discover import servers
 
@@ -90,11 +94,11 @@ def login(
     try:
         console.print("[bold blue]Starting Science Platform Login[/bold blue]")
         config = Configuration()
-        if not force and (config.auth.valid and not config.auth.expired):
+        if not force and not config.context.expired and config.context.server:
             console.print("[green]✓[/green] Credentials valid")
-            selected = getattr(config.auth, str(config.auth.mode)).server
             console.print(
-                f"[green]✓[/green] Authenticated with {selected.name} @ {selected.url}"
+                f"[green]✓[/green] Authenticated with {config.context.server.name} @ "
+                f"{config.context.server.url}"
             )
             console.print("[dim] Use --force to re-authenticate.[dim]")
             return
@@ -110,19 +114,32 @@ def login(
         )
 
         # Step 7-8: Choose authentication method based on registry
+        context: AuthContext
         if selected.registry.upper() == "CADC":
             console.print("[bold blue]X509 Certificate Authentication[/bold blue]")
-            config.auth.mode = "x509"
-            config.auth.x509.server = server
-            config.auth.x509 = x509.authenticate(config.auth.x509)
+            # Create new X509 context with server information
+            x509_context = X509(server=server, expiry=0.0)
+            # Authenticate and get updated context
+            context = x509.authenticate(x509_context)
         else:
             console.print(
                 f"[bold blue]OIDC Authentication for {selected.url}[/bold blue]"
             )
-            config.auth.mode = "oidc"
-            config.auth.oidc.server = server
-            config.auth.oidc.endpoints.discovery = discovery_url
-            config.auth.oidc = asyncio.run(oidc.authenticate(config.auth.oidc))
+            # Create new OIDC context with server and discovery information
+            oidc_context = OIDC(
+                server=server,
+                endpoints=Endpoint(discovery=discovery_url),
+                client=Client(),
+                token=Token(),
+                expiry=Expiry(),
+            )
+            # Authenticate and get updated context
+            context = asyncio.run(oidc.authenticate(oidc_context))
+
+        # Add the new context to the configuration
+        name = server.name or f"{selected.registry}-{selected.name}"
+        config.contexts[name] = context
+        config.active = name
 
         console.print("[green]✓[/green] Saving configuration")
         config.save()
@@ -155,15 +172,10 @@ def logout(
             raise typer.Exit(0)
 
     try:
-        config = Configuration()
-        # Clear authentication details
-        config.auth.mode = "default"
-        config.auth.x509 = X509()  # type: ignore [call-arg]
-        config.auth.oidc = OIDC()  # type: ignore [call-arg]
-        # Save updated configuration
-        config.save()
+        # Delete the configuration file entirely
+        CONFIG_PATH.unlink()
         console.print("[green]✓[/green] Authentication credentials cleared")
-    except (FileNotFoundError, OSError, ValueError):
+    except FileNotFoundError:
         console.print("[yellow]No configuration found to clear[/yellow]")
     except Exception as error:
         console.print(f"[bold red]Error during logout: {error}[/bold red]")

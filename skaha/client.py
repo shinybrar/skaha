@@ -120,16 +120,16 @@ class SkahaClient(BaseSettings):
         Returns:
             Client: The synchronous HTTPx client.
         """
-        if self._client is None:
-            self._client = self._create_client(asynchronous=False)
+        if not self._client:
+            self._client = self._create_sync_client()
             log.debug("Synchronous HTTPx client created successfully")
         return self._client
 
     @property
     def asynclient(self) -> AsyncClient:
         """Get the asynchronous HTTPx Async Client."""
-        if self._asynclient is None:
-            self._asynclient = self._create_client(asynchronous=True)
+        if not self._asynclient:
+            self._asynclient = self._create_async_client()
             log.debug("Asynchronous HTTPx client created successfully")
         return self._asynclient
 
@@ -188,17 +188,27 @@ class SkahaClient(BaseSettings):
 
         return self
 
-    def _create_client(self, asynchronous: bool) -> Client | AsyncClient:
-        """Factory method to create and configure an HTTPx client."""
-        kwargs = self._get_client_kwargs(asynchronous=asynchronous)
+    def _create_async_client(self) -> AsyncClient:
+        """Create an asynchronous HTTPx client.
+
+        Returns:
+            AsyncClient: The asynchronous HTTPx client.
+        """
+        kwargs = self._get_client_kwargs(asynchronous=True)
         headers = self._get_http_headers()
+        client = AsyncClient(**kwargs)
+        client.headers.update(headers)
+        return client
 
-        msg = f"Creating {'async' if asynchronous else 'sync'} client"
-        log.debug(msg)
+    def _create_sync_client(self) -> Client:
+        """Create a synchronous HTTPx client.
 
-        client_class = AsyncClient if asynchronous else Client
-        client = client_class(**kwargs)
-
+        Returns:
+            Client: The synchronous HTTPx client.
+        """
+        kwargs = self._get_client_kwargs(asynchronous=False)
+        headers = self._get_http_headers()
+        client = Client(**kwargs)
         client.headers.update(headers)
         return client
 
@@ -239,10 +249,13 @@ class SkahaClient(BaseSettings):
                 max_connections=self.concurrency,
                 max_keepalive_connections=self.concurrency // 4,
             )
+        # Get the active auth context
+        ctx: AuthContext = self.config.context
 
         # Prioritize user-provided credentials over configuration
         if self.token:
             return kwargs
+
         if self.certificate:
             msg = "creating runtime ssl context with: {self.certificate}"
             log.debug(msg)
@@ -250,7 +263,6 @@ class SkahaClient(BaseSettings):
             return kwargs
 
         # No user-provided credentials, use configured context
-        ctx: AuthContext = self.config.context
         if ctx.mode == "oidc":
             assert ctx.valid, "Invalid OIDC context provided."
             refresher = auth.ahook(self) if asynchronous else auth.hook(self)
@@ -259,9 +271,10 @@ class SkahaClient(BaseSettings):
 
         if ctx.mode == "x509":
             assert ctx.valid, "Invalid X509 context provided."
+            assert isinstance(ctx.path, Path), "X509 path must be a Path object."
             kwargs["verify"] = self._get_ssl_context(ctx.path)
             return kwargs
-        return kwargs
+        return kwargs  # type: ignore [unreachable]
 
     def _get_ssl_context(self, source: Path) -> ssl.SSLContext:
         """Get SSL context from certificate file.
