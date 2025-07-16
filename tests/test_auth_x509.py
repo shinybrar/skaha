@@ -73,7 +73,7 @@ def generate_cert(
 # --- Tests for skaha.auth.x509.valid --- #
 
 
-def test_valid_happy_path():
+def test_valid_happy_path() -> None:
     """Test that `valid` returns the correct path for a valid certificate."""
     with tempfile.NamedTemporaryFile(suffix=".pem") as temp_cert:
         cert_path = Path(temp_cert.name)
@@ -82,14 +82,14 @@ def test_valid_happy_path():
         assert Path(result).resolve() == cert_path.resolve()
 
 
-def test_valid_file_not_found():
+def test_valid_file_not_found() -> None:
     """Test that `valid` raises FileNotFoundError for a non-existent file."""
     non_existent_path = Path("/tmp/this/path/does/not/exist.pem")
     with pytest.raises(FileNotFoundError):
         x509_auth.valid(non_existent_path)
 
 
-def test_valid_not_a_file():
+def test_valid_not_a_file() -> None:
     """Test that `valid` raises ValueError for a path that is a directory."""
     with tempfile.TemporaryDirectory() as temp_dir:
         dir_path = Path(temp_dir)
@@ -97,7 +97,7 @@ def test_valid_not_a_file():
             x509_auth.valid(dir_path)
 
 
-def test_valid_not_readable(tmp_path):
+def test_valid_not_readable(tmp_path) -> None:
     """Test that `valid` raises PermissionError for an unreadable file."""
     cert_path = tmp_path / "cert.pem"
     generate_cert(cert_path)
@@ -110,7 +110,7 @@ def test_valid_not_readable(tmp_path):
 # --- Tests for skaha.auth.x509.expiry --- #
 
 
-def test_expiry_happy_path():
+def test_expiry_happy_path() -> None:
     """Test that `expiry` returns the correct expiry timestamp for a valid cert."""
     with tempfile.NamedTemporaryFile(suffix=".pem") as temp_cert:
         cert_path = Path(temp_cert.name)
@@ -120,7 +120,7 @@ def test_expiry_happy_path():
         assert expiry_ts > datetime.datetime.now(datetime.timezone.utc).timestamp()
 
 
-def test_expiry_is_expired():
+def test_expiry_is_expired() -> None:
     """Test that `expiry` raises ValueError for an expired certificate."""
     with tempfile.NamedTemporaryFile(suffix=".pem") as temp_cert:
         cert_path = Path(temp_cert.name)
@@ -129,7 +129,7 @@ def test_expiry_is_expired():
             x509_auth.expiry(cert_path)
 
 
-def test_expiry_not_yet_valid():
+def test_expiry_not_yet_valid() -> None:
     """Test that `expiry` raises ValueError for a certificate that is not yet valid."""
     with tempfile.NamedTemporaryFile(suffix=".pem") as temp_cert:
         cert_path = Path(temp_cert.name)
@@ -138,7 +138,7 @@ def test_expiry_not_yet_valid():
             x509_auth.expiry(cert_path)
 
 
-def test_expiry_with_invalid_content():
+def test_expiry_with_invalid_content() -> None:
     """Test that `expiry` raises ValueError for a file with invalid content."""
     with tempfile.NamedTemporaryFile(mode="w", suffix=".pem") as temp_cert:
         temp_cert.write("this is not a valid certificate")
@@ -151,7 +151,7 @@ def test_expiry_with_invalid_content():
 # --- Tests for skaha.auth.x509.inspect --- #
 
 
-def test_inspect_happy_path():
+def test_inspect_happy_path() -> None:
     """Test that `inspect` returns the correct path and expiry."""
     with tempfile.NamedTemporaryFile(suffix=".pem") as temp_cert:
         cert_path = Path(temp_cert.name)
@@ -168,7 +168,7 @@ def test_inspect_happy_path():
         )
 
 
-def test_inspect_with_expired_cert():
+def test_inspect_with_expired_cert() -> None:
     """Test that `inspect` fails when the certificate is expired."""
     with tempfile.NamedTemporaryFile(suffix=".pem") as temp_cert:
         cert_path = Path(temp_cert.name)
@@ -181,7 +181,7 @@ def test_inspect_with_expired_cert():
 
 
 @patch("skaha.auth.x509.gather")
-def test_authenticate_happy_path(mock_gather):
+def test_authenticate_happy_path(mock_gather) -> None:
     """Test that `authenticate` correctly updates the config on success."""
     with tempfile.NamedTemporaryFile(suffix=".pem") as temp_cert:
         cert_path = Path(temp_cert.name)
@@ -201,7 +201,7 @@ def test_authenticate_happy_path(mock_gather):
 
 
 @patch("skaha.auth.x509.gather")
-def test_authenticate_gather_fails(mock_gather):
+def test_authenticate_gather_fails(mock_gather) -> None:
     """Test that `authenticate` raises a ValueError if `gather` fails."""
     mock_gather.side_effect = ValueError("Failed to retrieve certificate")
 
@@ -215,7 +215,7 @@ def test_authenticate_gather_fails(mock_gather):
 
 @patch("skaha.auth.x509.get_cert")
 @patch("skaha.auth.x509.inspect")
-def test_gather_happy_path(mock_inspect, mock_get_cert, tmp_path):
+def test_gather_happy_path(mock_inspect, mock_get_cert, tmp_path) -> None:
     """Test the happy path for `gather` with a username provided."""
     mock_get_cert.return_value = "---BEGIN CERT---...---END CERT---"
     cert_path = tmp_path / "test.pem"
@@ -233,7 +233,7 @@ def test_gather_happy_path(mock_inspect, mock_get_cert, tmp_path):
 @patch("builtins.input")
 @patch("skaha.auth.x509.get_cert")
 @patch("skaha.auth.x509.inspect")
-def test_gather_prompts_for_username(mock_inspect, mock_get_cert, mock_input, tmp_path):
+def test_gather_prompts_for_username(mock_inspect, mock_get_cert, mock_input, tmp_path) -> None:
     """Test that `gather` prompts for a username if not provided."""
     mock_input.return_value = "prompted_user"
     mock_get_cert.return_value = "---BEGIN CERT---...---END CERT---"
@@ -250,7 +250,7 @@ def test_gather_prompts_for_username(mock_inspect, mock_get_cert, mock_input, tm
 @patch("pathlib.Path.home")
 @patch("skaha.auth.x509.get_cert")
 @patch("skaha.auth.x509.inspect")
-def test_gather_uses_default_path(mock_inspect, mock_get_cert, mock_home, tmp_path):
+def test_gather_uses_default_path(mock_inspect, mock_get_cert, mock_home, tmp_path) -> None:
     """Test that `gather` uses the default certificate path if none is provided."""
     # Point Path.home() to the pytest temporary directory
     mock_home.return_value = tmp_path
@@ -272,7 +272,7 @@ def test_gather_uses_default_path(mock_inspect, mock_get_cert, mock_home, tmp_pa
 
 
 @patch("skaha.auth.x509.get_cert")
-def test_gather_get_cert_fails(mock_get_cert, tmp_path):
+def test_gather_get_cert_fails(mock_get_cert, tmp_path) -> None:
     """Test that `gather` raises a ValueError if `get_cert` fails."""
     mock_get_cert.side_effect = Exception("Network error")
     cert_path = tmp_path / "test.pem"

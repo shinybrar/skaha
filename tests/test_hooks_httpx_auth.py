@@ -56,7 +56,7 @@ class TestSyncHook:
         mock_expiry,  # noqa: ARG002
         mock_save,
         oidc_client,
-    ):
+    ) -> None:
         """Verify a successful token refresh updates state and headers."""
         hook_func = hook(oidc_client)
         request = httpx.Request("GET", "https://oidc.example.com")
@@ -79,7 +79,7 @@ class TestSyncHook:
         assert new_context.expiry.access > time.time()
 
     @patch("skaha.auth.oidc.sync_refresh")
-    def test_skip_if_not_oidc_context(self, mock_refresh, tmp_path):
+    def test_skip_if_not_oidc_context(self, mock_refresh, tmp_path) -> None:
         """Verify the hook does nothing if the active context is not OIDC."""
         cert_path = tmp_path / "cert.pem"
         generate_cert(cert_path)
@@ -98,7 +98,7 @@ class TestSyncHook:
         mock_refresh.assert_not_called()
 
     @patch("skaha.auth.oidc.sync_refresh")
-    def test_skip_if_runtime_credentials_used(self, mock_refresh):
+    def test_skip_if_runtime_credentials_used(self, mock_refresh) -> None:
         """Verify the hook does nothing if runtime credentials are provided."""
         client = SkahaClient(
             token=SecretStr("runtime-token"), url="https://runtime.com"
@@ -110,7 +110,7 @@ class TestSyncHook:
         mock_refresh.assert_not_called()
 
     @patch("skaha.auth.oidc.sync_refresh")
-    def test_skip_if_token_not_expired(self, mock_refresh, oidc_client):
+    def test_skip_if_token_not_expired(self, mock_refresh, oidc_client) -> None:
         """Verify the hook does nothing if the access token is not expired."""
         oidc_client.config.context.expiry.access = time.time() + 3600  # Make it valid
         hook_func = hook(oidc_client)
@@ -120,7 +120,7 @@ class TestSyncHook:
         mock_refresh.assert_not_called()
 
     @patch("skaha.auth.oidc.sync_refresh", side_effect=Exception("Network Error"))
-    def test_refresh_failure_raises_error(self, mock_refresh, oidc_client):  # noqa: ARG002
+    def test_refresh_failure_raises_error(self, mock_refresh, oidc_client) -> None:  # noqa: ARG002
         """Verify that a failure during refresh raises AuthenticationError."""
         hook_func = hook(oidc_client)
         request = httpx.Request("GET", "/")
@@ -141,7 +141,7 @@ class TestAsyncHook:
         mock_expiry,  # noqa: ARG002
         mock_save,
         oidc_client,
-    ):
+    ) -> None:
         """Verify a successful async token refresh updates state and headers."""
         hook_func = ahook(oidc_client)
         request = httpx.Request("GET", "https://oidc.example.com")
@@ -161,7 +161,7 @@ class TestAsyncHook:
         assert new_context.token.access == "new-async-token"
 
     @patch("skaha.auth.oidc.refresh")
-    async def test_skip_if_not_oidc_context_async(self, mock_refresh, tmp_path):
+    async def test_skip_if_not_oidc_context_async(self, mock_refresh, tmp_path) -> None:
         """Verify the async hook does nothing for non-OIDC contexts."""
         cert_path = tmp_path / "cert.pem"
         generate_cert(cert_path)
@@ -180,7 +180,7 @@ class TestAsyncHook:
         mock_refresh.assert_not_called()
 
     @patch("skaha.auth.oidc.refresh", side_effect=Exception("Async Network Error"))
-    async def test_async_refresh_failure_raises_error(self, mock_refresh, oidc_client):  # noqa: ARG002
+    async def test_async_refresh_failure_raises_error(self, mock_refresh, oidc_client) -> None:  # noqa: ARG002
         """Verify a failure during async refresh raises AuthenticationError."""
         hook_func = ahook(oidc_client)
         request = httpx.Request("GET", "/")

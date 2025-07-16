@@ -59,7 +59,7 @@ def mock_cryptography():
 class TestInitializationAndConfiguration:
     """Test SkahaClient initialization and configuration loading."""
 
-    def test_default_initialization(self, skaha_client_fixture):
+    def test_default_initialization(self, skaha_client_fixture) -> None:
         """Test default initialization with no arguments."""
         client = skaha_client_fixture()
         assert client.timeout == 30
@@ -70,7 +70,7 @@ class TestInitializationAndConfiguration:
         assert client.url is None
         assert isinstance(client.config, Configuration)
 
-    def test_constructor_arguments(self, skaha_client_fixture):
+    def test_constructor_arguments(self, skaha_client_fixture) -> None:
         """Test initialization with explicit constructor arguments."""
         config = Configuration()
         client = skaha_client_fixture(
@@ -91,7 +91,7 @@ class TestInitializationAndConfiguration:
         assert client.config is config
         assert client.loglevel == "DEBUG"
 
-    def test_environment_variables(self, skaha_client_fixture, monkeypatch):
+    def test_environment_variables(self, skaha_client_fixture, monkeypatch) -> None:
         """Test that environment variables are picked up correctly."""
         monkeypatch.setenv("SKAHA_TIMEOUT", "45")
         monkeypatch.setenv("SKAHA_CONCURRENCY", "16")
@@ -107,7 +107,7 @@ class TestInitializationAndConfiguration:
         assert str(client.url) == "https://env.example.com/"
         assert client.loglevel == "WARNING"
 
-    def test_precedence_constructor_over_env(self, skaha_client_fixture, monkeypatch):
+    def test_precedence_constructor_over_env(self, skaha_client_fixture, monkeypatch) -> None:
         """Test that constructor arguments take precedence over env variables."""
         monkeypatch.setenv("SKAHA_TIMEOUT", "45")
         monkeypatch.setenv("SKAHA_TOKEN", "env-token")
@@ -120,7 +120,7 @@ class TestInitializationAndConfiguration:
         assert client.timeout == 90
         assert client.token.get_secret_value() == "constructor-token"
 
-    def test_client_has_session_attribute(self, skaha_client_fixture):
+    def test_client_has_session_attribute(self, skaha_client_fixture) -> None:
         """Test if SkahaClient object contains httpx.Client attribute."""
         client = skaha_client_fixture(
             token=SecretStr("test_token"), url="https://example.com"
@@ -128,12 +128,12 @@ class TestInitializationAndConfiguration:
         assert hasattr(client, "client")
         assert isinstance(client.client, httpx.Client)
 
-    def test_bad_server_no_schema(self, skaha_client_fixture):
+    def test_bad_server_no_schema(self, skaha_client_fixture) -> None:
         """Test server URL without schema."""
         with pytest.raises(ValidationError):
             skaha_client_fixture(url="ws-uv.canfar.net")
 
-    def test_default_certificate(self, skaha_client_fixture):
+    def test_default_certificate(self, skaha_client_fixture) -> None:
         """Test validation with default certificate value."""
         try:
             skaha_client_fixture()
@@ -145,13 +145,13 @@ class TestInitializationAndConfiguration:
 class TestRuntimeCredentialHandling:
     """Test runtime credential handling including mutual exclusivity and validation."""
 
-    def test_token_only(self, skaha_client_fixture):
+    def test_token_only(self, skaha_client_fixture) -> None:
         """Test instantiation with token only."""
         client = skaha_client_fixture(token=SecretStr("abc"), url="https://example.com")
         assert client.token.get_secret_value() == "abc"
         assert client.certificate is None
 
-    def test_certificate_only(self, skaha_client_fixture, tmp_path):
+    def test_certificate_only(self, skaha_client_fixture, tmp_path) -> None:
         """Test instantiation with certificate only."""
         cert_path = tmp_path / "test.pem"
         _create_test_certificate(cert_path)
@@ -162,7 +162,7 @@ class TestRuntimeCredentialHandling:
 
     def test_both_token_and_certificate_token_precedence(
         self, skaha_client_fixture, tmp_path
-    ):
+    ) -> None:
         """Test that token takes precedence when both are provided."""
         cert_path = tmp_path / "test.pem"
         _create_test_certificate(cert_path)
@@ -181,7 +181,7 @@ class TestRuntimeCredentialHandling:
             # Should log warnings about precedence
             mock_log.warning.assert_called()
 
-    def test_token_without_url_raises_error(self, skaha_client_fixture):
+    def test_token_without_url_raises_error(self, skaha_client_fixture) -> None:
         """Test that token without URL raises ValueError."""
         with pytest.raises(
             ValueError,
@@ -189,7 +189,7 @@ class TestRuntimeCredentialHandling:
         ):
             skaha_client_fixture(token=SecretStr("test-token"))
 
-    def test_certificate_without_url_raises_error(self, skaha_client_fixture, tmp_path):
+    def test_certificate_without_url_raises_error(self, skaha_client_fixture, tmp_path) -> None:
         """Test that certificate without URL raises ValueError."""
         cert_path = tmp_path / "test.pem"
         _create_test_certificate(cert_path)
@@ -200,14 +200,14 @@ class TestRuntimeCredentialHandling:
         ):
             skaha_client_fixture(certificate=cert_path)
 
-    def test_invalid_certificate_path_raises_error(self, skaha_client_fixture):
+    def test_invalid_certificate_path_raises_error(self, skaha_client_fixture) -> None:
         """Test that non-existent certificate path raises FileNotFoundError."""
         with pytest.raises(FileNotFoundError):
             skaha_client_fixture(
                 certificate=Path("/nonexistent/path.pem"), url="https://example.com"
             )
 
-    def test_token_setup_headers(self, skaha_client_fixture):
+    def test_token_setup_headers(self, skaha_client_fixture) -> None:
         """Test token setup creates correct headers."""
         token = "abcdef"
         client = skaha_client_fixture(token=SecretStr(token), url="https://example.com")
@@ -286,7 +286,7 @@ def _create_test_certificate(
 class TestBaseURLConstruction:
     """Test base URL construction based on precedence."""
 
-    def test_runtime_url_precedence(self, skaha_client_fixture):
+    def test_runtime_url_precedence(self, skaha_client_fixture) -> None:
         """Test that runtime URL takes precedence."""
         client = skaha_client_fixture(
             token=SecretStr("test-token"), url="https://runtime.com/api"
@@ -294,7 +294,7 @@ class TestBaseURLConstruction:
         base_url = client._get_base_url()
         assert str(base_url) == "https://runtime.com/api"
 
-    def test_configured_url_from_context(self, skaha_client_fixture):
+    def test_configured_url_from_context(self, skaha_client_fixture) -> None:
         """Test base URL construction from configuration context."""
         from pydantic import AnyHttpUrl, AnyUrl
 
@@ -316,7 +316,7 @@ class TestBaseURLConstruction:
         base_url = client._get_base_url()
         assert str(base_url) == "https://config.example.com//v1"
 
-    def test_no_server_in_context_raises_error(self, skaha_client_fixture):
+    def test_no_server_in_context_raises_error(self, skaha_client_fixture) -> None:
         """Test that missing server in context raises ValueError."""
         # Create a context without server
         custom_context = X509(
@@ -333,7 +333,7 @@ class TestBaseURLConstruction:
 class TestCertificateValidation:
     """Test certificate validation functionality."""
 
-    def test_certificate_validation_with_token_skips_validation(self, tmp_path):
+    def test_certificate_validation_with_token_skips_validation(self, tmp_path) -> None:
         """Test certificate validation when token provided takes precedence."""
         # Create a valid certificate file for this test
         cert_path = tmp_path / "valid.pem"
@@ -354,14 +354,14 @@ class TestCertificateValidation:
         assert headers["Authorization"] == "Bearer test-token"
         assert headers["X-Skaha-Authentication-Type"] == "RUNTIME-TOKEN"
 
-    def test_certificate_file_not_exists(self, tmp_path):
+    def test_certificate_file_not_exists(self, tmp_path) -> None:
         """Test certificate validation when file doesn't exist."""
         cert_path = tmp_path / "nonexistent.pem"
 
         with pytest.raises(FileNotFoundError):
             SkahaClient(certificate=cert_path, url="https://example.com")
 
-    def test_certificate_not_readable(self, tmp_path):
+    def test_certificate_not_readable(self, tmp_path) -> None:
         """Test certificate validation when file is not readable."""
         cert_path = tmp_path / "test.pem"
         # Create a valid certificate file first
@@ -377,7 +377,7 @@ class TestCertificateValidation:
         ):
             SkahaClient(certificate=cert_path, url="https://example.com")
 
-    def test_certificate_expired(self, tmp_path):
+    def test_certificate_expired(self, tmp_path) -> None:
         """Test certificate validation with expired certificate."""
         cert_path = tmp_path / "expired.pem"
         _create_test_certificate(cert_path, expired=True)
@@ -387,7 +387,7 @@ class TestCertificateValidation:
         with pytest.raises(ValueError, match="expired"):
             SkahaClient(certificate=cert_path, url="https://example.com")
 
-    def test_certificate_valid(self, tmp_path):
+    def test_certificate_valid(self, tmp_path) -> None:
         """Test certificate validation with valid certificate."""
         cert_path = tmp_path / "valid.pem"
         _create_test_certificate(cert_path)
@@ -400,7 +400,7 @@ class TestCertificateValidation:
 class TestHTTPClientCreationAndHeaders:
     """Test HTTP client creation and header generation."""
 
-    def test_lazy_client_initialization(self, skaha_client_fixture):
+    def test_lazy_client_initialization(self, skaha_client_fixture) -> None:
         """Test that httpx clients are created only on first access."""
         client = skaha_client_fixture(
             token=SecretStr("test-token"), url="https://example.com"
@@ -420,7 +420,7 @@ class TestHTTPClientCreationAndHeaders:
         assert client._asynclient is not None
         assert isinstance(async_client, httpx.AsyncClient)
 
-    def test_default_headers_present(self, skaha_client_fixture):
+    def test_default_headers_present(self, skaha_client_fixture) -> None:
         """Test that common headers are present."""
         client = skaha_client_fixture(
             token=SecretStr("test-token"), url="https://example.com"
@@ -435,7 +435,7 @@ class TestHTTPClientCreationAndHeaders:
         assert headers["Accept"] == "application/json"
         assert "python-skaha" in headers["User-Agent"]
 
-    def test_runtime_token_headers(self, skaha_client_fixture):
+    def test_runtime_token_headers(self, skaha_client_fixture) -> None:
         """Test headers for runtime token authentication."""
         client = skaha_client_fixture(
             token=SecretStr("test-token"), url="https://example.com"
@@ -445,7 +445,7 @@ class TestHTTPClientCreationAndHeaders:
         assert headers["Authorization"] == "Bearer test-token"
         assert headers["X-Skaha-Authentication-Type"] == "RUNTIME-TOKEN"
 
-    def test_runtime_certificate_headers(self, skaha_client_fixture, tmp_path):
+    def test_runtime_certificate_headers(self, skaha_client_fixture, tmp_path) -> None:
         """Test headers for runtime certificate authentication."""
         cert_path = tmp_path / "test.pem"
         _create_test_certificate(cert_path)
@@ -456,7 +456,7 @@ class TestHTTPClientCreationAndHeaders:
         assert headers["X-Skaha-Authentication-Type"] == "RUNTIME-X509"
         assert "Authorization" not in headers
 
-    def test_oidc_context_headers(self, skaha_client_fixture):
+    def test_oidc_context_headers(self, skaha_client_fixture) -> None:
         """Test headers for OIDC context authentication."""
         from pydantic import AnyHttpUrl, AnyUrl
 
@@ -485,7 +485,7 @@ class TestHTTPClientCreationAndHeaders:
         assert headers["Authorization"] == "Bearer oidc-access-token"
         assert headers["X-Skaha-Authentication-Type"] == "OIDC"
 
-    def test_x509_context_headers(self, skaha_client_fixture):
+    def test_x509_context_headers(self, skaha_client_fixture) -> None:
         """Test headers for X509 context authentication."""
         from pydantic import AnyHttpUrl, AnyUrl
 
@@ -509,7 +509,7 @@ class TestHTTPClientCreationAndHeaders:
         assert headers["X-Skaha-Authentication-Type"] == "X509"
         assert "Authorization" not in headers
 
-    def test_registry_headers(self, skaha_client_fixture):
+    def test_registry_headers(self, skaha_client_fixture) -> None:
         """Test headers with registry authentication."""
         registry = ContainerRegistry(username="test", secret="test")
         config = Configuration()
@@ -522,7 +522,7 @@ class TestHTTPClientCreationAndHeaders:
 
         assert "X-Skaha-Registry-Auth" in headers
 
-    def test_client_kwargs_timeout_and_concurrency(self, skaha_client_fixture):
+    def test_client_kwargs_timeout_and_concurrency(self, skaha_client_fixture) -> None:
         """Test that httpx clients are initialized with correct timeout and limits."""
         client = skaha_client_fixture(
             token=SecretStr("test-token"),
@@ -545,7 +545,7 @@ class TestHTTPClientCreationAndHeaders:
         assert "limits" in async_kwargs
         assert async_kwargs["limits"].max_connections == 16
 
-    def test_oidc_refresh_hook_added(self, skaha_client_fixture):
+    def test_oidc_refresh_hook_added(self, skaha_client_fixture) -> None:
         """Test that OIDC refresh hook is added for OIDC contexts."""
         from pydantic import AnyHttpUrl, AnyUrl
 
@@ -584,7 +584,7 @@ class TestHTTPClientCreationAndHeaders:
 class TestContextManagerBehavior:
     """Test context manager functionality."""
 
-    def test_sync_context_manager_enter_exit(self, skaha_client_fixture):
+    def test_sync_context_manager_enter_exit(self, skaha_client_fixture) -> None:
         """Test synchronous context manager entry and exit."""
         client = skaha_client_fixture(
             token=SecretStr("test-token"), url="https://example.com"
@@ -599,7 +599,7 @@ class TestContextManagerBehavior:
         # After exit, client should be closed
         assert client._client is None
 
-    def test_sync_session_context(self, skaha_client_fixture):
+    def test_sync_session_context(self, skaha_client_fixture) -> None:
         """Test synchronous session context manager."""
         client = skaha_client_fixture(
             token=SecretStr("test-token"), url="https://example.com"
@@ -611,7 +611,7 @@ class TestContextManagerBehavior:
         # After exit, client should be closed
         assert client._client is None
 
-    def test_close_sync_client(self, skaha_client_fixture):
+    def test_close_sync_client(self, skaha_client_fixture) -> None:
         """Test closing synchronous client."""
         client = skaha_client_fixture(
             token=SecretStr("test-token"), url="https://example.com"
@@ -625,7 +625,7 @@ class TestContextManagerBehavior:
         client._close()
         assert client._client is None
 
-    def test_close_sync_client_when_none(self, skaha_client_fixture):
+    def test_close_sync_client_when_none(self, skaha_client_fixture) -> None:
         """Test closing synchronous client when it's None."""
         client = skaha_client_fixture(
             token=SecretStr("test-token"), url="https://example.com"
@@ -638,7 +638,7 @@ class TestContextManagerBehavior:
         client._close()
         assert client._client is None
 
-    async def test_async_context_manager_enter_exit(self, skaha_client_fixture):
+    async def test_async_context_manager_enter_exit(self, skaha_client_fixture) -> None:
         """Test asynchronous context manager entry and exit."""
         client = skaha_client_fixture(
             token=SecretStr("test-token"), url="https://example.com"
@@ -653,7 +653,7 @@ class TestContextManagerBehavior:
         # After exit, asynclient should be closed
         assert client._asynclient is None
 
-    async def test_async_session_context(self, skaha_client_fixture):
+    async def test_async_session_context(self, skaha_client_fixture) -> None:
         """Test asynchronous session context manager."""
         client = skaha_client_fixture(
             token=SecretStr("test-token"), url="https://example.com"
@@ -665,7 +665,7 @@ class TestContextManagerBehavior:
         # After exit, asynclient should be closed
         assert client._asynclient is None
 
-    async def test_aclose_async_client(self, skaha_client_fixture):
+    async def test_aclose_async_client(self, skaha_client_fixture) -> None:
         """Test closing asynchronous client."""
         client = skaha_client_fixture(
             token=SecretStr("test-token"), url="https://example.com"
@@ -679,7 +679,7 @@ class TestContextManagerBehavior:
         await client._aclose()
         assert client._asynclient is None
 
-    async def test_aclose_async_client_when_none(self, skaha_client_fixture):
+    async def test_aclose_async_client_when_none(self, skaha_client_fixture) -> None:
         """Test closing asynchronous client when it's None."""
         client = skaha_client_fixture(
             token=SecretStr("test-token"), url="https://example.com"
@@ -696,7 +696,7 @@ class TestContextManagerBehavior:
 class TestSSLContextAndClientKwargs:
     """Test SSL context creation and client kwargs generation."""
 
-    def test_get_client_kwargs_with_certificate(self, skaha_client_fixture, tmp_path):
+    def test_get_client_kwargs_with_certificate(self, skaha_client_fixture, tmp_path) -> None:
         """Test client kwargs with certificate authentication."""
         cert_path = tmp_path / "test.pem"
         _create_test_certificate(cert_path)
@@ -707,7 +707,7 @@ class TestSSLContextAndClientKwargs:
         assert "verify" in kwargs
         assert isinstance(kwargs["verify"], ssl.SSLContext)
 
-    def test_get_ssl_context_valid_certificate(self, skaha_client_fixture, tmp_path):
+    def test_get_ssl_context_valid_certificate(self, skaha_client_fixture, tmp_path) -> None:
         """Test SSL context creation with valid certificate."""
         cert_path = tmp_path / "test.pem"
         _create_test_certificate(cert_path)
@@ -719,7 +719,7 @@ class TestSSLContextAndClientKwargs:
         assert ssl_context.minimum_version == ssl.TLSVersion.TLSv1_2
 
 
-def test_non_readable_certfile():
+def test_non_readable_certfile() -> None:
     """Test non-readable certificate file."""
     with tempfile.NamedTemporaryFile(delete=False) as temp:
         temp_path = temp.name

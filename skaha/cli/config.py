@@ -12,7 +12,7 @@ from skaha.models.config import Configuration
 config: typer.Typer = typer.Typer(
     cls=AliasGroup,
 )
-console = Console(width=80)
+console = Console(width=120)
 
 
 @config.command("show | list | ls")

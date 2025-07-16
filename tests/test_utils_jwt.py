@@ -8,7 +8,7 @@ import pytest
 from skaha.utils.jwt import expiry
 
 
-def test_expiry_with_valid_jwt():
+def test_expiry_with_valid_jwt() -> None:
     """Test expiry function with a valid JWT token."""
     # Create a mock JWT token with expiry
     header = {"alg": "HS256", "typ": "JWT"}
@@ -29,7 +29,7 @@ def test_expiry_with_valid_jwt():
     assert result == payload["exp"]
 
 
-def test_expiry_with_exp_in_header():
+def test_expiry_with_exp_in_header() -> None:
     """Test expiry function when exp is in header (edge case)."""
     # Create a mock JWT token with expiry in header
     header = {"alg": "HS256", "typ": "JWT", "exp": 9876543210}
@@ -50,7 +50,7 @@ def test_expiry_with_exp_in_header():
     assert result == header["exp"]
 
 
-def test_expiry_with_no_exp_field():
+def test_expiry_with_no_exp_field() -> None:
     """Test expiry function with JWT token that has no exp field."""
     # Create a mock JWT token without expiry
     header = {"alg": "HS256", "typ": "JWT"}
@@ -71,7 +71,7 @@ def test_expiry_with_no_exp_field():
         expiry(token)
 
 
-def test_expiry_with_invalid_json():
+def test_expiry_with_invalid_json() -> None:
     """Test expiry function with invalid JSON in JWT token."""
     # Create a token with invalid JSON
     header_encoded = base64.urlsafe_b64encode(b"invalid_json").decode().rstrip("=")

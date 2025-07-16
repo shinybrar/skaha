@@ -224,7 +224,7 @@ class TestCancelPendingTasks:
         """Test cancelling pending tasks."""
 
         # Create real async tasks that we can cancel
-        async def dummy_task():
+        async def dummy_task() -> None:
             await asyncio.sleep(10)  # Long sleep to ensure cancellation
 
         task1 = asyncio.create_task(dummy_task())
@@ -489,7 +489,7 @@ class TestRefreshFunction:
     """Test the async refresh function."""
 
     @pytest.mark.asyncio
-    async def test_refresh_success(self):
+    async def test_refresh_success(self) -> None:
         """Test successful async token refresh."""
         mock_response = MagicMock()
         mock_response.json.return_value = {"access_token": "new_access_token"}
@@ -510,7 +510,7 @@ class TestRefreshFunction:
             mock_client.post.assert_called_once()
 
     @pytest.mark.asyncio
-    async def test_refresh_http_error(self):
+    async def test_refresh_http_error(self) -> None:
         """Test async refresh with HTTP error (lines 179-182)."""
         mock_response = MagicMock()
         mock_response.raise_for_status.side_effect = httpx.HTTPStatusError(
@@ -531,7 +531,7 @@ class TestRefreshFunction:
                 )
 
     @pytest.mark.asyncio
-    async def test_refresh_key_error(self):
+    async def test_refresh_key_error(self) -> None:
         """Test async refresh with missing access token in response (lines 183-186)."""
         mock_response = MagicMock()
         mock_response.json.return_value = {"error": "invalid_grant"}
@@ -550,7 +550,7 @@ class TestRefreshFunction:
                 )
 
     @pytest.mark.asyncio
-    async def test_refresh_general_exception(self):
+    async def test_refresh_general_exception(self) -> None:
         """Test async refresh with general exception (lines 187-190)."""
         with patch("httpx.AsyncClient") as mock_client_class:
             mock_client_class.side_effect = Exception("Network error")
@@ -567,7 +567,7 @@ class TestRefreshFunction:
 class TestSyncRefreshFunction:
     """Test the sync refresh function."""
 
-    def test_sync_refresh_success(self):
+    def test_sync_refresh_success(self) -> None:
         """Test successful sync token refresh."""
         mock_response = MagicMock()
         mock_response.json.return_value = {"access_token": "new_access_token"}
@@ -587,7 +587,7 @@ class TestSyncRefreshFunction:
             assert result.get_secret_value() == "new_access_token"
             mock_client.post.assert_called_once()
 
-    def test_sync_refresh_http_error(self):
+    def test_sync_refresh_http_error(self) -> None:
         """Test sync refresh with HTTP error (lines 232-235)."""
         mock_response = MagicMock()
         mock_response.raise_for_status.side_effect = httpx.HTTPStatusError(
@@ -607,7 +607,7 @@ class TestSyncRefreshFunction:
                     token="refresh_token",
                 )
 
-    def test_sync_refresh_key_error(self):
+    def test_sync_refresh_key_error(self) -> None:
         """Test sync refresh with missing access token in response (lines 236-239)."""
         mock_response = MagicMock()
         mock_response.json.return_value = {"error": "invalid_grant"}
@@ -625,7 +625,7 @@ class TestSyncRefreshFunction:
                     token="refresh_token",
                 )
 
-    def test_sync_refresh_general_exception(self):
+    def test_sync_refresh_general_exception(self) -> None:
         """Test sync refresh with general exception (lines 240-242)."""
         with patch("httpx.Client") as mock_client_class:
             mock_client_class.side_effect = Exception("Network error")
