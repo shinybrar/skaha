@@ -9,7 +9,6 @@ repos:
           - types-defusedxml
           - types-PyYAML
           - httpx
-          - authlib
           - pydantic
           - pydantic_settings
           - rich
@@ -17,7 +16,7 @@ repos:
           - typer
           - cadcutils
           - questionary
-          - jwt
+          - humanize
         args: [--config-file=pyproject.toml]
 
   - repo: https://github.com/pre-commit/pre-commit-hooks

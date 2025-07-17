@@ -7,6 +7,7 @@ including specifications for creating and fetching sessions.
 from __future__ import annotations
 
 import warnings
+from datetime import datetime
 from typing import Any, get_args
 
 from pydantic import (
@@ -144,3 +145,28 @@ class FetchRequest(BaseModel):
     view: View | None = Field(None, description="Number of views.", examples=["all"])
 
     model_config = ConfigDict(validate_assignment=True, populate_by_name=True)
+
+
+class FetchResponse(BaseModel):
+    """Data model for a single session returned by the fetch API."""
+
+    id: str
+    userid: str
+    runAsUID: str
+    runAsGID: str
+    supplementalGroups: list[int]
+    appid: str
+    image: str
+    type: Kind
+    status: Status
+    name: str
+    startTime: datetime
+    expiryTime: datetime
+    connectURL: str
+    requestedRAM: str
+    requestedCPUCores: str
+    requestedGPUCores: str
+    ramInUse: str
+    gpuRAMInUse: str
+    cpuCoresInUse: str
+    gpuUtilization: str

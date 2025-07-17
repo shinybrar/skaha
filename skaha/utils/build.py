@@ -59,7 +59,10 @@ def create_parameters(
     if "env" not in data:
         data["env"] = {}
     for replica in range(replicas):
-        data["name"] = name + "-" + str(replica + 1)
+        if replicas == 1:
+            data["name"] = name
+        else:
+            data["name"] = name + "-" + str(replica + 1)
         data["env"]["REPLICA_ID"] = str(replica + 1)
         data["env"]["REPLICA_COUNT"] = str(replicas)
         payload = convert.dict_to_tuples(data)

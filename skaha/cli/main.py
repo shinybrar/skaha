@@ -7,6 +7,14 @@ from rich.console import Console
 
 from skaha.cli.auth import auth
 from skaha.cli.config import config
+from skaha.cli.create import create
+from skaha.cli.delete import delete
+from skaha.cli.events import events
+from skaha.cli.info import info
+from skaha.cli.logs import logs
+from skaha.cli.prune import prune
+from skaha.cli.ps import ps
+from skaha.cli.stats import stats
 from skaha.cli.version import version
 
 console = Console()
@@ -40,7 +48,63 @@ cli.add_typer(
     name="auth",
     help="Authenticate with Science Platform",
     no_args_is_help=True,
-    rich_help_panel="Core",
+    rich_help_panel="Auth Management",
+)
+
+cli.add_typer(
+    create,
+    name="create",
+    help="Create a new session.",
+    no_args_is_help=True,
+    rich_help_panel="Session Management",
+)
+
+cli.add_typer(
+    ps,
+    help="Show running sessions.",
+    no_args_is_help=False,
+    rich_help_panel="Session Management",
+)
+cli.add_typer(
+    events,
+    help="Show session events.",
+    no_args_is_help=False,
+    rich_help_panel="Session Management",
+)
+
+cli.add_typer(
+    info,
+    help="Show session info.",
+    no_args_is_help=False,
+    rich_help_panel="Session Management",
+)
+
+cli.add_typer(
+    stats,
+    help="Show cluster stats.",
+    no_args_is_help=False,
+    rich_help_panel="Cluster Information",
+)
+
+cli.add_typer(
+    logs,
+    help="Show session logs.",
+    no_args_is_help=False,
+    rich_help_panel="Session Management",
+)
+
+cli.add_typer(
+    delete,
+    help="Delete one or more sessions.",
+    no_args_is_help=True,
+    rich_help_panel="Session Management",
+)
+
+cli.add_typer(
+    prune,
+    help="Prune sessions by criteria.",
+    no_args_is_help=True,
+    rich_help_panel="Session Management",
 )
 
 cli.add_typer(
@@ -48,14 +112,14 @@ cli.add_typer(
     name="config",
     help="Manage configuration for client",
     no_args_is_help=True,
-    rich_help_panel="Info",
+    rich_help_panel="Client Info",
 )
 cli.add_typer(
     version,
     name="version",
     help="View client info",
     no_args_is_help=False,
-    rich_help_panel="Info",
+    rich_help_panel="Client Info",
 )
 
 
