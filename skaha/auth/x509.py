@@ -149,8 +149,8 @@ def expiry(path: Path = CERT_PATH) -> float:
     Returns:
         float: Expiry time as Unix timestamp (seconds since epoch).
     """
-    destination = path.resolve(strict=True)
     try:
+        destination = path.resolve(strict=True)
         data = destination.read_bytes()
         cert = x509.load_pem_x509_certificate(data, default_backend())
         now_utc = datetime.now(timezone.utc)
@@ -159,7 +159,7 @@ def expiry(path: Path = CERT_PATH) -> float:
         # Expiry as Unix timestamp
         return cert.not_valid_after_utc.timestamp()
     except Exception as err:
-        msg = f"{destination} not a valid: {err}"
+        msg = f"Failed to get expiry for {path}: {err}"
         log.debug(msg)
         return 0.0
 
