@@ -56,4 +56,8 @@ def prune_sessions(
         async with AsyncSession(loglevel=log_level) as session:
             response = await session.destroy_with(prefix=name, kind=kind, status=status)
             console.print(f"[bold green]Successfully pruned {len(response)} sessions.[/bold green]")
+            # Print the IDs of the deleted sessions
+            for session_id in response:
+                console.print(f"  - {session_id}")
+
     asyncio.run(_prune())
