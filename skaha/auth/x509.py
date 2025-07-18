@@ -146,9 +146,6 @@ def expiry(path: Path = CERT_PATH) -> float:
         path (Path, optional): Path to certificate file.
             Defaults to skaha.CERT_PATH, which is ~/.ssl/cadcproxy.pem.
 
-    Raises:
-        ValueError: If certificate cannot be read or parsed.
-
     Returns:
         float: Expiry time as Unix timestamp (seconds since epoch).
     """
@@ -160,9 +157,10 @@ def expiry(path: Path = CERT_PATH) -> float:
         assert cert.not_valid_after_utc > now_utc, f"{destination} has expired."
         assert cert.not_valid_before_utc < now_utc, f"{destination} is not yet valid."
         return cert.not_valid_after_utc.timestamp()
-    except Exception as err:
-        msg = f"{path.as_posix()} not a valid: {err}"
-        raise ValueError(msg) from err
+    except FileNotFoundError as err:
+        msg = f"x509 cert not found: {err}"
+        log.debug(msg)
+        return 0.0
 
 
 def authenticate(config: auth.X509) -> auth.X509:
