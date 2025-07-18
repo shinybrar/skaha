@@ -7,7 +7,7 @@ including specifications for creating and fetching sessions.
 from __future__ import annotations
 
 import warnings
-from datetime import datetime
+from datetime import datetime  # noqa: TC003
 from typing import Any, get_args
 
 from pydantic import (
@@ -147,6 +147,8 @@ class FetchRequest(BaseModel):
     model_config = ConfigDict(validate_assignment=True, populate_by_name=True)
 
 
+# This model is excluded from pep8-naming checks, since its the data shape
+# of the response from the server. See [tool.ruff.per-file-ignores] in pyproject.toml
 class FetchResponse(BaseModel):
     """Data model for a single session returned by the fetch API."""
 

@@ -208,6 +208,7 @@ ignore = [
     "S108",    # Probable insecure usage of temporary file/directory
 ]
 "docs/**/*.py" = ["INP001"]
+"skaha/models/session.py" = ["N815"]
 
 [tool.ruff.lint.isort]
 known-first-party = ["skaha"]
