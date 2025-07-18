@@ -22,6 +22,7 @@ from typing_extensions import Self
 
 from skaha import __version__, get_logger, set_log_level
 from skaha.auth import x509
+from skaha.exceptions.context import AuthContextError
 from skaha.hooks.httpx import auth, errors
 from skaha.models.config import Configuration
 
@@ -269,12 +270,17 @@ class SkahaClient(BaseSettings):
             kwargs["event_hooks"]["request"] = [refresher]
             return kwargs
 
-        if ctx.mode == "x509":
-            assert ctx.valid, "Invalid X509 context provided."
-            assert isinstance(ctx.path, Path), "X509 path must be a Path object."
-            kwargs["verify"] = self._get_ssl_context(ctx.path)
+        if ctx.mode in {"x509", "default"}:
+            assert isinstance(ctx.path, Path), "X509 path must be a pathlike object."
+            try:
+                x509.valid(ctx.path)
+                kwargs["verify"] = self._get_ssl_context(ctx.path)
+            except FileNotFoundError as err:
+                raise AuthContextError(
+                    self.config.active, f"x509 cert {ctx.path} does not exist."
+                ) from err
             return kwargs
-        return kwargs  # type: ignore [unreachable]
+        return kwargs
 
     def _get_ssl_context(self, source: Path) -> ssl.SSLContext:
         """Get SSL context from certificate file.
