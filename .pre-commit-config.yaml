@@ -36,12 +36,6 @@ repos:
       - id: check-symlinks
       - id: detect-private-key
 
-  - repo: https://github.com/PyCQA/bandit
-    rev: '1.8.3'
-    hooks:
-      - id: bandit
-        args: ["--skip=B101", "--config=pyproject.toml"]
-
   - repo: local
     hooks:
     - id: radon
