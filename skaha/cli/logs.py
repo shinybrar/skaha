@@ -45,11 +45,15 @@ def get_logs(
                 raise typer.Exit(1)
 
         if not all_logs:
-            console.print("[yellow]No logs found for the specified session(s).[/yellow]")
+            console.print(
+                "[yellow]No logs found for the specified session(s).[/yellow]"
+            )
             return
 
         for session_id, log_text in all_logs.items():
-            console.print(f"--- [bold deep_pink3] Logs for session {session_id} [/bold deep_pink3] ---")
+            console.print(
+                f"--- [bold deep_pink3] Logs for session {session_id} [/bold deep_pink3] ---"
+            )
             console.print(log_text)
 
     asyncio.run(_get_logs())

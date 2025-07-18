@@ -45,30 +45,25 @@ def delete_sessions(
     ] = False,
 ) -> None:
     """Delete one or more Skaha sessions."""
-    if not force:
-        should_delete = Confirm.ask(
-            f"Are you sure you want to delete {len(session_ids)} session(s)?"
+    if force:
+        proceed: bool = True
+    else:
+        proceed: bool = Confirm.ask(
+            f"Confirm deletion of {len(session_ids)} session(s)?",
+            console=console,
+            default=False,
         )
-        if not should_delete:
-            console.print("[yellow]Deletion cancelled.[/yellow]")
-            raise typer.Exit()
 
     async def _delete() -> None:
-        log_level = "DEBUG" if debug else "INFO"
-        async with AsyncSession(loglevel=log_level) as session:
+        async with AsyncSession(loglevel="DEBUG" if debug else "INFO") as session:
             try:
-                deleted_ids = await session.delete(ids=session_ids)
-                if deleted_ids:
-                    console.print(
-                        f"[bold green]Successfully deleted {len(deleted_ids)} session(s):[/bold green]"
-                    )
-                    for session_id in deleted_ids:
-                        console.print(f"  - {session_id}")
-                else:
-                    console.print("[bold red]Failed to delete session(s).[/bold red]")
-                    raise typer.Exit(1)
-            except Exception as e:
-                console.print(f"[bold red]Error during deletion: {e}[/bold red]")
-                raise typer.Exit(1)
+                deleted = await session.destroy(ids=session_ids)
+                console.print(
+                    f"[bold green]Successfully deleted {deleted} "
+                    f"session(s).[/bold green]"
+                )
+            except Exception as err:  # noqa: BLE001
+                console.print(f"[bold red]Error during deletion: {err}[/bold red]")
 
-    asyncio.run(_delete())
+    if proceed:
+        asyncio.run(_delete())

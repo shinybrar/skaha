@@ -9,6 +9,7 @@ class AuthContextError(Exception):
         self.message += f"\nReason: {reason}"
         super().__init__(self.message)
 
+
 class AuthExpiredError(Exception):
     """Raised when an authentication context is expired."""
 

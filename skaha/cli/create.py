@@ -72,8 +72,8 @@ def creation(
     ] = False,
 ) -> None:
     """Create a new Skaha session."""
-    cmd_str = command[0] if command else None
-    args_str = " ".join(command[1:]) if command and len(command) > 1 else None
+    cmd = command[0] if command else None
+    args = " ".join(command[1:]) if command and len(command) > 1 else None
 
     env_vars: dict[str, Any] = {}
     if env:
@@ -98,8 +98,8 @@ def creation(
                     ram=ram,
                     kind=kind,
                     gpu=gpu,
-                    cmd=cmd_str,
-                    args=args_str,
+                    cmd=cmd,
+                    args=args,
                     env=env_vars if env_vars else None,
                     replicas=replicas,
                 )
@@ -118,9 +118,7 @@ def creation(
                         )
                 else:
                     console.print("[bold red]Failed to create session(s).[/bold red] ")
-                    raise typer.Exit(1)
-            except Exception as e:
-                console.print(f"[bold red]Something went wrong: {e}[/bold red]")
-                raise typer.Exit(1)
+            except Exception as err:  # noqa: BLE001
+                console.print(f"[bold red]Something went wrong: {err}[/bold red]")
 
     asyncio.run(_create())

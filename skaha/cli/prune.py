@@ -6,12 +6,8 @@ import asyncio
 from typing import Annotated
 
 import typer
-from rich import box
 from rich.console import Console
-from rich.prompt import Confirm
-from rich.table import Table
 
-from skaha.models.session import FetchResponse
 from skaha.session import AsyncSession
 
 console = Console()
@@ -48,12 +44,17 @@ def prune_sessions(
 ) -> None:
     """Prune Skaha sessions based on name, kind, or status."""
     if not any([name, kind, status]):
-        console.print("[bold red]Error:[/bold red] At least one filter (--name, --kind, or --status) must be provided.")
+        console.print(
+            "[bold red]Error:[/bold red] At least one filter (--name, --kind, or --status) must be provided."
+        )
         raise typer.Exit(1)
 
     async def _prune() -> None:
         log_level = "DEBUG" if debug else "INFO"
         async with AsyncSession(loglevel=log_level) as session:
             response = await session.destroy_with(prefix=name, kind=kind, status=status)
-            console.print(f"[bold green]Successfully pruned {len(response)} sessions.[/bold green]")
+            console.print(
+                f"[bold green]Successfully pruned {len(response)} sessions.[/bold green]"
+            )
+
     asyncio.run(_prune())

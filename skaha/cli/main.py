@@ -16,6 +16,7 @@ from skaha.cli.prune import prune
 from skaha.cli.ps import ps
 from skaha.cli.stats import stats
 from skaha.cli.version import version
+from skaha.exceptions.context import AuthContextError
 
 console = Console()
 
@@ -125,7 +126,10 @@ cli.add_typer(
 
 def main() -> None:
     """Main entry point."""
-    cli()
+    try:
+        cli()
+    except AuthContextError as err:
+        console.print(err)
 
 
 if __name__ == "__main__":

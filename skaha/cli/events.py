@@ -7,9 +7,9 @@ import re
 from typing import Annotated
 
 import typer
+from rich import box
 from rich.console import Console
 from rich.table import Table
-from rich import box
 
 from skaha.session import AsyncSession
 
@@ -48,7 +48,9 @@ def get_events(
                 raise typer.Exit(1)
 
         if not all_events:
-            console.print("[yellow]No events found for the specified session(s).[/yellow]")
+            console.print(
+                "[yellow]No events found for the specified session(s).[/yellow]"
+            )
             return
 
         for event_dict in all_events:
@@ -66,10 +68,10 @@ def get_events(
                 table.add_column("Last-Seen")
 
                 # Split the event text into lines and skip the header
-                lines = event_text.strip().split('\n')[1:]
+                lines = event_text.strip().split("\n")[1:]
                 for line in lines:
                     # Use regex to split the line by multiple spaces
-                    parts = re.split(r'\s{2,}', line)
+                    parts = re.split(r"\s{2,}", line)
                     if len(parts) == 5:
                         table.add_row(*parts)
 

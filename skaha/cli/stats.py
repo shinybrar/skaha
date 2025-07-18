@@ -86,6 +86,8 @@ def get_stats(
         max_ram = ram.get("maxRAM", {}).get("ram", "N/A")
         console.print(main_table)
         console.print(f"[bold]Maximum Requests:[/bold] {max_cpu} Cores, {max_ram} RAM")
-        console.print("[dim]Based on best-case scenario, and may not be achievable.[/dim]")
+        console.print(
+            "[dim]Based on best-case scenario, and may not be achievable.[/dim]"
+        )
 
     asyncio.run(_get_stats())
