@@ -124,17 +124,17 @@ def valid(path: Path = CERT_PATH) -> str:
         ValueError: If certificate file is not a file.
         PermissionError: If certificate file is not readable.
     """
-    destination = path.resolve(strict=True)
-    if not destination.exists():
-        msg = f"{destination} does not exist."
-        raise FileNotFoundError(msg)
-    if not destination.is_file():
-        msg = f"{destination} is not a file."
-        raise ValueError(msg)
-    if not access(destination, R_OK):
-        msg = f"{destination} is not readable."
-        raise PermissionError(msg)
-    return destination.absolute().as_posix()
+    try:
+        destination = path.resolve(strict=True)
+        assert destination.is_file(), f"{destination} is not a file."
+        assert access(destination, R_OK), f"{destination} is not readable."
+        return destination.absolute().as_posix()
+    except (FileNotFoundError, AssertionError) as err:
+        msg = f"{path.as_posix()} does not exist."
+        raise FileNotFoundError(msg) from err
+    except PermissionError as err:
+        msg = f"{path.as_posix()} is not readable."
+        raise PermissionError(msg) from err
 
 
 def expiry(path: Path = CERT_PATH) -> float:
@@ -152,17 +152,16 @@ def expiry(path: Path = CERT_PATH) -> float:
     Returns:
         float: Expiry time as Unix timestamp (seconds since epoch).
     """
-    destination = path.resolve(strict=True)
     try:
+        destination = path.resolve(strict=True)
         data = destination.read_bytes()
         cert = x509.load_pem_x509_certificate(data, default_backend())
         now_utc = datetime.now(timezone.utc)
         assert cert.not_valid_after_utc > now_utc, f"{destination} has expired."
         assert cert.not_valid_before_utc < now_utc, f"{destination} is not yet valid."
-        # Expiry as Unix timestamp
         return cert.not_valid_after_utc.timestamp()
     except Exception as err:
-        msg = f"{destination} not a valid: {err}"
+        msg = f"{path.as_posix()} not a valid: {err}"
         raise ValueError(msg) from err
 
 
