@@ -7,8 +7,7 @@ import time
 from pathlib import Path  # noqa: TC003
 from typing import Annotated, Literal
 
-from pydantic import BaseModel, Field, model_validator
-from typing_extensions import Self
+from pydantic import BaseModel, Field
 
 from skaha import get_logger
 from skaha.auth import x509
@@ -139,16 +138,6 @@ class X509(BaseModel):
         Field(description="X509 server information"),
     ] = None
 
-    @model_validator(mode="after")
-    def _compute_expiry(self) -> Self:
-        """Compute expiry from certificate file if not already set."""
-        # Only compute if expiry is still the default value (0.0)
-        if self.path and math.isclose(self.expiry, 0.0, abs_tol=1e-9):
-            log.debug("Computing expiry from certificate file.")
-            results = x509.inspect(self.path)
-            self.expiry = results["expiry"]
-        return self
-
     @property
     def valid(self) -> bool:
         """Check if the certificate filepath is defined and expiry is in the future.
@@ -177,6 +166,7 @@ class X509(BaseModel):
             return True
         if math.isclose(self.expiry, 0.0, abs_tol=1e-9):
             self.expiry = x509.expiry(self.path)
+            log.debug("Computed expiry from certificate file.")
         return self.expiry < time.time()
 
 
