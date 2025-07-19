@@ -3,7 +3,8 @@
 from __future__ import annotations
 
 import asyncio
-from typing import Annotated
+from datetime import datetime, timezone
+from typing import Annotated, Any
 
 import humanize
 import typer
@@ -22,6 +23,83 @@ info = typer.Typer(
     no_args_is_help=True,
 )
 
+ALL_FIELDS: dict[str, str] = {
+    "id": "Session ID",
+    "name": "Name",
+    "status": "Status",
+    "type": "Type",
+    "image": "Image",
+    "userid": "User ID",
+    "startTime": "Start Time",
+    "expiryTime": "Expiry Time",
+    "connectURL": "Connect URL",
+    "runAsUID": "UID",
+    "runAsGID": "GID",
+    "supplementalGroups": "Groups",
+    "appid": "App ID",
+}
+
+
+def _format(field: str, value: Any) -> str:
+    """Format the value for display."""
+    if field == "startTime" and isinstance(value, datetime):
+        return humanize.naturaltime(value)
+    if field == "expiryTime" and isinstance(value, datetime):
+        now = datetime.now(timezone.utc)
+        return humanize.precisedelta(value - now, minimum_unit="hours")
+    return str(value)
+
+
+def _utilization(used: float | str, requested: float | str, unit: str) -> str:
+    """Calculate and format resource utilization."""
+    req_val = float(str(requested).replace("G", ""))
+    if req_val == 0:
+        return "[italic]Not Requested[/italic]"
+    usage = 0.0 if used == "<none>" else float(used)
+    percentage = (usage / req_val) * 100
+    return f"{percentage:.0f}% [italic]of {requested} {unit}[/italic]"
+
+
+def _display(session_info: dict[str, Any]) -> None:
+    """Display information for a single session."""
+    data = FetchResponse.model_validate(session_info)
+    table = Table(
+        title=f"Skaha Session Info for {data.id}",
+        box=box.SIMPLE,
+        show_header=False,
+    )
+    table.add_column("Field", style="bold magenta")
+    table.add_column("Value", overflow="fold")
+    for field, header in ALL_FIELDS.items():
+        value = getattr(data, field)
+        display_value = _format(field, value)
+        table.add_row(header, display_value)
+    cpu_usage = _utilization(data.cpuCoresInUse, data.requestedCPUCores, "core(s)")
+    ram_usage = _utilization(data.ramInUse, data.requestedRAM, "GB")
+    gpu_usage = _utilization(data.gpuRAMInUse, data.requestedGPUCores, "core(s)")
+
+    table.add_row("CPU Usage", cpu_usage)
+    table.add_row("RAM Usage", ram_usage)
+    table.add_row("GPU Usage", gpu_usage)
+    console.print(table)
+
+
+async def _get_info(
+    session_ids: list[str],
+    debug: bool,
+) -> None:
+    """Get detailed information about one or more sessions."""
+    log_level = "DEBUG" if debug else "INFO"
+    async with AsyncSession(loglevel=log_level) as session:
+        sessions_info = await session.info(ids=session_ids)
+    if not sessions_info:
+        console.print(
+            "[yellow]No information found for the specified session(s).[/yellow]"
+        )
+        return
+    for response in sessions_info:
+        _display(response)
+
 
 @info.callback(invoke_without_command=True)
 def get_info(
@@ -38,62 +116,4 @@ def get_info(
     ] = False,
 ) -> None:
     """Get detailed information about one or more sessions."""
-
-    async def _get_info() -> None:
-        log_level = "DEBUG" if debug else "INFO"
-        async with AsyncSession(loglevel=log_level) as session:
-            sessions_info = await session.info(ids=session_ids)
-        if not sessions_info:
-            console.print(
-                "[yellow]No information found for the specified session(s).[/yellow]"
-            )
-            return
-
-        field_map = {
-            "id": "ID",
-            "name": "Name",
-            "status": "Status",
-            "type": "Type",
-            "image": "Image",
-            "userid": "User ID",
-            "startTime": "Start Time",
-            "expiryTime": "Expiry Time",
-            "requestedRAM": "RAM (Req)",
-            "requestedCPUCores": "CPU (Req)",
-            "requestedGPUCores": "GPU (Req)",
-            "ramInUse": "RAM (Used)",
-            "cpuCoresInUse": "CPU (Used)",
-            "gpuRAMInUse": "GPU RAM (Used)",
-            "gpuUtilization": "GPU Utilization",
-            "connectURL": "Connect URL",
-            "runAsUID": "UID",
-            "runAsGID": "GID",
-            "supplementalGroups": "Groups",
-            "appid": "App ID",
-        }
-
-        table = Table(
-            title="Skaha Session Information",
-            box=box.SIMPLE,
-            show_header=True,
-            header_style="bold magenta",
-        )
-
-        for header in field_map.values():
-            table.add_column(header, overflow="fold")
-
-        for session_info_dict in sessions_info:
-            session_info = FetchResponse.model_validate(session_info_dict)
-            row = []
-            for field in field_map:
-                value = getattr(session_info, field)
-                if field in ["startTime", "expiryTime"]:
-                    display_value = humanize.naturaltime(value)
-                else:
-                    display_value = str(value)
-                row.append(display_value)
-            table.add_row(*row)
-
-        console.print(table)
-
-    asyncio.run(_get_info())
+    asyncio.run(_get_info(session_ids, debug))

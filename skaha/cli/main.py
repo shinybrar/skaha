@@ -12,6 +12,7 @@ from skaha.cli.delete import delete
 from skaha.cli.events import events
 from skaha.cli.info import info
 from skaha.cli.logs import logs
+from skaha.cli.open import open_command
 from skaha.cli.prune import prune
 from skaha.cli.ps import ps
 from skaha.cli.stats import stats
@@ -55,55 +56,63 @@ cli.add_typer(
 cli.add_typer(
     create,
     name="create",
-    help="Create a new session.",
+    help="Create a new session",
     no_args_is_help=True,
     rich_help_panel="Session Management",
 )
 
 cli.add_typer(
     ps,
-    help="Show running sessions.",
+    help="Show running sessions",
     no_args_is_help=False,
     rich_help_panel="Session Management",
 )
 cli.add_typer(
     events,
-    help="Show session events.",
+    help="Show session events",
     no_args_is_help=False,
     rich_help_panel="Session Management",
 )
 
 cli.add_typer(
     info,
-    help="Show session info.",
+    help="Show session info",
     no_args_is_help=False,
     rich_help_panel="Session Management",
 )
 
 cli.add_typer(
+    open_command,
+    name="open",
+    help="Open sessions in a browser",
+    no_args_is_help=True,
+    rich_help_panel="Session Management",
+)
+
+cli.add_typer(
     stats,
-    help="Show cluster stats.",
+    help="Show cluster stats",
     no_args_is_help=False,
     rich_help_panel="Cluster Information",
 )
 
 cli.add_typer(
     logs,
-    help="Show session logs.",
+    help="Show session logs",
     no_args_is_help=False,
     rich_help_panel="Session Management",
 )
 
 cli.add_typer(
     delete,
-    help="Delete one or more sessions.",
+    help="Delete one or more sessions",
     no_args_is_help=True,
     rich_help_panel="Session Management",
 )
 
 cli.add_typer(
     prune,
-    help="Prune sessions by criteria.",
+    help="Prune sessions by criteria",
     no_args_is_help=True,
     rich_help_panel="Session Management",
 )
@@ -111,7 +120,7 @@ cli.add_typer(
 cli.add_typer(
     config,
     name="config",
-    help="Manage configuration for client",
+    help="Manage client config",
     no_args_is_help=True,
     rich_help_panel="Client Info",
 )
