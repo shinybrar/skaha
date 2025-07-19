@@ -622,8 +622,8 @@ class AsyncSession(SkahaClient):
                 return response.text.rstrip("\r\n")
 
         tasks = [bounded(payload) for payload in payloads]
-
-        log.info("Creating {replicas} {kind} session[s].")
+        msg = f"Creating {replicas} {kind} session[s]."
+        log.info(msg)
         responses = await asyncio.gather(*tasks, return_exceptions=True)
         for reply in responses:
             if isinstance(reply, Exception):
