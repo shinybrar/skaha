@@ -32,3 +32,8 @@ def show() -> None:
     except Exception as error:
         console.print(f"[bold red]Error: {error}[/bold red]")
         raise typer.Exit(1) from error
+
+@config.command("path")
+def path() -> None:
+    """Displays the path to the configuration file."""
+    console.print(f"[green]{CONFIG_PATH}[/green]")
