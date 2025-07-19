@@ -31,8 +31,9 @@ COMMANDS = [
     ["version"],
 ]
 
+
 @pytest.mark.parametrize("command", COMMANDS)
 def test_cli_help(command: list[str]) -> None:
     """Test CLI commands with --help option."""
-    result = runner.invoke(cli, command + ["--help"])
+    result = runner.invoke(cli, [*command, "--help"])
     assert result.exit_code == 0
