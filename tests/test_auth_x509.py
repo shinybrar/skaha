@@ -135,7 +135,7 @@ def test_expiry_not_yet_valid() -> None:
     with tempfile.NamedTemporaryFile(suffix=".pem") as temp_cert:
         cert_path = Path(temp_cert.name)
         generate_cert(cert_path, not_before_days=2)
-        with pytest.raises(ValueError, match="is not yet valid"):
+        with pytest.raises(ValueError, match="is not yet valid."):
             x509_auth.expiry(cert_path)
 
 
@@ -145,7 +145,7 @@ def test_expiry_with_invalid_content() -> None:
         temp_cert.write("this is not a valid certificate")
         temp_cert.flush()
         cert_path = Path(temp_cert.name)
-        with pytest.raises(ValueError, match="not a valid"):
+        with pytest.raises(ValueError, match="Unable to load PEM file."):
             x509_auth.expiry(cert_path)
 
 

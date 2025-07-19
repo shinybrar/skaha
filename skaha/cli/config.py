@@ -33,6 +33,7 @@ def show() -> None:
         console.print(f"[bold red]Error: {error}[/bold red]")
         raise typer.Exit(1) from error
 
+
 @config.command("path")
 def path() -> None:
     """Displays the path to the configuration file."""

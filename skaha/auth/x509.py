@@ -126,15 +126,19 @@ def valid(path: Path = CERT_PATH) -> str:
     """
     try:
         destination = path.resolve(strict=True)
-        assert destination.is_file(), f"{destination} is not a file."
-        assert access(destination, R_OK), f"{destination} is not readable."
-        return destination.absolute().as_posix()
-    except (FileNotFoundError, AssertionError) as err:
+    except FileNotFoundError as err:
         msg = f"{path.as_posix()} does not exist."
         raise FileNotFoundError(msg) from err
-    except PermissionError as err:
-        msg = f"{path.as_posix()} is not readable."
-        raise PermissionError(msg) from err
+
+    if not destination.is_file():
+        msg = f"{destination} is not a file."
+        raise ValueError(msg)
+
+    if not access(destination, R_OK):
+        msg = f"{destination} is not readable."
+        raise PermissionError(msg)
+
+    return destination.absolute().as_posix()
 
 
 def expiry(path: Path = CERT_PATH) -> float:
@@ -148,19 +152,34 @@ def expiry(path: Path = CERT_PATH) -> float:
 
     Returns:
         float: Expiry time as Unix timestamp (seconds since epoch).
+
+    Raises:
+        ValueError: If certificate is expired, not yet valid, or cannot be parsed.
     """
     try:
         destination = path.resolve(strict=True)
         data = destination.read_bytes()
         cert = x509.load_pem_x509_certificate(data, default_backend())
         now_utc = datetime.now(timezone.utc)
-        assert cert.not_valid_after_utc > now_utc, f"{destination} has expired."
-        assert cert.not_valid_before_utc < now_utc, f"{destination} is not yet valid."
+
+        if cert.not_valid_after_utc <= now_utc:
+            msg = f"{destination} has expired."
+            raise ValueError(msg)  # noqa: TRY301
+
+        if cert.not_valid_before_utc >= now_utc:
+            msg = f"{destination} is not yet valid."
+            raise ValueError(msg)  # noqa: TRY301
+
         return cert.not_valid_after_utc.timestamp()
     except FileNotFoundError as err:
         msg = f"x509 cert not found: {err}"
         log.debug(msg)
         return 0.0
+    except Exception as err:
+        if isinstance(err, ValueError):
+            raise  # Re-raise ValueError for expired/not-yet-valid certificates
+        msg = f"Unable to load PEM file. {err}"
+        raise ValueError(msg) from err
 
 
 def authenticate(config: auth.X509) -> auth.X509:
@@ -182,5 +201,5 @@ def authenticate(config: auth.X509) -> auth.X509:
     except Exception as err:
         msg = f"Failed to authenticate with X509 certificate: {err}"
         raise ValueError(msg) from err
-    else:
-        return config
+
+    return config

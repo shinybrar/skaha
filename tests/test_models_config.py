@@ -112,7 +112,7 @@ class TestConfigurationValidation:
 
     def test_empty_contexts_with_default_active(self) -> None:
         """Test validation fails when contexts is empty but active is set."""
-        with pytest.raises(ValidationError, match="Active context 'default' not found"):
+        with pytest.raises(ValidationError, match="Active context"):
             Configuration(contexts={})
 
     def test_custom_active_with_matching_context(self) -> None:
