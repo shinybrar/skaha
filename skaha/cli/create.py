@@ -13,26 +13,50 @@ from skaha.models.types import Kind
 from skaha.session import AsyncSession
 from skaha.utils import funny
 
-CHOICES: list[str] = list(get_args(Kind))
-METAVAR = "|".join(CHOICES)
-
 console = Console()
+
+
+class CreateUsageMessage(typer.core.TyperGroup):
+    """Custom usage message for prune command.
+
+    Args:
+        typer (TyperGroup): Base class for grouping commands in Typer.
+    """
+
+    def get_usage(self, ctx: click.core.Context) -> str:  # noqa: ARG002
+        """Get the usage message for the prune command.
+
+        Args:
+            ctx (typer.Context): The Typer context.
+
+        Returns:
+            str: The usage message.
+        """
+        return "Usage: skaha create [OPTIONS] KIND IMAGE -- CMD [ARGS]... "
+
 
 create = typer.Typer(
     name="create",
     help="Create a new Skaha session.",
     no_args_is_help=True,
+    cls=CreateUsageMessage,
 )
 
 
-@create.callback(invoke_without_command=True)
+@create.callback(
+    invoke_without_command=True,
+    context_settings={
+        "help_option_names": ["-h", "--help"],
+        "allow_interspersed_args": True,
+    },
+)
 def creation(
     kind: Annotated[
-        str,
+        Kind,
         typer.Argument(
             ...,
-            click_type=click.Choice(CHOICES, case_sensitive=True),
-            metavar=METAVAR,
+            click_type=click.Choice(list(get_args(Kind)), case_sensitive=True),
+            metavar="|".join(list(get_args(Kind))),
             help="Session Kind.",
         ),
     ],
@@ -42,26 +66,26 @@ def creation(
     ],
     command: Annotated[
         list[str] | None,
-        typer.Argument(help="Runtime Command + Arguments."),
+        typer.Argument(help="Runtime Command + Arguments.", metavar="CMD [ARGS]..."),
     ] = None,
     name: Annotated[
         str, typer.Option("--name", "-n", help="Name of the session.")
     ] = funny.name(),
-    cores: Annotated[
-        int, typer.Option("--cores", "-c", help="Number of CPU cores.")
-    ] = 1,
-    ram: Annotated[int, typer.Option("--ram", "-r", help="Amount of RAM in GB.")] = 2,
+    cpus: Annotated[int, typer.Option("--cpus", "-c", help="Number of CPU cores.")] = 1,
+    memory: Annotated[
+        int, typer.Option("--memory", "-m", help="Amount of RAM in GB.")
+    ] = 2,
     gpu: Annotated[
         int | None, typer.Option("--gpu", "-g", help="Number of GPUs.")
     ] = None,
     env: Annotated[
         list[str] | None,
         typer.Option(
-            "--env", "-e", help="Penvironment variables (e.g., --env KEY=VALUE)."
+            "--env", "-e", help="Environment variables (e.g., --env KEY=VALUE)."
         ),
     ] = None,
     replicas: Annotated[
-        int, typer.Option("--replicas", help="Number of replicas to create.")
+        int, typer.Option("--replicas", "-r", help="Number of replicas to create.")
     ] = 1,
     debug: Annotated[
         bool,
@@ -70,21 +94,32 @@ def creation(
             help="Enable debug logging.",
         ),
     ] = False,
+    dry: Annotated[
+        bool,
+        typer.Option(
+            "--dry-run",
+            help="Perform a dry run without actually creating the session.",
+        ),
+    ] = False,
 ) -> None:
     """Create a new Skaha session."""
-    cmd = command[0] if command else None
-    args = " ".join(command[1:]) if command and len(command) > 1 else None
+    cmd = None
+    args = ""
+    environment: dict[str, Any] = {}
 
-    env_vars: dict[str, Any] = {}
+    if command and len(command) > 0:
+        cmd = command[0]
+        args = " ".join(command[1:])
+
     if env:
         for item in env:
             if "=" not in item:
                 console.print(
-                    f"[bold red] Invalid environment variable format: {item}[/bold red]"
+                    f"[bold red]Error:[/bold red] Invalid env variable: {item}"
                 )
                 raise typer.Exit(1)
             key, value = item.split("=", 1)
-            env_vars[key] = value
+            environment[key] = value
 
     async def _create() -> None:
         log_level = "DEBUG" if debug else "INFO"
@@ -94,13 +129,13 @@ def creation(
                 session_ids = await session.create(
                     name=name,
                     image=image,
-                    cores=cores,
-                    ram=ram,
+                    cores=cpus,
+                    ram=memory,
                     kind=kind,
                     gpu=gpu,
-                    cmd=cmd,
-                    args=args,
-                    env=env_vars if env_vars else None,
+                    cmd=cmd if cmd else None,
+                    args=args if args else None,
+                    env=environment if environment else None,
                     replicas=replicas,
                 )
                 if session_ids:
@@ -111,14 +146,38 @@ def creation(
                         )
                         for session_id in session_ids:
                             console.print(f"  - {session_id}")
-                    else:
-                        console.print(
-                            f"[bold green]Successfully created session "
-                            f"'{name}' (ID: {session_ids[0]})[/bold green]"
-                        )
-                else:
-                    console.print("[bold red]Failed to create session(s).[/bold red] ")
+                        return
+
+                    console.print(
+                        f"[bold green]Successfully created session "
+                        f"'{name}' (ID: {session_ids[0]})[/bold green]"
+                    )
+                    return
+                console.print("[bold red]Failed to create session(s).[/bold red]")
+            except KeyboardInterrupt:
+                console.print(
+                    "\n[bold yellow]Operation cancelled by user.[/bold yellow]"
+                )
+                raise typer.Exit(130) from KeyboardInterrupt
             except Exception as err:  # noqa: BLE001
-                console.print(f"[bold red]Something went wrong: {err}[/bold red]")
+                console.print(f"[bold red]Error: {err}[/bold red]")
+                console.print_exception()
+            raise typer.Exit(1)
+
+    if dry or debug:
+        console.print("[dim]Debug: Parsed parameters:[/dim]")
+        console.print(f"[dim]  Kind: {kind}[/dim]")
+        console.print(f"[dim]  Image: {image}[/dim]")
+        console.print(f"[dim]  Name: {name}[/dim]")
+        console.print(f"[dim]  CPUs: {cpus}[/dim]")
+        console.print(f"[dim]  Memory: {memory}GB[/dim]")
+        console.print(f"[dim]  GPU: {gpu}[/dim]")
+        console.print(f"[dim]  Env: {environment}[/dim]")
+        console.print(f"[dim]  Replicas: {replicas}[/dim]")
+        console.print(f"[dim]  Command: {cmd}[/dim]")
+        console.print(f"[dim]  Arguments: {args}[/dim]")
+    if dry:
+        console.print("[yellow]Dry run complete.[/yellow]")
+        return
 
     asyncio.run(_create())

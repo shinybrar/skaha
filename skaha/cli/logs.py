@@ -42,7 +42,7 @@ def get_logs(
                 all_logs = await session.logs(ids=session_ids)
             except Exception as e:
                 console.print(f"[bold red]Error:[/bold red] Could not fetch logs. {e}")
-                raise typer.Exit(1)
+                raise typer.Exit(1) from e
 
         if not all_logs:
             console.print(
@@ -52,7 +52,7 @@ def get_logs(
 
         for session_id, log_text in all_logs.items():
             console.print(
-                f"--- [bold deep_pink3] Logs for session {session_id} [/bold deep_pink3] ---"
+                f"\n[bold magenta] Logs for session {session_id} [/bold magenta]\n"
             )
             console.print(log_text)
 

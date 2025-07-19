@@ -94,6 +94,7 @@ def login(
     """
     if debug:
         set_log_level("DEBUG")
+        log.debug("Debug logging enabled")
 
     try:
         console.print("[bold blue]Starting Science Platform Login[/bold blue]")

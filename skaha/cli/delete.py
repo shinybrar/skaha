@@ -48,7 +48,7 @@ def delete_sessions(
     if force:
         proceed: bool = True
     else:
-        proceed: bool = Confirm.ask(
+        proceed = Confirm.ask(
             f"Confirm deletion of {len(session_ids)} session(s)?",
             console=console,
             default=False,

@@ -35,26 +35,22 @@ def get_stats(
 
     async def _get_stats() -> None:
         log_level = "DEBUG" if debug else "INFO"
-        try:
-            async with AsyncSession(loglevel=log_level) as session:
-                stats_data = await session.stats()
-        except Exception as e:
-            console.print(f"[bold red]Error:[/bold red] Could not fetch stats. {e}")
-            raise typer.Exit(1)
+        async with AsyncSession(loglevel=log_level) as session:
+            data = await session.stats()
 
         # Main table
-        main_table = Table(
+        table = Table(
             title="Skaha Cluster Usage Statistics",
             box=box.SIMPLE,
             show_header=True,
             header_style="bold blue",
         )
-        main_table.add_column("Instances", justify="center")
-        main_table.add_column("CPU", justify="center")
-        main_table.add_column("RAM", justify="center")
+        table.add_column("Instances", justify="center")
+        table.add_column("CPU", justify="center")
+        table.add_column("RAM", justify="center")
 
         # Nested table for Instances
-        instances = stats_data.get("instances", {})
+        instances = data.get("instances", {})
         instances_table = Table(box=box.MINIMAL, show_header=False)
         instances_table.add_column("Kind", justify="left")
         instances_table.add_column("Count", justify="left")
@@ -63,7 +59,7 @@ def get_stats(
             instances_table.add_row(key.capitalize(), str(value), style=style)
 
         # Nested table for Cores
-        cores = stats_data.get("cores", {})
+        cores = data.get("cores", {})
         cores_table = Table(box=box.MINIMAL, show_header=False)
         cores_table.add_column("Metric", justify="left")
         cores_table.add_column("Value", justify="left")
@@ -71,7 +67,7 @@ def get_stats(
         cores_table.add_row("Available", f"{cores.get('cpuCoresAvailable', 'N/A')}")
 
         # Nested table for RAM
-        ram = stats_data.get("ram", {})
+        ram = data.get("ram", {})
         ram_table = Table(box=box.MINIMAL, show_header=False)
         ram_table.add_column("Metric", justify="left")
         ram_table.add_column("Value", justify="left")
@@ -79,13 +75,15 @@ def get_stats(
         ram_table.add_row("Available", f"{ram.get('ramAvailable', 'N/A')}")
 
         # Add the first row with nested tables
-        main_table.add_row(instances_table, cores_table, ram_table)
+        table.add_row(instances_table, cores_table, ram_table)
 
         # Add the second row with max session size
         max_cpu = cores.get("maxCPUCores", {}).get("cpuCores", "N/A")
         max_ram = ram.get("maxRAM", {}).get("ram", "N/A")
-        console.print(main_table)
-        console.print(f"[bold]Maximum Requests:[/bold] {max_cpu} Cores, {max_ram} RAM")
+        console.print(table)
+        console.print(
+            f"[bold]Maximum Requests Size:[/bold] {max_cpu} Cores or {max_ram} RAM"
+        )
         console.print(
             "[dim]Based on best-case scenario, and may not be achievable.[/dim]"
         )

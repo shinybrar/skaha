@@ -41,11 +41,7 @@ def get_events(
     async def _get_events() -> None:
         log_level = "DEBUG" if debug else "INFO"
         async with AsyncSession(loglevel=log_level) as session:
-            try:
-                all_events = await session.events(ids=session_ids)
-            except Exception as e:
-                console.print(f"[bold red]Could not fetch events. {e}[/bold red]")
-                raise typer.Exit(1)
+            all_events = await session.events(ids=session_ids)
 
         if not all_events:
             console.print(
@@ -53,8 +49,8 @@ def get_events(
             )
             return
 
-        for event_dict in all_events:
-            for session_id, event_text in event_dict.items():
+        for event in all_events:
+            for session_id, event_text in event.items():
                 table = Table(
                     title=f"[blue]Server events for [bold]{session_id}[/bold] [/blue]",
                     show_header=True,

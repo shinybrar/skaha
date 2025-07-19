@@ -42,14 +42,7 @@ def get_info(
     async def _get_info() -> None:
         log_level = "DEBUG" if debug else "INFO"
         async with AsyncSession(loglevel=log_level) as session:
-            try:
-                sessions_info = await session.info(ids=session_ids)
-            except Exception as e:
-                console.print(
-                    f"[bold red]Error:[/bold red] Could not fetch session info. {e}"
-                )
-                raise typer.Exit(1)
-
+            sessions_info = await session.info(ids=session_ids)
         if not sessions_info:
             console.print(
                 "[yellow]No information found for the specified session(s).[/yellow]"

@@ -4,8 +4,9 @@ from __future__ import annotations
 
 import asyncio
 from datetime import datetime, timezone
-from typing import Annotated
+from typing import Annotated, get_args
 
+import click
 import humanize
 import typer
 from rich import box
@@ -13,6 +14,7 @@ from rich.console import Console
 from rich.table import Table
 
 from skaha.models.session import FetchResponse
+from skaha.models.types import Kind, Status
 from skaha.session import AsyncSession
 
 console = Console()
@@ -37,12 +39,24 @@ def list_sessions(
         typer.Option("--quiet", "-q", help="Only show session IDs."),
     ] = False,
     kind: Annotated[
-        str | None,
-        typer.Option("--kind", "-k", help="Filter by session kind."),
+        Kind | None,
+        typer.Option(
+            "--kind",
+            "-k",
+            click_type=click.Choice(list(get_args(Kind)), case_sensitive=True),
+            metavar="|".join(get_args(Kind)),
+            help="Filter by session kind.",
+        ),
     ] = None,
     status: Annotated[
-        str | None,
-        typer.Option("--status", "-s", help="Filter by session status."),
+        Status | None,
+        typer.Option(
+            "--status",
+            "-s",
+            click_type=click.Choice(list(get_args(Status)), case_sensitive=True),
+            metavar="|".join(get_args(Status)),
+            help="Filter by session status.",
+        ),
     ] = None,
     debug: Annotated[
         bool,
@@ -55,6 +69,7 @@ def list_sessions(
     """List sessions."""
 
     async def _list_sessions() -> None:
+        """Asynchronous function to list sessions."""
         log_level = "DEBUG" if debug else "INFO"
         async with AsyncSession(loglevel=log_level) as session:
             sessions: list[FetchResponse] = []
