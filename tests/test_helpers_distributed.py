@@ -2,8 +2,6 @@
 
 from __future__ import annotations
 
-import os
-from unittest.mock import patch
 from typing import Any
 
 import pytest
@@ -34,17 +32,17 @@ def sample_string() -> str:
 def test_stripe_basic_functionality() -> None:
     """Test stripe function with basic parameters."""
     data = list(range(10))
-    
+
     # Test replica 1 of 3
     result = list(stripe(data, replica=1, total=3))
     expected = [0, 3, 6, 9]  # indices 0, 3, 6, 9
     assert result == expected
-    
+
     # Test replica 2 of 3
     result = list(stripe(data, replica=2, total=3))
     expected = [1, 4, 7]  # indices 1, 4, 7
     assert result == expected
-    
+
     # Test replica 3 of 3
     result = list(stripe(data, replica=3, total=3))
     expected = [2, 5, 8]  # indices 2, 5, 8
@@ -61,15 +59,15 @@ def test_stripe_single_replica() -> None:
 def test_stripe_more_replicas_than_items() -> None:
     """Test stripe function when total replicas exceed item count."""
     data = [1, 2, 3]
-    
+
     # Replica 1 should get item 0
     result = list(stripe(data, replica=1, total=5))
     assert result == [1]
-    
+
     # Replica 2 should get item 1
     result = list(stripe(data, replica=2, total=5))
     assert result == [2]
-    
+
     # Replica 4 should get nothing
     result = list(stripe(data, replica=4, total=5))
     assert result == []
@@ -85,13 +83,13 @@ def test_stripe_with_different_types(sample_string: str) -> None:
     """Test stripe function with different iterable types."""
     # Test with string
     result = list(stripe(sample_string, replica=1, total=5))
-    expected = ['a', 'f', 'k', 'p', 'u', 'z']  # indices 0, 5, 10, 15, 20, 25
+    expected = ["a", "f", "k", "p", "u", "z"]  # indices 0, 5, 10, 15, 20, 25
     assert result == expected
-    
+
     # Test with generator
     def gen() -> Any:
         yield from range(10)
-    
+
     result = list(stripe(gen(), replica=2, total=3))
     expected = [1, 4, 7]
     assert result == expected
@@ -128,17 +126,17 @@ def test_stripe_environment_defaults_fallback() -> None:
 def test_chunk_basic_functionality() -> None:
     """Test chunk function with basic parameters."""
     data = list(range(12))
-    
+
     # Test replica 0 of 3 (first chunk)
     result = list(chunk(data, replica=0, total=3))
     expected = [0, 1, 2, 3]  # first 4 items
     assert result == expected
-    
+
     # Test replica 1 of 3 (second chunk)
     result = list(chunk(data, replica=1, total=3))
     expected = [4, 5, 6, 7]  # next 4 items
     assert result == expected
-    
+
     # Test replica 2 of 3 (last chunk)
     result = list(chunk(data, replica=2, total=3))
     expected = [8, 9, 10, 11]  # last 4 items
@@ -148,16 +146,16 @@ def test_chunk_basic_functionality() -> None:
 def test_chunk_uneven_division() -> None:
     """Test chunk function when items don't divide evenly."""
     data = list(range(10))  # 10 items, 3 chunks
-    
+
     # First two chunks get 3 items each (10 // 3 = 3)
     result = list(chunk(data, replica=0, total=3))
     expected = [0, 1, 2]
     assert result == expected
-    
+
     result = list(chunk(data, replica=1, total=3))
     expected = [3, 4, 5]
     assert result == expected
-    
+
     # Last chunk gets remainder (3 + 1 = 4 items)
     result = list(chunk(data, replica=2, total=3))
     expected = [6, 7, 8, 9]
@@ -174,11 +172,11 @@ def test_chunk_single_chunk() -> None:
 def test_chunk_more_chunks_than_items() -> None:
     """Test chunk function when total chunks exceed item count."""
     data = [1, 2, 3]
-    
+
     # Each chunk should get at most 1 item (3 // 5 = 0, but last chunk gets remainder)
     result = list(chunk(data, replica=0, total=5))
     assert result == []
-    
+
     result = list(chunk(data, replica=4, total=5))  # Last replica gets all items
     assert result == [1, 2, 3]
 
@@ -195,7 +193,7 @@ def test_chunk_with_different_types(sample_string: str) -> None:
     result = list(chunk(sample_string, replica=0, total=3))
     expected = list("abcdefgh")  # first 8 chars
     assert result == expected
-    
+
     result = list(chunk(sample_string, replica=2, total=3))
     expected = list("qrstuvwxyz")  # last 10 chars
     assert result == expected
@@ -235,17 +233,17 @@ def test_stripe_vs_chunk_coverage() -> None:
     """Test that stripe and chunk together cover all items exactly once."""
     data = list(range(20))
     total = 4
-    
+
     # Collect all items from stripe
     stripe_items = []
     for replica in range(1, total + 1):
         stripe_items.extend(stripe(data, replica=replica, total=total))
-    
-    # Collect all items from chunk  
+
+    # Collect all items from chunk
     chunk_items = []
     for replica in range(total):
         chunk_items.extend(chunk(data, replica=replica, total=total))
-    
+
     # Both should cover all items exactly once
     assert sorted(stripe_items) == data
     assert sorted(chunk_items) == data
@@ -255,12 +253,12 @@ def test_stripe_vs_chunk_no_overlap() -> None:
     """Test that stripe partitions have no overlap."""
     data = list(range(15))
     total = 3
-    
+
     partitions = []
     for replica in range(1, total + 1):
         partition = list(stripe(data, replica=replica, total=total))
         partitions.append(set(partition))
-    
+
     # Check no overlap between partitions
     for i in range(len(partitions)):
         for j in range(i + 1, len(partitions)):

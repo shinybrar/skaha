@@ -160,7 +160,9 @@ def show() -> None:
     """Show all available auth contexts."""
     config = Configuration()
     table = Table(
-        title="Available Authentication Contexts", show_lines=True, box=box.MINIMAL
+        title="Available Authentication Contexts",
+        show_lines=True,
+        box=box.SIMPLE,
     )
     table.add_column("Active", justify="center", style="cyan")
     table.add_column("Name", style="magenta")

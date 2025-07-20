@@ -107,9 +107,9 @@ nav:
     - Updates: updates.md
     - Changelog: changelog.md
   - Get Started:
-    - Quick Start: quick-start.md
-    - Installation: get-started.md
-    - Authentication: authentication-contexts.md
+    - 5-Minute Tutorial: quick-start.md
+    - Installation & Setup: get-started.md
+    - Authentication Guide: authentication-contexts.md
   - Examples:
     - Basic: examples.md
     - Advanced: advanced-examples.md
@@ -128,7 +128,6 @@ nav:
     - Code of Conduct: conduct.md
     - OpenSSF Report: https://scorecard.dev/viewer/?uri=github.com/shinybrar/skaha
     - License: license.md
-  - Bug Reports: 
+  - Bug Reports:
     - Bugs: bug-reports.md
     - Security Issues: security.md
-  
