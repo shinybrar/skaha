@@ -234,7 +234,7 @@ class Session(SkahaClient):
             replicas,
         )
         results: list[str] = []
-        log.info("Creating %d %s session[s].", replicas, kind)
+        log.debug("Creating %d %s session[s].", replicas, kind)
         for payload in payloads:
             try:
                 response: Response = self.client.post(url="session", params=payload)
@@ -623,7 +623,7 @@ class AsyncSession(SkahaClient):
 
         tasks = [bounded(payload) for payload in payloads]
         msg = f"Creating {replicas} {kind} session[s]."
-        log.info(msg)
+        log.debug(msg)
         responses = await asyncio.gather(*tasks, return_exceptions=True)
         for reply in responses:
             if isinstance(reply, Exception):
