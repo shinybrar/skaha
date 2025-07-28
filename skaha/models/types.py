@@ -13,7 +13,9 @@ Kind: TypeAlias = Literal[
 ]
 """Session type constants (new lowercase style)."""
 
-Status: TypeAlias = Literal["Pending", "Running", "Terminating", "Succeeded", "Error"]
+Status: TypeAlias = Literal[
+    "Pending", "Running", "Terminating", "Succeeded", "Error", "Failed"
+]
 """Session status constants."""
 
 View: TypeAlias = Literal["all"]
