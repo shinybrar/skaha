@@ -18,6 +18,7 @@ from skaha.cli.ps import ps
 from skaha.cli.stats import stats
 from skaha.cli.version import version
 from skaha.exceptions.context import AuthContextError
+from skaha.hooks.typer.aliases import AliasGroup
 
 console = Console()
 
@@ -43,6 +44,7 @@ cli: typer.Typer = typer.Typer(
     rich_help_panel="Skaha CLI Commands",
     callback=callback,
     invoke_without_command=True,  # Allow callback to be called without subcommand
+    cls=AliasGroup,
 )
 
 cli.add_typer(
