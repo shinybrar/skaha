@@ -673,19 +673,6 @@
         
       
       
-        <label class="md-nav__link md-nav__link--active" for="__toc">
-          
-  
-  
-  <span class="md-ellipsis">
-    Advanced
-    
-  </span>
-  
-
-          <span class="md-nav__icon md-icon"></span>
-        </label>
-      
       <a href="./" class="md-nav__link md-nav__link--active">
         
   
@@ -697,67 +684,6 @@
   
 
       </a>
-      
-        
-
-<nav class="md-nav md-nav--secondary" aria-label="Table of contents">
-  
-  
-  
-    
-  
-  
-    <label class="md-nav__title" for="__toc">
-      <span class="md-nav__icon md-icon"></span>
-      Table of contents
-    </label>
-    <ul class="md-nav__list" data-md-component="toc" data-md-scrollfix>
-      
-        <li class="md-nav__item">
-  <a href="#massively-parallel-processing" class="md-nav__link">
-    <span class="md-ellipsis">
-      Massively Parallel Processing
-    </span>
-  </a>
-  
-    <nav class="md-nav" aria-label="Massively Parallel Processing">
-      <ul class="md-nav__list">
-        
-          <li class="md-nav__item">
-  <a href="#launching-analysis-with-python-api" class="md-nav__link">
-    <span class="md-ellipsis">
-      Launching Analysis with Python API
-    </span>
-  </a>
-  
-</li>
-        
-          <li class="md-nav__item">
-  <a href="#launching-analysis-with-cli" class="md-nav__link">
-    <span class="md-ellipsis">
-      Launching Analysis with CLI
-    </span>
-  </a>
-  
-</li>
-        
-      </ul>
-    </nav>
-  
-</li>
-      
-        <li class="md-nav__item">
-  <a href="#varying-file-sizes" class="md-nav__link">
-    <span class="md-ellipsis">
-      Varying File Sizes
-    </span>
-  </a>
-  
-</li>
-      
-    </ul>
-  
-</nav>
       
     </li>
   
@@ -979,56 +905,6 @@
     
   
   
-    <label class="md-nav__title" for="__toc">
-      <span class="md-nav__icon md-icon"></span>
-      Table of contents
-    </label>
-    <ul class="md-nav__list" data-md-component="toc" data-md-scrollfix>
-      
-        <li class="md-nav__item">
-  <a href="#massively-parallel-processing" class="md-nav__link">
-    <span class="md-ellipsis">
-      Massively Parallel Processing
-    </span>
-  </a>
-  
-    <nav class="md-nav" aria-label="Massively Parallel Processing">
-      <ul class="md-nav__list">
-        
-          <li class="md-nav__item">
-  <a href="#launching-analysis-with-python-api" class="md-nav__link">
-    <span class="md-ellipsis">
-      Launching Analysis with Python API
-    </span>
-  </a>
-  
-</li>
-        
-          <li class="md-nav__item">
-  <a href="#launching-analysis-with-cli" class="md-nav__link">
-    <span class="md-ellipsis">
-      Launching Analysis with CLI
-    </span>
-  </a>
-  
-</li>
-        
-      </ul>
-    </nav>
-  
-</li>
-      
-        <li class="md-nav__item">
-  <a href="#varying-file-sizes" class="md-nav__link">
-    <span class="md-ellipsis">
-      Varying File Sizes
-    </span>
-  </a>
-  
-</li>
-      
-    </ul>
-  
 </nav>
                   </div>
                 </div>
@@ -1048,14 +924,26 @@
 
 <h1 id="advanced-examples">Advanced Examples<a class="headerlink" href="#advanced-examples" title="Permanent link">&para;</a></h1>
 <p>Complex use cases and power-user examples for Skaha and the CANFAR Science Platform.</p>
+<h1 id="quick-start">Quick Start<a class="headerlink" href="#quick-start" title="Permanent link">&para;</a></h1>
+<div class="admonition info">
+<p class="admonition-title">Info</p>
+<p>Skaha automatically sets these environment variables in each container:</p>
+<ul>
+<li><code>REPLICA_ID</code>: Current container ID (1, 2, 3, ...)</li>
+<li><code>REPLICA_COUNT</code>: Total number of containers</li>
+</ul>
+</div>
 <h2 id="massively-parallel-processing">Massively Parallel Processing<a class="headerlink" href="#massively-parallel-processing" title="Permanent link">&para;</a></h2>
-<p>Lets assume you have a large dataset of 1000 FITS files that you want to process in parallel. You have a Python script that can process a single FITS file, and you want to run this script in parallel on 100 different Skaha sessions.</p>
+<p>Let's assume you have a large dataset of 1000 FITS files that you want to process in parallel. You have a Python script that can process a single FITS file, and you want to run this script in parallel on 100 different Skaha sessions.</p>
 <div class="highlight"><span class="filename">batch_processing.py</span><pre><span></span><code><span class="kn">from</span><span class="w"> </span><span class="nn">skaha.helpers</span><span class="w"> </span><span class="kn">import</span> <span class="n">distributed</span>
-<span class="kn">from</span><span class="w"> </span><span class="nn">regex</span><span class="w"> </span><span class="kn">import</span> <span class="n">findall</span>
+<span class="kn">from</span><span class="w"> </span><span class="nn">glob</span><span class="w"> </span><span class="kn">import</span> <span class="n">glob</span>
 <span class="kn">from</span><span class="w"> </span><span class="nn">your.code</span><span class="w"> </span><span class="kn">import</span> <span class="n">process_datafile</span>
 
-<span class="n">datafiles</span> <span class="o">=</span> <span class="n">findall</span><span class="p">(</span><span class="s2">&quot;/path/to/data/files/*.fits&quot;</span><span class="p">)</span>
+<span class="c1"># Find all FITS files to process</span>
+<span class="n">datafiles</span> <span class="o">=</span> <span class="n">glob</span><span class="p">(</span><span class="s2">&quot;/path/to/data/files/*.fits&quot;</span><span class="p">)</span>
 
+<span class="c1"># Each replica processes its assigned chunk of files</span>
+<span class="c1"># The chunk function automatically handles 1-based REPLICA_ID values</span>
 <span class="k">for</span> <span class="n">datafile</span> <span class="ow">in</span> <span class="n">distributed</span><span class="o">.</span><span class="n">chunk</span><span class="p">(</span><span class="n">datafiles</span><span class="p">):</span>
     <span class="n">process_datafile</span><span class="p">(</span><span class="n">datafile</span><span class="p">)</span>
 </code></pre></div>
@@ -1076,11 +964,129 @@
     <span class="k">return</span> <span class="n">sessions</span>
 </code></pre></div>
 <h3 id="launching-analysis-with-cli">Launching Analysis with CLI<a class="headerlink" href="#launching-analysis-with-cli" title="Permanent link">&para;</a></h3>
-<div class="highlight"><span class="filename">Large-Scale Parallel Processing</span><pre><span></span><code>skaha<span class="w"> </span>create<span class="w"> </span>--cores<span class="w"> </span><span class="m">8</span><span class="w"> </span>--memory<span class="w"> </span><span class="m">32</span><span class="w"> </span>--replicas<span class="w"> </span><span class="m">100</span><span class="w"> </span>--name<span class="w"> </span>fits-processing<span class="w"> </span>headless<span class="w"> </span>images.canfar.net/your/analysis-container:latest<span class="w"> </span>--<span class="w"> </span>python<span class="w"> </span>/path/to/batch_processing.py
+<div class="highlight"><span class="filename">Large-Scale Parallel Processing</span><pre><span></span><code>skaha<span class="w"> </span>create<span class="w"> </span>-c<span class="w"> </span><span class="m">8</span><span class="w"> </span>-m<span class="w"> </span><span class="m">32</span><span class="w"> </span>-r<span class="w"> </span><span class="m">100</span><span class="w"> </span>-n<span class="w"> </span>fits-processing<span class="w"> </span>headless<span class="w"> </span>images.canfar.net/your/analysis-container:latest<span class="w"> </span>--<span class="w"> </span>python<span class="w"> </span>/path/to/batch_processing.py
 </code></pre></div>
-<h2 id="varying-file-sizes">Varying File Sizes<a class="headerlink" href="#varying-file-sizes" title="Permanent link">&para;</a></h2>
-<p>In both cases, the <code>distributed.block</code> function will ensure that each session only processes 10 FITS files. e.g. the first session will process files 0-9, the second session will process files 10-19, and so on.</p>
-<p>If your datafiles increase in size, e.g. the first 10 files are small, the next 10 are larger, you can use the <code>distributed.stripe</code> function instead. This will ensure that each session processes files 0,10,20,..., the second session will process files 1,11,21,..., and so on. This saves you from having to write complex logic to determine the memory allocation for each session.</p>
+<h2 id="distributed-processing-strategies">Distributed Processing Strategies<a class="headerlink" href="#distributed-processing-strategies" title="Permanent link">&para;</a></h2>
+<p>Skaha provides two main strategies for distributing data across replicas:</p>
+<h3 id="chunking-strategy-distributedchunk">Chunking Strategy (<code>distributed.chunk</code>)<a class="headerlink" href="#chunking-strategy-distributedchunk" title="Permanent link">&para;</a></h3>
+<p>The <code>chunk</code> function divides your data into contiguous blocks, with each replica processing a consecutive chunk. The function uses 1-based replica IDs (matching Skaha's <code>REPLICA_ID</code> environment variable):</p>
+<div class="highlight"><span class="filename">Chunking Example</span><pre><span></span><code><span class="kn">from</span><span class="w"> </span><span class="nn">skaha.helpers</span><span class="w"> </span><span class="kn">import</span> <span class="n">distributed</span>
+
+<span class="c1"># With 1000 files and 100 replicas:</span>
+<span class="c1"># - Replica 1 processes files 0-9</span>
+<span class="c1"># - Replica 2 processes files 10-19  </span>
+<span class="c1"># - Replica 3 processes files 20-29</span>
+<span class="c1"># - And so on...</span>
+
+<span class="n">datafiles</span> <span class="o">=</span> <span class="n">glob</span><span class="p">(</span><span class="s2">&quot;/path/to/data/*.fits&quot;</span><span class="p">)</span>
+<span class="k">for</span> <span class="n">datafile</span> <span class="ow">in</span> <span class="n">distributed</span><span class="o">.</span><span class="n">chunk</span><span class="p">(</span><span class="n">datafiles</span><span class="p">):</span>
+    <span class="n">process_datafile</span><span class="p">(</span><span class="n">datafile</span><span class="p">)</span>
+</code></pre></div>
+<h3 id="striping-strategy-distributedstripe">Striping Strategy (<code>distributed.stripe</code>)<a class="headerlink" href="#striping-strategy-distributedstripe" title="Permanent link">&para;</a></h3>
+<p>The <code>stripe</code> function distributes data in a round-robin fashion, which is useful when file sizes vary significantly:</p>
+<div class="highlight"><span class="filename">Striping Example</span><pre><span></span><code><span class="kn">from</span><span class="w"> </span><span class="nn">skaha.helpers</span><span class="w"> </span><span class="kn">import</span> <span class="n">distributed</span>
+
+<span class="c1"># With 1000 files and 100 replicas:</span>
+<span class="c1"># - Replica 1 processes files 0, 100, 200, 300, ...</span>
+<span class="c1"># - Replica 2 processes files 1, 101, 201, 301, ...</span>
+<span class="c1"># - Replica 3 processes files 2, 102, 202, 302, ...</span>
+<span class="c1"># - And so on...</span>
+
+<span class="n">datafiles</span> <span class="o">=</span> <span class="n">glob</span><span class="p">(</span><span class="s2">&quot;/path/to/data/*.fits&quot;</span><span class="p">)</span>
+<span class="k">for</span> <span class="n">datafile</span> <span class="ow">in</span> <span class="n">distributed</span><span class="o">.</span><span class="n">stripe</span><span class="p">(</span><span class="n">datafiles</span><span class="p">):</span>
+    <span class="n">process_datafile</span><span class="p">(</span><span class="n">datafile</span><span class="p">)</span>
+</code></pre></div>
+<h3 id="when-to-use-each-strategy">When to Use Each Strategy<a class="headerlink" href="#when-to-use-each-strategy" title="Permanent link">&para;</a></h3>
+<ul>
+<li><strong>Use <code>chunk</code></strong> when files are similar in size and you want each replica to process a contiguous block of data</li>
+<li><strong>Use <code>stripe</code></strong> when file sizes vary significantly, as it distributes the workload more evenly across replicas</li>
+</ul>
+<h2 id="real-world-example-processing-astronomical-data">Real-World Example: Processing Astronomical Data<a class="headerlink" href="#real-world-example-processing-astronomical-data" title="Permanent link">&para;</a></h2>
+<div class="highlight"><pre><span></span><code><span class="kn">import</span><span class="w"> </span><span class="nn">os</span>
+<span class="kn">import</span><span class="w"> </span><span class="nn">json</span>
+<span class="kn">from</span><span class="w"> </span><span class="nn">pathlib</span><span class="w"> </span><span class="kn">import</span> <span class="n">Path</span>
+<span class="kn">from</span><span class="w"> </span><span class="nn">skaha.helpers.distributed</span><span class="w"> </span><span class="kn">import</span> <span class="n">chunk</span>
+
+<span class="k">def</span><span class="w"> </span><span class="nf">process_observations</span><span class="p">():</span>
+<span class="w">    </span><span class="sd">&quot;&quot;&quot;Process FITS files across multiple containers.&quot;&quot;&quot;</span>
+
+    <span class="c1"># Get all observation files</span>
+    <span class="n">fits_files</span> <span class="o">=</span> <span class="nb">list</span><span class="p">(</span><span class="n">Path</span><span class="p">(</span><span class="s2">&quot;/data/observations&quot;</span><span class="p">)</span><span class="o">.</span><span class="n">glob</span><span class="p">(</span><span class="s2">&quot;*.fits&quot;</span><span class="p">))</span>
+    <span class="n">my_files</span> <span class="o">=</span> <span class="nb">list</span><span class="p">(</span><span class="n">chunk</span><span class="p">(</span><span class="n">fits_files</span><span class="p">))</span>
+
+    <span class="k">if</span> <span class="ow">not</span> <span class="n">my_files</span><span class="p">:</span>
+        <span class="nb">print</span><span class="p">(</span><span class="s2">&quot;No files assigned to this container&quot;</span><span class="p">)</span>
+        <span class="k">return</span>
+
+    <span class="n">replica_id</span> <span class="o">=</span> <span class="n">os</span><span class="o">.</span><span class="n">environ</span><span class="o">.</span><span class="n">get</span><span class="p">(</span><span class="s1">&#39;REPLICA_ID&#39;</span><span class="p">)</span>
+    <span class="nb">print</span><span class="p">(</span><span class="sa">f</span><span class="s2">&quot;Container </span><span class="si">{</span><span class="n">replica_id</span><span class="si">}</span><span class="s2"> processing </span><span class="si">{</span><span class="nb">len</span><span class="p">(</span><span class="n">my_files</span><span class="p">)</span><span class="si">}</span><span class="s2"> files&quot;</span><span class="p">)</span>
+
+    <span class="c1"># Process each file</span>
+    <span class="n">results</span> <span class="o">=</span> <span class="p">[]</span>
+    <span class="k">for</span> <span class="n">fits_file</span> <span class="ow">in</span> <span class="n">my_files</span><span class="p">:</span>
+        <span class="c1"># Your analysis code here</span>
+        <span class="n">result</span> <span class="o">=</span> <span class="p">{</span><span class="s2">&quot;file&quot;</span><span class="p">:</span> <span class="n">fits_file</span><span class="o">.</span><span class="n">name</span><span class="p">,</span> <span class="s2">&quot;stars_detected&quot;</span><span class="p">:</span> <span class="n">analyze_fits</span><span class="p">(</span><span class="n">fits_file</span><span class="p">)}</span>
+        <span class="n">results</span><span class="o">.</span><span class="n">append</span><span class="p">(</span><span class="n">result</span><span class="p">)</span>
+
+    <span class="c1"># Save results with container ID</span>
+    <span class="n">output_file</span> <span class="o">=</span> <span class="sa">f</span><span class="s2">&quot;/results/container_</span><span class="si">{</span><span class="n">replica_id</span><span class="si">}</span><span class="s2">_results.json&quot;</span>
+    <span class="k">with</span> <span class="nb">open</span><span class="p">(</span><span class="n">output_file</span><span class="p">,</span> <span class="s1">&#39;w&#39;</span><span class="p">)</span> <span class="k">as</span> <span class="n">f</span><span class="p">:</span>
+        <span class="n">json</span><span class="o">.</span><span class="n">dump</span><span class="p">(</span><span class="n">results</span><span class="p">,</span> <span class="n">f</span><span class="p">,</span> <span class="n">indent</span><span class="o">=</span><span class="mi">2</span><span class="p">)</span>
+
+    <span class="nb">print</span><span class="p">(</span><span class="sa">f</span><span class="s2">&quot;Saved </span><span class="si">{</span><span class="nb">len</span><span class="p">(</span><span class="n">results</span><span class="p">)</span><span class="si">}</span><span class="s2"> results to </span><span class="si">{</span><span class="n">output_file</span><span class="si">}</span><span class="s2">&quot;</span><span class="p">)</span>
+
+<span class="k">def</span><span class="w"> </span><span class="nf">analyze_fits</span><span class="p">(</span><span class="n">fits_path</span><span class="p">):</span>
+<span class="w">    </span><span class="sd">&quot;&quot;&quot;Your FITS analysis logic here.&quot;&quot;&quot;</span>
+    <span class="k">return</span> <span class="mi">42</span>  <span class="c1"># Placeholder</span>
+</code></pre></div>
+<h2 id="best-practices">Best Practices<a class="headerlink" href="#best-practices" title="Permanent link">&para;</a></h2>
+<p><strong>Choose the right function:</strong>
+- Use <code>chunk()</code> when you need contiguous data blocks
+- Use <code>stripe()</code> for round-robin distribution</p>
+<p><strong>Handle empty containers:</strong>
+<div class="highlight"><pre><span></span><code><span class="n">my_data</span> <span class="o">=</span> <span class="nb">list</span><span class="p">(</span><span class="n">chunk</span><span class="p">(</span><span class="n">data</span><span class="p">))</span>
+<span class="k">if</span> <span class="ow">not</span> <span class="n">my_data</span><span class="p">:</span>
+    <span class="nb">print</span><span class="p">(</span><span class="s2">&quot;No data for this container&quot;</span><span class="p">)</span>
+    <span class="k">return</span>
+</code></pre></div></p>
+<p><strong>Save results with container ID:</strong>
+<div class="highlight"><pre><span></span><code><span class="kn">import</span><span class="w"> </span><span class="nn">os</span>
+<span class="n">replica_id</span> <span class="o">=</span> <span class="n">os</span><span class="o">.</span><span class="n">environ</span><span class="o">.</span><span class="n">get</span><span class="p">(</span><span class="s1">&#39;REPLICA_ID&#39;</span><span class="p">)</span>
+<span class="n">output_file</span> <span class="o">=</span> <span class="sa">f</span><span class="s2">&quot;/results/container_</span><span class="si">{</span><span class="n">replica_id</span><span class="si">}</span><span class="s2">_results.json&quot;</span>
+</code></pre></div></p>
+<p><strong>Combine results from all containers:</strong>
+<div class="highlight"><pre><span></span><code><span class="kn">from</span><span class="w"> </span><span class="nn">pathlib</span><span class="w"> </span><span class="kn">import</span> <span class="n">Path</span>
+<span class="kn">import</span><span class="w"> </span><span class="nn">json</span>
+
+<span class="k">def</span><span class="w"> </span><span class="nf">combine_results</span><span class="p">():</span>
+<span class="w">    </span><span class="sd">&quot;&quot;&quot;Merge results from all containers.&quot;&quot;&quot;</span>
+    <span class="n">all_results</span> <span class="o">=</span> <span class="p">[]</span>
+    <span class="k">for</span> <span class="n">result_file</span> <span class="ow">in</span> <span class="n">Path</span><span class="p">(</span><span class="s2">&quot;/results&quot;</span><span class="p">)</span><span class="o">.</span><span class="n">glob</span><span class="p">(</span><span class="s2">&quot;container_*_results.json&quot;</span><span class="p">):</span>
+        <span class="k">with</span> <span class="nb">open</span><span class="p">(</span><span class="n">result_file</span><span class="p">)</span> <span class="k">as</span> <span class="n">f</span><span class="p">:</span>
+            <span class="n">all_results</span><span class="o">.</span><span class="n">extend</span><span class="p">(</span><span class="n">json</span><span class="o">.</span><span class="n">load</span><span class="p">(</span><span class="n">f</span><span class="p">))</span>
+
+    <span class="k">with</span> <span class="nb">open</span><span class="p">(</span><span class="s2">&quot;/results/final_results.json&quot;</span><span class="p">,</span> <span class="s1">&#39;w&#39;</span><span class="p">)</span> <span class="k">as</span> <span class="n">f</span><span class="p">:</span>
+        <span class="n">json</span><span class="o">.</span><span class="n">dump</span><span class="p">(</span><span class="n">all_results</span><span class="p">,</span> <span class="n">f</span><span class="p">,</span> <span class="n">indent</span><span class="o">=</span><span class="mi">2</span><span class="p">)</span>
+</code></pre></div></p>
+<h2 id="creating-distributed-sessions">Creating Distributed Sessions<a class="headerlink" href="#creating-distributed-sessions" title="Permanent link">&para;</a></h2>
+<p>Create multiple containers for distributed processing:</p>
+<div class="highlight"><pre><span></span><code><span class="c1"># Create 5 containers for distributed analysis</span>
+skaha<span class="w"> </span>create<span class="w"> </span>headless<span class="w"> </span>images.canfar.net/skaha/astronomy:latest<span class="w"> </span>-r<span class="w"> </span><span class="m">5</span><span class="w"> </span>--<span class="w"> </span>python3<span class="w"> </span>/scripts/process_data.py
+</code></pre></div>
+<h2 id="common-issues">Common Issues<a class="headerlink" href="#common-issues" title="Permanent link">&para;</a></h2>
+<p><strong>Some containers get no data</strong>
+This happens when you have more containers than data items. Handle it gracefully:
+<div class="highlight"><pre><span></span><code><span class="n">my_data</span> <span class="o">=</span> <span class="nb">list</span><span class="p">(</span><span class="n">chunk</span><span class="p">(</span><span class="n">data</span><span class="p">))</span>
+<span class="k">if</span> <span class="ow">not</span> <span class="n">my_data</span><span class="p">:</span>
+    <span class="nb">print</span><span class="p">(</span><span class="s2">&quot;No data assigned to this container&quot;</span><span class="p">)</span>
+    <span class="k">return</span>
+</code></pre></div></p>
+<p><strong>Debugging distribution</strong>
+<div class="highlight"><pre><span></span><code><span class="kn">import</span><span class="w"> </span><span class="nn">os</span>
+<span class="n">replica_id</span> <span class="o">=</span> <span class="n">os</span><span class="o">.</span><span class="n">environ</span><span class="o">.</span><span class="n">get</span><span class="p">(</span><span class="s1">&#39;REPLICA_ID&#39;</span><span class="p">)</span>
+<span class="n">replica_count</span> <span class="o">=</span> <span class="n">os</span><span class="o">.</span><span class="n">environ</span><span class="o">.</span><span class="n">get</span><span class="p">(</span><span class="s1">&#39;REPLICA_COUNT&#39;</span><span class="p">)</span>
+<span class="nb">print</span><span class="p">(</span><span class="sa">f</span><span class="s2">&quot;Container </span><span class="si">{</span><span class="n">replica_id</span><span class="si">}</span><span class="s2"> of </span><span class="si">{</span><span class="n">replica_count</span><span class="si">}</span><span class="s2"> processing </span><span class="si">{</span><span class="nb">len</span><span class="p">(</span><span class="n">my_data</span><span class="p">)</span><span class="si">}</span><span class="s2"> items&quot;</span><span class="p">)</span>
+</code></pre></div></p>
 
 
 
@@ -1101,7 +1107,7 @@
     <span class="md-icon" title="Last update">
       <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24"><path d="M21 13.1c-.1 0-.3.1-.4.2l-1 1 2.1 2.1 1-1c.2-.2.2-.6 0-.8l-1.3-1.3c-.1-.1-.2-.2-.4-.2m-1.9 1.8-6.1 6V23h2.1l6.1-6.1zM12.5 7v5.2l4 2.4-1 1L11 13V7zM11 21.9c-5.1-.5-9-4.8-9-9.9C2 6.5 6.5 2 12 2c5.3 0 9.6 4.1 10 9.3-.3-.1-.6-.2-1-.2s-.7.1-1 .2C19.6 7.2 16.2 4 12 4c-4.4 0-8 3.6-8 8 0 4.1 3.1 7.5 7.1 7.9l-.1.2z"/></svg>
     </span>
-    <span class="git-revision-date-localized-plugin git-revision-date-localized-plugin-date" title="July 20, 2025 06:39:12 UTC">July 20, 2025</span>
+    <span class="git-revision-date-localized-plugin git-revision-date-localized-plugin-date" title="July 29, 2025 22:03:57 UTC">July 29, 2025</span>
   </span>
 
     

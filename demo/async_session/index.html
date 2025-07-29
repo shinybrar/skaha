@@ -1791,7 +1791,8 @@ retrieving logs, and destroying existing sessions.</p>
 <span class="normal">760</span>
 <span class="normal">761</span>
 <span class="normal">762</span>
-<span class="normal">763</span></pre></div></td><td class="code"><div><pre><span></span><code><span class="k">class</span><span class="w"> </span><span class="nc">AsyncSession</span><span class="p">(</span><span class="n">SkahaClient</span><span class="p">):</span>
+<span class="normal">763</span>
+<span class="normal">764</span></pre></div></td><td class="code"><div><pre><span></span><code><span class="k">class</span><span class="w"> </span><span class="nc">AsyncSession</span><span class="p">(</span><span class="n">SkahaClient</span><span class="p">):</span>
 <span class="w">    </span><span class="sd">&quot;&quot;&quot;Asynchronous Skaha Session Management Client.</span>
 
 <span class="sd">    This class provides methods to manage sessions in the system,</span>
@@ -2055,6 +2056,7 @@ retrieving logs, and destroying existing sessions.</p>
 
         <span class="k">async</span> <span class="k">def</span><span class="w"> </span><span class="nf">bounded</span><span class="p">(</span><span class="n">parameters</span><span class="p">:</span> <span class="nb">list</span><span class="p">[</span><span class="nb">tuple</span><span class="p">[</span><span class="nb">str</span><span class="p">,</span> <span class="n">Any</span><span class="p">]])</span> <span class="o">-&gt;</span> <span class="n">Any</span><span class="p">:</span>
             <span class="k">async</span> <span class="k">with</span> <span class="n">semaphore</span><span class="p">:</span>
+                <span class="n">log</span><span class="o">.</span><span class="n">debug</span><span class="p">(</span><span class="s2">&quot;HTTP Request Parameters: </span><span class="si">%s</span><span class="s2">&quot;</span><span class="p">,</span> <span class="n">parameters</span><span class="p">)</span>
                 <span class="n">response</span> <span class="o">=</span> <span class="k">await</span> <span class="bp">self</span><span class="o">.</span><span class="n">asynclient</span><span class="o">.</span><span class="n">post</span><span class="p">(</span><span class="n">url</span><span class="o">=</span><span class="s2">&quot;session&quot;</span><span class="p">,</span> <span class="n">params</span><span class="o">=</span><span class="n">parameters</span><span class="p">)</span>
                 <span class="k">return</span> <span class="n">response</span><span class="o">.</span><span class="n">text</span><span class="o">.</span><span class="n">rstrip</span><span class="p">(</span><span class="s2">&quot;</span><span class="se">\r\n</span><span class="s2">&quot;</span><span class="p">)</span>
 
@@ -2541,7 +2543,8 @@ Each container will have the following environment variables injected:
 <span class="normal">630</span>
 <span class="normal">631</span>
 <span class="normal">632</span>
-<span class="normal">633</span></pre></div></td><td class="code"><div><pre><span></span><code><span class="k">async</span> <span class="k">def</span><span class="w"> </span><span class="nf">create</span><span class="p">(</span>
+<span class="normal">633</span>
+<span class="normal">634</span></pre></div></td><td class="code"><div><pre><span></span><code><span class="k">async</span> <span class="k">def</span><span class="w"> </span><span class="nf">create</span><span class="p">(</span>
     <span class="bp">self</span><span class="p">,</span>
     <span class="n">name</span><span class="p">:</span> <span class="nb">str</span><span class="p">,</span>
     <span class="n">image</span><span class="p">:</span> <span class="nb">str</span><span class="p">,</span>
@@ -2612,6 +2615,7 @@ Each container will have the following environment variables injected:
 
     <span class="k">async</span> <span class="k">def</span><span class="w"> </span><span class="nf">bounded</span><span class="p">(</span><span class="n">parameters</span><span class="p">:</span> <span class="nb">list</span><span class="p">[</span><span class="nb">tuple</span><span class="p">[</span><span class="nb">str</span><span class="p">,</span> <span class="n">Any</span><span class="p">]])</span> <span class="o">-&gt;</span> <span class="n">Any</span><span class="p">:</span>
         <span class="k">async</span> <span class="k">with</span> <span class="n">semaphore</span><span class="p">:</span>
+            <span class="n">log</span><span class="o">.</span><span class="n">debug</span><span class="p">(</span><span class="s2">&quot;HTTP Request Parameters: </span><span class="si">%s</span><span class="s2">&quot;</span><span class="p">,</span> <span class="n">parameters</span><span class="p">)</span>
             <span class="n">response</span> <span class="o">=</span> <span class="k">await</span> <span class="bp">self</span><span class="o">.</span><span class="n">asynclient</span><span class="o">.</span><span class="n">post</span><span class="p">(</span><span class="n">url</span><span class="o">=</span><span class="s2">&quot;session&quot;</span><span class="p">,</span> <span class="n">params</span><span class="o">=</span><span class="n">parameters</span><span class="p">)</span>
             <span class="k">return</span> <span class="n">response</span><span class="o">.</span><span class="n">text</span><span class="o">.</span><span class="n">rstrip</span><span class="p">(</span><span class="s2">&quot;</span><span class="se">\r\n</span><span class="s2">&quot;</span><span class="p">)</span>
 
@@ -2723,8 +2727,7 @@ Each container will have the following environment variables injected:
 
             <details class="quote">
               <summary>Source code in <code>skaha/session.py</code></summary>
-              <div class="highlight"><table class="highlighttable"><tr><td class="linenos"><div class="linenodiv"><pre><span></span><span class="normal">688</span>
-<span class="normal">689</span>
+              <div class="highlight"><table class="highlighttable"><tr><td class="linenos"><div class="linenodiv"><pre><span></span><span class="normal">689</span>
 <span class="normal">690</span>
 <span class="normal">691</span>
 <span class="normal">692</span>
@@ -2761,7 +2764,8 @@ Each container will have the following environment variables injected:
 <span class="normal">723</span>
 <span class="normal">724</span>
 <span class="normal">725</span>
-<span class="normal">726</span></pre></div></td><td class="code"><div><pre><span></span><code><span class="k">async</span> <span class="k">def</span><span class="w"> </span><span class="nf">destroy</span><span class="p">(</span><span class="bp">self</span><span class="p">,</span> <span class="n">ids</span><span class="p">:</span> <span class="nb">str</span> <span class="o">|</span> <span class="nb">list</span><span class="p">[</span><span class="nb">str</span><span class="p">])</span> <span class="o">-&gt;</span> <span class="nb">dict</span><span class="p">[</span><span class="nb">str</span><span class="p">,</span> <span class="nb">bool</span><span class="p">]:</span>
+<span class="normal">726</span>
+<span class="normal">727</span></pre></div></td><td class="code"><div><pre><span></span><code><span class="k">async</span> <span class="k">def</span><span class="w"> </span><span class="nf">destroy</span><span class="p">(</span><span class="bp">self</span><span class="p">,</span> <span class="n">ids</span><span class="p">:</span> <span class="nb">str</span> <span class="o">|</span> <span class="nb">list</span><span class="p">[</span><span class="nb">str</span><span class="p">])</span> <span class="o">-&gt;</span> <span class="nb">dict</span><span class="p">[</span><span class="nb">str</span><span class="p">,</span> <span class="nb">bool</span><span class="p">]:</span>
 <span class="w">    </span><span class="sd">&quot;&quot;&quot;Destroy session[s].</span>
 
 <span class="sd">    Args:</span>
@@ -2937,8 +2941,7 @@ This method is useful for destroying multiple sessions at once.</p>
 
             <details class="quote">
               <summary>Source code in <code>skaha/session.py</code></summary>
-              <div class="highlight"><table class="highlighttable"><tr><td class="linenos"><div class="linenodiv"><pre><span></span><span class="normal">728</span>
-<span class="normal">729</span>
+              <div class="highlight"><table class="highlighttable"><tr><td class="linenos"><div class="linenodiv"><pre><span></span><span class="normal">729</span>
 <span class="normal">730</span>
 <span class="normal">731</span>
 <span class="normal">732</span>
@@ -2972,7 +2975,8 @@ This method is useful for destroying multiple sessions at once.</p>
 <span class="normal">760</span>
 <span class="normal">761</span>
 <span class="normal">762</span>
-<span class="normal">763</span></pre></div></td><td class="code"><div><pre><span></span><code><span class="k">async</span> <span class="k">def</span><span class="w"> </span><span class="nf">destroy_with</span><span class="p">(</span>
+<span class="normal">763</span>
+<span class="normal">764</span></pre></div></td><td class="code"><div><pre><span></span><code><span class="k">async</span> <span class="k">def</span><span class="w"> </span><span class="nf">destroy_with</span><span class="p">(</span>
     <span class="bp">self</span><span class="p">,</span>
     <span class="n">prefix</span><span class="p">:</span> <span class="nb">str</span><span class="p">,</span>
     <span class="n">kind</span><span class="p">:</span> <span class="n">Kind</span> <span class="o">=</span> <span class="s2">&quot;headless&quot;</span><span class="p">,</span>
@@ -3117,8 +3121,7 @@ This method is useful for destroying multiple sessions at once.</p>
 
             <details class="quote">
               <summary>Source code in <code>skaha/session.py</code></summary>
-              <div class="highlight"><table class="highlighttable"><tr><td class="linenos"><div class="linenodiv"><pre><span></span><span class="normal">635</span>
-<span class="normal">636</span>
+              <div class="highlight"><table class="highlighttable"><tr><td class="linenos"><div class="linenodiv"><pre><span></span><span class="normal">636</span>
 <span class="normal">637</span>
 <span class="normal">638</span>
 <span class="normal">639</span>
@@ -3168,7 +3171,8 @@ This method is useful for destroying multiple sessions at once.</p>
 <span class="normal">683</span>
 <span class="normal">684</span>
 <span class="normal">685</span>
-<span class="normal">686</span></pre></div></td><td class="code"><div><pre><span></span><code><span class="k">async</span> <span class="k">def</span><span class="w"> </span><span class="nf">events</span><span class="p">(</span>
+<span class="normal">686</span>
+<span class="normal">687</span></pre></div></td><td class="code"><div><pre><span></span><code><span class="k">async</span> <span class="k">def</span><span class="w"> </span><span class="nf">events</span><span class="p">(</span>
     <span class="bp">self</span><span class="p">,</span>
     <span class="n">ids</span><span class="p">:</span> <span class="nb">str</span> <span class="o">|</span> <span class="nb">list</span><span class="p">[</span><span class="nb">str</span><span class="p">],</span>
     <span class="n">verbose</span><span class="p">:</span> <span class="nb">bool</span> <span class="o">=</span> <span class="kc">False</span><span class="p">,</span>
