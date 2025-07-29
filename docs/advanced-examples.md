@@ -4,16 +4,18 @@ Complex use cases and power-user examples for Skaha and the CANFAR Science Platf
 
 ## Massively Parallel Processing
 
-Lets assume you have a large dataset of 1000 FITS files that you want to process in parallel. You have a Python script that can process a single FITS file, and you want to run this script in parallel on 100 different Skaha sessions.
-
+Let's assume you have a large dataset of 1000 FITS files that you want to process in parallel. You have a Python script that can process a single FITS file, and you want to run this script in parallel on 100 different Skaha sessions.
 
 ```python title="batch_processing.py"
 from skaha.helpers import distributed
-from regex import findall
+from glob import glob
 from your.code import process_datafile
 
-datafiles = findall("/path/to/data/files/*.fits")
+# Find all FITS files to process
+datafiles = glob("/path/to/data/files/*.fits")
 
+# Each replica processes its assigned chunk of files
+# The chunk function automatically handles 1-based REPLICA_ID values
 for datafile in distributed.chunk(datafiles):
     process_datafile(datafile)
 ```
@@ -43,9 +45,72 @@ async with AsyncSession() as session:
 skaha create --cores 8 --memory 32 --replicas 100 --name fits-processing headless images.canfar.net/your/analysis-container:latest -- python /path/to/batch_processing.py
 ```
 
-## Varying File Sizes
+## Distributed Processing Strategies
 
-In both cases, the `distributed.block` function will ensure that each session only processes 10 FITS files. e.g. the first session will process files 0-9, the second session will process files 10-19, and so on.
+Skaha provides two main strategies for distributing data across replicas:
 
-If your datafiles increase in size, e.g. the first 10 files are small, the next 10 are larger, you can use the `distributed.stripe` function instead. This will ensure that each session processes files 0,10,20,..., the second session will process files 1,11,21,..., and so on. This saves you from having to write complex logic to determine the memory allocation for each session.
+### Chunking Strategy (`distributed.chunk`)
+
+The `chunk` function divides your data into contiguous blocks, with each replica processing a consecutive chunk. The function uses 1-based replica IDs (matching Skaha's `REPLICA_ID` environment variable):
+
+```python title="Chunking Example"
+from skaha.helpers import distributed
+
+# With 1000 files and 100 replicas:
+# - Replica 1 processes files 0-9
+# - Replica 2 processes files 10-19  
+# - Replica 3 processes files 20-29
+# - And so on...
+
+datafiles = glob("/path/to/data/*.fits")
+for datafile in distributed.chunk(datafiles):
+    process_datafile(datafile)
+```
+
+### Striping Strategy (`distributed.stripe`)
+
+The `stripe` function distributes data in a round-robin fashion, which is useful when file sizes vary significantly:
+
+```python title="Striping Example"
+from skaha.helpers import distributed
+
+# With 1000 files and 100 replicas:
+# - Replica 1 processes files 0, 100, 200, 300, ...
+# - Replica 2 processes files 1, 101, 201, 301, ...
+# - Replica 3 processes files 2, 102, 202, 302, ...
+# - And so on...
+
+datafiles = glob("/path/to/data/*.fits")
+for datafile in distributed.stripe(datafiles):
+    process_datafile(datafile)
+```
+
+### When to Use Each Strategy
+
+- **Use `chunk`** when files are similar in size and you want each replica to process a contiguous block of data
+- **Use `stripe`** when file sizes vary significantly, as it distributes the workload more evenly across replicas
+
+### Edge Cases
+
+Both functions handle edge cases gracefully:
+
+- **More replicas than files**: Each file goes to a different replica, remaining replicas get no work
+- **Single replica**: All data goes to that replica
+- **Empty dataset**: All replicas receive empty iterators
+
+```python title="Edge Case Example"
+# With 3 files and 5 replicas using chunk():
+# - Replica 1 gets file1.fits
+# - Replica 2 gets file2.fits  
+# - Replica 3 gets file3.fits
+# - Replicas 4 and 5 get no files (empty iterator)
+
+small_dataset = ["file1.fits", "file2.fits", "file3.fits"]
+my_files = list(distributed.chunk(small_dataset))
+if my_files:  # Check if replica has work to do
+    for datafile in my_files:
+        process_datafile(datafile)
+else:
+    print("No work assigned to this replica")
+```
 
