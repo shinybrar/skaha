@@ -54,9 +54,19 @@ def get_stats(
         instances_table = Table(box=box.MINIMAL, show_header=False)
         instances_table.add_column("Kind", justify="left")
         instances_table.add_column("Count", justify="left")
+        # Change DesktopApp to Desktop in the instances table
+        if "desktopApp" in instances:
+            instances["Desktops"] = instances.pop("desktopApp")
+
         for key, value in instances.items():
-            style = "bold" if key == "total" else ""
-            instances_table.add_row(key.capitalize(), str(value), style=style)
+            if key == "total":
+                pass
+            else:
+                instances_table.add_row(key.capitalize(), str(value))
+        if "total" in instances:
+            instances_table.add_row(
+                "Total", str(instances["total"]), style="bold italic"
+            )
 
         # Nested table for Cores
         cores = data.get("cores", {})
