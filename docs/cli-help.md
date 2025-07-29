@@ -151,7 +151,7 @@ skaha create [OPTIONS] KIND IMAGE [-- CMD [ARGS]...]
 | Option | Short | Type | Default | Description |
 |--------|-------|------|---------|-------------|
 | `--name` | `-n` | TEXT | Auto-generated | Name of the session |
-| `--cpus` | `-c` | INTEGER | 1 | Number of CPU cores |
+| `--cpu` | `-c` | INTEGER | 1 | Number of CPU cores |
 | `--memory` | `-m` | INTEGER | 2 | Amount of RAM in GB |
 | `--gpu` | `-g` | INTEGER | None | Number of GPUs |
 | `--env` | `-e` | TEXT | None | Environment variables (e.g., `--env KEY=VALUE`) |
@@ -161,7 +161,7 @@ skaha create [OPTIONS] KIND IMAGE [-- CMD [ARGS]...]
 
 !!! example "Create a Jupyter Notebook"
     ```bash
-    skaha create --cpus 4 -m 8notebook images.canfar.net/skaha/scipy-notebook:latest
+    skaha create --cpu 4 -m 8notebook images.canfar.net/skaha/scipy-notebook:latest
     ```
 
 !!! example "Create a Headless Session with Custom Command"
