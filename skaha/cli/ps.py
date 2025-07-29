@@ -79,6 +79,7 @@ def list_sessions(
                 FetchResponse.model_validate(item)
                 for item in await session.fetch(kind=kind, status=status)
             ]
+        sessions = sorted(sessions, key=lambda x: x.startTime, reverse=False)
 
         if quiet:
             for instance in sessions:
