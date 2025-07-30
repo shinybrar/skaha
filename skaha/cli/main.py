@@ -57,20 +57,17 @@ cli.add_typer(
 
 cli.add_typer(
     create,
-    name="create",
     no_args_is_help=True,
     rich_help_panel="Session Management",
 )
 
 cli.add_typer(
     ps,
-    help="Show running sessions",
     no_args_is_help=False,
     rich_help_panel="Session Management",
 )
 cli.add_typer(
     events,
-    help="Show session events",
     no_args_is_help=False,
     rich_help_panel="Session Management",
 )

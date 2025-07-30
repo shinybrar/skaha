@@ -10,7 +10,15 @@ class TestKindType:
 
     def test_kind_values(self) -> None:
         """Test that Kind contains expected values."""
-        expected_kinds = ("desktop", "notebook", "carta", "headless", "firefly", "desktop-app", "contributed")
+        expected_kinds = (
+            "desktop",
+            "notebook",
+            "carta",
+            "headless",
+            "firefly",
+            "desktop-app",
+            "contributed",
+        )
         actual_kinds = get_args(Kind)
 
         assert actual_kinds == expected_kinds
@@ -34,7 +42,14 @@ class TestStatusType:
 
     def test_status_values(self) -> None:
         """Test that Status contains expected values."""
-        expected_statuses = ("Pending", "Running", "Terminating", "Succeeded", "Error", "Failed")
+        expected_statuses = (
+            "Pending",
+            "Running",
+            "Terminating",
+            "Succeeded",
+            "Error",
+            "Failed",
+        )
         actual_statuses = get_args(Status)
 
         assert actual_statuses == expected_statuses

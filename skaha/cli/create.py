@@ -9,6 +9,7 @@ import click
 import typer
 from rich.console import Console
 
+from skaha.hooks.typer.aliases import AliasGroup
 from skaha.models.types import Kind
 from skaha.session import AsyncSession
 from skaha.utils import funny
@@ -16,7 +17,7 @@ from skaha.utils import funny
 console = Console()
 
 
-class CreateUsageMessage(typer.core.TyperGroup):
+class CreateUsageMessage(AliasGroup):
     """Custom usage message for prune command.
 
     Args:
@@ -36,9 +37,9 @@ class CreateUsageMessage(typer.core.TyperGroup):
 
 
 create = typer.Typer(
-    name="create",
+    name="launch | create",
     no_args_is_help=True,
-    cls=CreateUsageMessage,
+    cls=AliasGroup,
 )
 
 
@@ -101,7 +102,7 @@ def creation(
         ),
     ] = False,
 ) -> None:
-    """Create a new session.
+    """Launch a new session.
 
     Examples:
     skaha create notebook images.canfar.net/skaha/base-notebook:latest
