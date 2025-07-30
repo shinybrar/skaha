@@ -15,8 +15,7 @@ from skaha.session import AsyncSession
 console = Console()
 
 delete = typer.Typer(
-    name="delete",
-    help="Delete one or more sessions.",
+    name="delete | rm",
     no_args_is_help=True,
     cls=AliasGroup,
 )
@@ -44,7 +43,12 @@ def delete_sessions(
         ),
     ] = False,
 ) -> None:
-    """Delete one or more Skaha sessions."""
+    """Delete sessions by ID.
+
+    Examples:
+    skaha delete abc123
+    skaha delete abc123 def456
+    """
     if force:
         proceed: bool = True
     else:

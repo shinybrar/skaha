@@ -37,7 +37,6 @@ class PruneUsageMessage(typer.core.TyperGroup):
 
 prune = typer.Typer(
     name="prune",
-    help="Prune sessions based on specified criteria.",
     no_args_is_help=True,
 )
 
@@ -77,7 +76,12 @@ def prune_sessions(
         typer.Option("--debug", help="Enable debug logging."),
     ] = False,
 ) -> None:
-    """Prune Skaha sessions based on name, kind, or status."""
+    """Delete sessions by criteria.
+
+    Examples:
+    skaha prune testname-* headless Succeeded
+    skaha prune sample-* notebook Running
+    """
 
     async def _prune() -> None:
         log_level = "DEBUG" if debug else "INFO"

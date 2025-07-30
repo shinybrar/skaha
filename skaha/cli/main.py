@@ -103,14 +103,12 @@ cli.add_typer(
 
 cli.add_typer(
     delete,
-    help="Delete one or more sessions",
     no_args_is_help=True,
     rich_help_panel="Session Management",
 )
 
 cli.add_typer(
     prune,
-    help="Prune sessions by criteria",
     no_args_is_help=True,
     rich_help_panel="Session Management",
 )

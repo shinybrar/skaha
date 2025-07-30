@@ -21,7 +21,7 @@ from skaha.session import AsyncSession
 console = Console()
 
 ps = typer.Typer(
-    name="list | ls | ps",
+    name="ps | ls | list",
     no_args_is_help=False,
     cls=AliasGroup,
 )

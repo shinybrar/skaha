@@ -16,7 +16,7 @@ from skaha.session import AsyncSession
 console = Console()
 
 events = typer.Typer(
-    name="trace",
+    name="events",
     help="List events for sessions.",
     no_args_is_help=False,
 )
