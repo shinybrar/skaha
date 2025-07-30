@@ -1329,69 +1329,70 @@ def test_chunk_stripe_integration_consistency_across_scenarios() -> None:
 
 def test_skaha_environment_integration_realistic_scenarios() -> None:
     """Test chunk function with realistic Skaha container environment scenarios.
-    
+
     This test simulates real-world Skaha container environments where REPLICA_ID
     and REPLICA_COUNT are set as string environment variables with 1-based indexing.
     """
     # Scenario 1: Processing 100 astronomical images across 10 containers
     image_files = [f"image_{i:03d}.fits" for i in range(100)]
-    
+
     # Simulate each container's environment and verify correct distribution
     all_processed_files = []
     for container_id in range(1, 11):  # 1-based container IDs
-        with patch.dict(os.environ, {
-            "REPLICA_ID": str(container_id),
-            "REPLICA_COUNT": "10"
-        }):
+        with patch.dict(
+            os.environ, {"REPLICA_ID": str(container_id), "REPLICA_COUNT": "10"}
+        ):
             # Read environment variables as the function would
             replica = int(os.environ.get("REPLICA_ID", "1"))
             total = int(os.environ.get("REPLICA_COUNT", "1"))
             container_files = list(chunk(image_files, replica=replica, total=total))
             all_processed_files.extend(container_files)
-            
+
             # Each container should get exactly 10 files
             assert len(container_files) == 10, (
                 f"Container {container_id} should process exactly 10 files"
             )
-            
+
             # Verify files are in correct order for this container
             expected_start = (container_id - 1) * 10
-            expected_files = [f"image_{i:03d}.fits" for i in range(expected_start, expected_start + 10)]
-            assert container_files == expected_files, (
-                f"Container {container_id} should process files {expected_start}-{expected_start + 9}"
-            )
-    
+            expected_files = [
+                f"image_{i:03d}.fits"
+                for i in range(expected_start, expected_start + 10)
+            ]
+            assert container_files == expected_files
+
     # Verify all files were processed exactly once
     assert len(all_processed_files) == 100, "All 100 files should be processed"
     assert len(set(all_processed_files)) == 100, "No file should be processed twice"
-    assert set(all_processed_files) == set(image_files), "All original files should be processed"
+    assert set(all_processed_files) == set(image_files), (
+        "All original files should be processed"
+    )
 
 
 def test_skaha_environment_integration_sparse_distribution() -> None:
     """Test chunk function with sparse distribution in Skaha environment.
-    
+
     This simulates scenarios where there are fewer data items than containers,
     which can happen with small datasets or many parallel containers.
     """
     # Scenario: 3 large data files to be processed by 8 containers
     large_files = ["dataset_part1.h5", "dataset_part2.h5", "dataset_part3.h5"]
-    
+
     processed_files = []
     active_containers = []
-    
+
     for container_id in range(1, 9):  # 8 containers
-        with patch.dict(os.environ, {
-            "REPLICA_ID": str(container_id),
-            "REPLICA_COUNT": "8"
-        }):
+        with patch.dict(
+            os.environ, {"REPLICA_ID": str(container_id), "REPLICA_COUNT": "8"}
+        ):
             replica = int(os.environ.get("REPLICA_ID", "1"))
             total = int(os.environ.get("REPLICA_COUNT", "1"))
             container_files = list(chunk(large_files, replica=replica, total=total))
-            
+
             if container_files:
                 processed_files.extend(container_files)
                 active_containers.append(container_id)
-                
+
                 # Each active container should get exactly one file
                 assert len(container_files) == 1, (
                     f"Container {container_id} should process exactly 1 file"
@@ -1401,7 +1402,7 @@ def test_skaha_environment_integration_sparse_distribution() -> None:
                 assert container_id > 3, (
                     f"Container {container_id} should be idle (no files to process)"
                 )
-    
+
     # Verify correct distribution
     assert len(active_containers) == 3, "Exactly 3 containers should be active"
     assert active_containers == [1, 2, 3], "Containers 1, 2, 3 should be active"
@@ -1410,74 +1411,74 @@ def test_skaha_environment_integration_sparse_distribution() -> None:
 
 def test_skaha_environment_integration_uneven_distribution() -> None:
     """Test chunk function with uneven distribution in Skaha environment.
-    
+
     This tests scenarios where data doesn't divide evenly across containers.
     """
     # Scenario: 23 data files across 5 containers
     data_files = [f"data_{i:02d}.csv" for i in range(23)]
-    
+
     all_processed = []
     container_loads = {}
-    
+
     for container_id in range(1, 6):  # 5 containers
-        with patch.dict(os.environ, {
-            "REPLICA_ID": str(container_id),
-            "REPLICA_COUNT": "5"
-        }):
+        with patch.dict(
+            os.environ, {"REPLICA_ID": str(container_id), "REPLICA_COUNT": "5"}
+        ):
             replica = int(os.environ.get("REPLICA_ID", "1"))
             total = int(os.environ.get("REPLICA_COUNT", "1"))
             container_files = list(chunk(data_files, replica=replica, total=total))
             all_processed.extend(container_files)
             container_loads[container_id] = len(container_files)
-    
+
     # Verify distribution: 23 files / 5 containers = 4 files each + 3 remainder
     # First 4 containers get 4 files each, last container gets 7 files (4 + 3 remainder)
     expected_loads = {1: 4, 2: 4, 3: 4, 4: 4, 5: 7}
     assert container_loads == expected_loads, (
         f"Expected loads {expected_loads}, got {container_loads}"
     )
-    
+
     # Verify all files processed exactly once
     assert len(all_processed) == 23, "All 23 files should be processed"
-    assert set(all_processed) == set(data_files), "All original files should be processed"
+    assert set(all_processed) == set(data_files), (
+        "All original files should be processed"
+    )
 
 
 def test_skaha_environment_integration_edge_cases() -> None:
     """Test edge cases that might occur in real Skaha environments."""
-    
     # Edge case 1: Single file, multiple containers
     single_file = ["important_config.json"]
-    
+
     for container_id in range(1, 6):  # 5 containers
-        with patch.dict(os.environ, {
-            "REPLICA_ID": str(container_id),
-            "REPLICA_COUNT": "5"
-        }):
+        with patch.dict(
+            os.environ, {"REPLICA_ID": str(container_id), "REPLICA_COUNT": "5"}
+        ):
             replica = int(os.environ.get("REPLICA_ID", "1"))
             total = int(os.environ.get("REPLICA_COUNT", "1"))
             result = list(chunk(single_file, replica=replica, total=total))
-            
+
             if container_id == 1:
-                assert result == single_file, "Container 1 should process the single file"
+                assert result == single_file, (
+                    "Container 1 should process the single file"
+                )
             else:
                 assert result == [], f"Container {container_id} should be idle"
-    
+
     # Edge case 2: Empty dataset
     empty_data = []
-    
+
     for container_id in range(1, 4):  # 3 containers
-        with patch.dict(os.environ, {
-            "REPLICA_ID": str(container_id),
-            "REPLICA_COUNT": "3"
-        }):
+        with patch.dict(
+            os.environ, {"REPLICA_ID": str(container_id), "REPLICA_COUNT": "3"}
+        ):
             replica = int(os.environ.get("REPLICA_ID", "1"))
             total = int(os.environ.get("REPLICA_COUNT", "1"))
             result = list(chunk(empty_data, replica=replica, total=total))
             assert result == [], f"Container {container_id} should get empty result"
-    
+
     # Edge case 3: Single container (no parallelization)
     all_data = list(range(50))
-    
+
     with patch.dict(os.environ, {"REPLICA_ID": "1", "REPLICA_COUNT": "1"}):
         replica = int(os.environ.get("REPLICA_ID", "1"))
         total = int(os.environ.get("REPLICA_COUNT", "1"))
@@ -1487,33 +1488,32 @@ def test_skaha_environment_integration_edge_cases() -> None:
 
 def test_skaha_environment_integration_string_conversion() -> None:
     """Test that environment variables are properly converted from strings.
-    
+
     Skaha sets environment variables as strings, so we need to ensure
     proper string-to-integer conversion works correctly.
     """
     data = list(range(20))
-    
+
     # Test various string representations
     test_cases = [
-        ("1", "4"),    # Basic case
-        ("2", "4"),    # Middle replica
-        ("4", "4"),    # Last replica
+        ("1", "4"),  # Basic case
+        ("2", "4"),  # Middle replica
+        ("4", "4"),  # Last replica
         ("01", "04"),  # Zero-padded strings
-        ("3", "10"),   # Larger total
+        ("3", "10"),  # Larger total
     ]
-    
+
     for replica_str, total_str in test_cases:
-        with patch.dict(os.environ, {
-            "REPLICA_ID": replica_str,
-            "REPLICA_COUNT": total_str
-        }):
+        with patch.dict(
+            os.environ, {"REPLICA_ID": replica_str, "REPLICA_COUNT": total_str}
+        ):
             # Simulate the actual environment variable reading
             replica = int(os.environ.get("REPLICA_ID", "1"))
             total = int(os.environ.get("REPLICA_COUNT", "1"))
-            
+
             # Should not raise any errors
             result = list(chunk(data, replica=replica, total=total))
-            
+
             # Verify result is reasonable (non-empty for valid cases)
             if len(data) >= total:
                 assert len(result) > 0, (
@@ -1524,30 +1524,29 @@ def test_skaha_environment_integration_string_conversion() -> None:
 def test_skaha_environment_integration_performance_characteristics() -> None:
     """Test performance characteristics with realistic Skaha workloads."""
     import time
-    
+
     # Large dataset simulation (10,000 items across 20 containers)
     large_dataset = list(range(10000))
-    
+
     start_time = time.time()
-    
+
     # Simulate processing across all containers
     total_processed = 0
     for container_id in range(1, 21):  # 20 containers
-        with patch.dict(os.environ, {
-            "REPLICA_ID": str(container_id),
-            "REPLICA_COUNT": "20"
-        }):
+        with patch.dict(
+            os.environ, {"REPLICA_ID": str(container_id), "REPLICA_COUNT": "20"}
+        ):
             replica = int(os.environ.get("REPLICA_ID", "1"))
             total = int(os.environ.get("REPLICA_COUNT", "1"))
             container_data = list(chunk(large_dataset, replica=replica, total=total))
             total_processed += len(container_data)
-    
+
     end_time = time.time()
     processing_time = end_time - start_time
-    
+
     # Verify all data was processed
     assert total_processed == 10000, "All 10,000 items should be processed"
-    
+
     # Performance should be reasonable (less than 1 second for this test)
     assert processing_time < 1.0, (
         f"Processing should be fast, took {processing_time:.3f} seconds"
@@ -1557,90 +1556,88 @@ def test_skaha_environment_integration_performance_characteristics() -> None:
 def test_skaha_environment_integration_error_conditions() -> None:
     """Test error conditions that might occur in Skaha environments."""
     data = list(range(10))
-    
+
     # Test invalid REPLICA_ID (0-based indexing attempt)
     with patch.dict(os.environ, {"REPLICA_ID": "0", "REPLICA_COUNT": "5"}):
         replica = int(os.environ.get("REPLICA_ID", "1"))
         total = int(os.environ.get("REPLICA_COUNT", "1"))
-        
+
         with pytest.raises(ValueError, match="replica must be >= 1"):
             list(chunk(data, replica=replica, total=total))
-    
+
     # Test REPLICA_ID exceeding REPLICA_COUNT
     with patch.dict(os.environ, {"REPLICA_ID": "6", "REPLICA_COUNT": "5"}):
         replica = int(os.environ.get("REPLICA_ID", "1"))
         total = int(os.environ.get("REPLICA_COUNT", "1"))
-        
+
         with pytest.raises(ValueError, match="replica cannot exceed total"):
             list(chunk(data, replica=replica, total=total))
-    
+
     # Test zero REPLICA_COUNT
     with patch.dict(os.environ, {"REPLICA_ID": "1", "REPLICA_COUNT": "0"}):
         replica = int(os.environ.get("REPLICA_ID", "1"))
         total = int(os.environ.get("REPLICA_COUNT", "1"))
-        
+
         with pytest.raises(ValueError, match="total must be positive"):
             list(chunk(data, replica=replica, total=total))
 
 
 def test_skaha_environment_integration_real_world_workflow() -> None:
     """Test a complete real-world workflow simulation.
-    
+
     This simulates a typical astronomical data processing workflow where
     multiple containers process different parts of a large dataset.
     """
     # Simulate processing 1000 FITS files across 25 containers
     fits_files = [f"observation_{i:04d}.fits" for i in range(1000)]
-    
+
     # Track processing results
     processing_results = {}
     all_processed_files = []
-    
+
     # Simulate each container's processing
     for container_id in range(1, 26):  # 25 containers (1-based)
-        with patch.dict(os.environ, {
-            "REPLICA_ID": str(container_id),
-            "REPLICA_COUNT": "25"
-        }):
+        with patch.dict(
+            os.environ, {"REPLICA_ID": str(container_id), "REPLICA_COUNT": "25"}
+        ):
             # Get files for this container
             replica = int(os.environ.get("REPLICA_ID", "1"))
             total = int(os.environ.get("REPLICA_COUNT", "1"))
             my_files = list(chunk(fits_files, replica=replica, total=total))
-            
+
             # Simulate processing (just record what we would process)
             processing_results[container_id] = {
                 "files_count": len(my_files),
                 "first_file": my_files[0] if my_files else None,
                 "last_file": my_files[-1] if my_files else None,
             }
-            
+
             all_processed_files.extend(my_files)
-    
+
     # Verify complete and correct distribution
     assert len(all_processed_files) == 1000, "All 1000 files should be processed"
     assert len(set(all_processed_files)) == 1000, "No file should be processed twice"
-    
+
     # Verify load balancing (each container should get 40 files: 1000/25 = 40)
     for container_id, results in processing_results.items():
         assert results["files_count"] == 40, (
             f"Container {container_id} should process exactly 40 files, "
             f"got {results['files_count']}"
         )
-    
+
     # Verify sequential assignment within each container
     for container_id in range(1, 26):
-        with patch.dict(os.environ, {
-            "REPLICA_ID": str(container_id),
-            "REPLICA_COUNT": "25"
-        }):
+        with patch.dict(
+            os.environ, {"REPLICA_ID": str(container_id), "REPLICA_COUNT": "25"}
+        ):
             replica = int(os.environ.get("REPLICA_ID", "1"))
             total = int(os.environ.get("REPLICA_COUNT", "1"))
             my_files = list(chunk(fits_files, replica=replica, total=total))
-            
+
             # Files should be sequential within each container's chunk
             expected_start = (container_id - 1) * 40
-            expected_files = fits_files[expected_start:expected_start + 40]
-            
+            expected_files = fits_files[expected_start : expected_start + 40]
+
             assert my_files == expected_files, (
                 f"Container {container_id} should get sequential files "
                 f"{expected_start} to {expected_start + 39}"

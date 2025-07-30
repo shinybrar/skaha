@@ -10,19 +10,10 @@ class TestKindType:
 
     def test_kind_values(self) -> None:
         """Test that Kind contains expected values."""
-        expected_kinds = ("desktop", "notebook", "carta", "headless", "firefly")
+        expected_kinds = ("desktop", "notebook", "carta", "headless", "firefly", "desktop-app", "contributed")
         actual_kinds = get_args(Kind)
 
         assert actual_kinds == expected_kinds
-
-    def test_kind_type_checking(self) -> None:
-        """Test Kind type checking behavior."""
-        # Valid kinds
-        valid_kinds = ["desktop", "notebook", "carta", "headless", "firefly"]
-
-        for kind in valid_kinds:
-            # These should be valid at runtime
-            assert kind in get_args(Kind)
 
     def test_kind_completeness(self) -> None:
         """Test that all expected session kinds are included."""
@@ -34,16 +25,8 @@ class TestKindType:
         assert "carta" in kinds
         assert "headless" in kinds
         assert "firefly" in kinds
-
-        # Check total count
-        assert len(kinds) == 5
-
-    def test_kind_ordering(self) -> None:
-        """Test that Kind values are in expected order."""
-        kinds = get_args(Kind)
-        expected_order = ("desktop", "notebook", "carta", "headless", "firefly")
-
-        assert kinds == expected_order
+        assert "desktop-app" in kinds
+        assert "contributed" in kinds
 
 
 class TestStatusType:
@@ -51,19 +34,10 @@ class TestStatusType:
 
     def test_status_values(self) -> None:
         """Test that Status contains expected values."""
-        expected_statuses = ("Pending", "Running", "Terminating", "Succeeded", "Error")
+        expected_statuses = ("Pending", "Running", "Terminating", "Succeeded", "Error", "Failed")
         actual_statuses = get_args(Status)
 
         assert actual_statuses == expected_statuses
-
-    def test_status_type_checking(self) -> None:
-        """Test Status type checking behavior."""
-        # Valid statuses
-        valid_statuses = ["Pending", "Running", "Terminating", "Succeeded", "Error"]
-
-        for status in valid_statuses:
-            # These should be valid at runtime
-            assert status in get_args(Status)
 
     def test_status_completeness(self) -> None:
         """Test that all expected session statuses are included."""
@@ -75,9 +49,10 @@ class TestStatusType:
         assert "Terminating" in statuses
         assert "Succeeded" in statuses
         assert "Error" in statuses
+        assert "Failed" in statuses
 
         # Check total count
-        assert len(statuses) == 5
+        assert len(statuses) == 6
 
     def test_status_capitalization(self) -> None:
         """Test that Status values follow proper capitalization."""
@@ -88,13 +63,6 @@ class TestStatusType:
             assert status[0].isupper()
             # Rest should be lowercase (except for proper nouns)
             assert status == status.capitalize() or status in ["Error"]
-
-    def test_status_ordering(self) -> None:
-        """Test that Status values are in expected order."""
-        statuses = get_args(Status)
-        expected_order = ("Pending", "Running", "Terminating", "Succeeded", "Error")
-
-        assert statuses == expected_order
 
 
 class TestViewType:
@@ -248,28 +216,6 @@ class TestTypeAliasesIntegration:
         assert Status is not None
         assert View is not None
         assert Mode is not None
-
-    def test_type_alias_documentation(self) -> None:
-        """Test that type aliases are properly documented through their values."""
-        # Kind should represent session types
-        kinds = get_args(Kind)
-        session_types = {"desktop", "notebook", "carta", "headless", "firefly"}
-        assert set(kinds) == session_types
-
-        # Status should represent Kubernetes-style statuses
-        statuses = get_args(Status)
-        k8s_statuses = {"Pending", "Running", "Terminating", "Succeeded", "Error"}
-        assert set(statuses) == k8s_statuses
-
-        # View should represent view options
-        views = get_args(View)
-        view_options = {"all"}
-        assert set(views) == view_options
-
-        # Mode should represent authentication modes
-        modes = get_args(Mode)
-        auth_modes = {"x509", "oidc", "token", "default"}
-        assert set(modes) == auth_modes
 
 
 class TestTypeAliasUsage:
