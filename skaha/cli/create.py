@@ -105,8 +105,9 @@ def creation(
     """Launch a new session.
 
     Examples:
+    skaha create notebook skaha/base-notebook:latest
     skaha create notebook images.canfar.net/skaha/base-notebook:latest
-    skaha create headless images.canfar.net/skaha/base-notebook:latest -- python3 -V
+    skaha create headless skaha/base-notebook:latest -- python3 -V
     """
     cmd = None
     args = ""

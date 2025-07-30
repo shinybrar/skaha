@@ -48,7 +48,7 @@ class TestCreateSpec:
         )
 
         assert spec.name == "full-session"
-        assert spec.image == "custom/image:latest"
+        assert spec.image == "images.canfar.net/custom/image:latest"  # Gets prefixed
         assert spec.kind == "headless"
         assert spec.cores == 8
         assert spec.ram == 16
@@ -61,73 +61,73 @@ class TestCreateSpec:
     def test_cores_validation(self) -> None:
         """Test cores field validation."""
         # Valid values
-        spec = CreateRequest(name="test", image="test:latest", kind="headless", cores=1)
+        spec = CreateRequest(name="test", image="skaha/test", kind="headless", cores=1)
         assert spec.cores == 1
 
         spec = CreateRequest(
-            name="test", image="test:latest", kind="headless", cores=256
+            name="test", image="skaha/test", kind="headless", cores=256
         )
         assert spec.cores == 256
 
         # Invalid values
         with pytest.raises(ValidationError):
-            CreateRequest(name="test", image="test:latest", kind="headless", cores=0)
+            CreateRequest(name="test", image="skaha/test", kind="headless", cores=0)
 
         with pytest.raises(ValidationError):
-            CreateRequest(name="test", image="test:latest", kind="headless", cores=257)
+            CreateRequest(name="test", image="skaha/test", kind="headless", cores=257)
 
     def test_ram_validation(self) -> None:
         """Test RAM field validation."""
         # Valid values
-        spec = CreateRequest(name="test", image="test:latest", kind="headless", ram=1)
+        spec = CreateRequest(name="test", image="skaha/test", kind="headless", ram=1)
         assert spec.ram == 1
 
-        spec = CreateRequest(name="test", image="test:latest", kind="headless", ram=512)
+        spec = CreateRequest(name="test", image="skaha/test", kind="headless", ram=512)
         assert spec.ram == 512
 
         # Invalid values
         with pytest.raises(ValidationError):
-            CreateRequest(name="test", image="test:latest", kind="headless", ram=0)
+            CreateRequest(name="test", image="skaha/test", kind="headless", ram=0)
 
         with pytest.raises(ValidationError):
-            CreateRequest(name="test", image="test:latest", kind="headless", ram=513)
+            CreateRequest(name="test", image="skaha/test", kind="headless", ram=513)
 
     def test_gpus_validation(self) -> None:
         """Test GPUs field validation."""
         # Valid values
-        spec = CreateRequest(name="test", image="test:latest", kind="headless", gpus=1)
+        spec = CreateRequest(name="test", image="skaha/test", kind="headless", gpus=1)
         assert spec.gpus == 1
 
-        spec = CreateRequest(name="test", image="test:latest", kind="headless", gpus=28)
+        spec = CreateRequest(name="test", image="skaha/test", kind="headless", gpus=28)
         assert spec.gpus == 28
 
         # Invalid values
         with pytest.raises(ValidationError):
-            CreateRequest(name="test", image="test:latest", kind="headless", gpus=0)
+            CreateRequest(name="test", image="skaha/test", kind="headless", gpus=0)
 
         with pytest.raises(ValidationError):
-            CreateRequest(name="test", image="test:latest", kind="headless", gpus=29)
+            CreateRequest(name="test", image="skaha/test", kind="headless", gpus=29)
 
     def test_replicas_validation(self) -> None:
         """Test replicas field validation."""
         # Valid values
         spec = CreateRequest(
-            name="test", image="test:latest", kind="headless", replicas=1
+            name="test", image="skaha/test", kind="headless", replicas=1
         )
         assert spec.replicas == 1
 
         spec = CreateRequest(
-            name="test", image="test:latest", kind="headless", replicas=512
+            name="test", image="skaha/test", kind="headless", replicas=512
         )
         assert spec.replicas == 512
 
         # Invalid values
         with pytest.raises(ValidationError):
-            CreateRequest(name="test", image="test:latest", kind="headless", replicas=0)
+            CreateRequest(name="test", image="skaha/test", kind="headless", replicas=0)
 
         with pytest.raises(ValidationError):
             CreateRequest(
-                name="test", image="test:latest", kind="headless", replicas=513
+                name="test", image="skaha/test", kind="headless", replicas=513
             )
 
     def test_kind_validation(self) -> None:
@@ -135,18 +135,18 @@ class TestCreateSpec:
         # Valid kinds
         valid_kinds = ["desktop", "notebook", "carta", "headless", "firefly"]
         for kind in valid_kinds:
-            spec = CreateRequest(name="test", image="test:latest", kind=kind)
+            spec = CreateRequest(name="test", image="skaha/test", kind=kind)
             assert spec.kind == kind
 
         # Invalid kind
         with pytest.raises(ValidationError):
-            CreateRequest(name="test", image="test:latest", kind="invalid")
+            CreateRequest(name="test", image="skaha/test", kind="invalid")
 
     def test_headless_validation_success(self) -> None:
         """Test that cmd, args, env are allowed for headless sessions."""
         spec = CreateRequest(
             name="test",
-            image="test:latest",
+            image="skaha/test",
             kind="headless",
             cmd="python",
             args="script.py",
@@ -166,14 +166,14 @@ class TestCreateSpec:
             with pytest.raises(
                 ValidationError, match="cmd, args, env only allowed for headless"
             ):
-                CreateRequest(name="test", image="test:latest", kind=kind, cmd="python")
+                CreateRequest(name="test", image="skaha/test", kind=kind, cmd="python")
 
             # Test args restriction
             with pytest.raises(
                 ValidationError, match="cmd, args, env only allowed for headless"
             ):
                 CreateRequest(
-                    name="test", image="test:latest", kind=kind, args="--verbose"
+                    name="test", image="skaha/test", kind=kind, args="--verbose"
                 )
 
             # Test env restriction
@@ -181,7 +181,7 @@ class TestCreateSpec:
                 ValidationError, match="cmd, args, env only allowed for headless"
             ):
                 CreateRequest(
-                    name="test", image="test:latest", kind=kind, env={"VAR": "value"}
+                    name="test", image="skaha/test", kind=kind, env={"VAR": "value"}
                 )
 
     def test_firefly_desktop_warnings(self) -> None:
@@ -192,7 +192,7 @@ class TestCreateSpec:
             # Test firefly with ignored parameters
             CreateRequest(
                 name="test",
-                image="test:latest",
+                image="skaha/test",
                 kind="firefly",
                 cores=8,  # Should be ignored
                 ram=16,  # Should be ignored
@@ -210,14 +210,14 @@ class TestCreateSpec:
             ):
                 CreateRequest(
                     name="test",
-                    image="test:latest",
+                    image="skaha/test",
                     kind=kind,
                     replicas=2,
                 )
 
     def test_serialization_alias(self) -> None:
         """Test that kind field uses 'type' as serialization alias."""
-        spec = CreateRequest(name="test", image="test:latest", kind="headless")
+        spec = CreateRequest(name="test", image="skaha/test", kind="headless")
 
         # Test model dump with by_alias=True uses 'type' instead of 'kind'
         data = spec.model_dump(by_alias=True)
@@ -228,7 +228,7 @@ class TestCreateSpec:
     def test_replicas_excluded_from_serialization(self) -> None:
         """Test that replicas field is excluded from serialization."""
         spec = CreateRequest(
-            name="test", image="test:latest", kind="headless", replicas=5
+            name="test", image="skaha/test", kind="headless", replicas=5
         )
 
         data = spec.model_dump()
@@ -240,7 +240,7 @@ class TestCreateSpec:
     def test_populate_by_name(self) -> None:
         """Test that model can be populated by field name or alias."""
         # Using field name 'kind' (serialization_alias doesn't affect input)
-        data = {"name": "test", "image": "test:latest", "kind": "notebook"}
+        data = {"name": "test", "image": "skaha/test", "kind": "notebook"}
         spec = CreateRequest.model_validate(data)
         assert spec.kind == "notebook"
 
@@ -338,6 +338,88 @@ class TestFetchSpec:
         assert "populate_by_name" in spec.model_config
         assert spec.model_config["populate_by_name"] is True
 
+    def test_image_validation_bare_names(self) -> None:
+        """Test image validation for bare image names."""
+        # Bare image name without tag
+        spec = CreateRequest(name="test", image="skaha/astroml", kind="headless")
+        assert spec.image == "images.canfar.net/skaha/astroml:latest"
+
+        # Bare image name with tag
+        spec = CreateRequest(name="test", image="skaha/astroml:v1.0", kind="headless")
+        assert spec.image == "images.canfar.net/skaha/astroml:v1.0"
+
+        # Single component image name (gets prefixed and tagged)
+        spec = CreateRequest(name="test", image="ubuntu", kind="headless")
+        assert spec.image == "images.canfar.net/ubuntu:latest"
+
+    def test_image_validation_canfar_registry(self) -> None:
+        """Test image validation for CANFAR registry images."""
+        # Full CANFAR registry path without tag
+        spec = CreateRequest(
+            name="test", image="images.canfar.net/skaha/astroml", kind="headless"
+        )
+        assert spec.image == "images.canfar.net/skaha/astroml:latest"
+
+        # Full CANFAR registry path with tag
+        spec = CreateRequest(
+            name="test", image="images.canfar.net/skaha/astroml:v1.0", kind="headless"
+        )
+        assert spec.image == "images.canfar.net/skaha/astroml:v1.0"
+
+    def test_image_validation_custom_registry_rejection(self) -> None:
+        """Test that custom registries are rejected."""
+        # Custom registry with domain
+        with pytest.raises(
+            ValidationError, match="Only images.canfar.net registry is supported"
+        ):
+            CreateRequest(
+                name="test",
+                image="myregistry.com/skaha/astroml:latest",
+                kind="headless",
+            )
+
+        # Localhost registry
+        with pytest.raises(
+            ValidationError, match="Only images.canfar.net registry is supported"
+        ):
+            CreateRequest(name="test", image="localhost:5000/image", kind="headless")
+
+        # Docker Hub official images (contain dots in name)
+        with pytest.raises(
+            ValidationError, match="Only images.canfar.net registry is supported"
+        ):
+            CreateRequest(
+                name="test", image="docker.io/library/ubuntu", kind="headless"
+            )
+
+        # Registry with port
+        with pytest.raises(
+            ValidationError, match="Only images.canfar.net registry is supported"
+        ):
+            CreateRequest(
+                name="test", image="registry.example.com:443/image", kind="headless"
+            )
+
+    def test_image_validation_edge_cases(self) -> None:
+        """Test edge cases for image validation."""
+        # Image with multiple path components
+        spec = CreateRequest(
+            name="test", image="namespace/project/image", kind="headless"
+        )
+        assert spec.image == "images.canfar.net/namespace/project/image:latest"
+
+        # Image with complex tag
+        spec = CreateRequest(
+            name="test", image="skaha/astroml:v1.0-beta.1", kind="headless"
+        )
+        assert spec.image == "images.canfar.net/skaha/astroml:v1.0-beta.1"
+
+        # Image with digest (should not get :latest appended)
+        spec = CreateRequest(
+            name="test", image="skaha/astroml@sha256:abc123", kind="headless"
+        )
+        assert spec.image == "images.canfar.net/skaha/astroml@sha256:abc123"
+
 
 class TestSessionModelsIntegration:
     """Test integration between session models."""
@@ -347,7 +429,7 @@ class TestSessionModelsIntegration:
         # Create a session
         create_spec = CreateRequest(
             name="integration-test",
-            image="test:latest",
+            image="skaha/test",
             kind="notebook",
         )
 
@@ -363,7 +445,7 @@ class TestSessionModelsIntegration:
 
         for kind in valid_kinds:
             # Should work in CreateSpec
-            create_spec = CreateRequest(name="test", image="test:latest", kind=kind)
+            create_spec = CreateRequest(name="test", image="skaha/test", kind=kind)
             assert create_spec.kind == kind
 
             # Should work in FetchSpec
@@ -385,6 +467,7 @@ class TestSessionModelsIntegration:
         )
 
         assert create_spec.name == "data-processing"
+        assert create_spec.image == "images.canfar.net/python:3.9"  # Gets prefixed
         assert create_spec.kind == "headless"
         assert create_spec.cores == 4
         assert create_spec.ram == 8

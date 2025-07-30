@@ -161,12 +161,12 @@ skaha create [OPTIONS] KIND IMAGE [-- CMD [ARGS]...]
 
 !!! example "Create a Jupyter Notebook"
     ```bash
-    skaha create --cpu 4 -m 8notebook images.canfar.net/skaha/scipy-notebook:latest
+    skaha create --cpu 4 -m 8notebook skaha/scipy-notebook:latest
     ```
 
 !!! example "Create a Headless Session with Custom Command"
     ```bash
-    uv run skaha create headless images.canfar.net/skaha/terminal:1.1.2 -- python -c "print('Hello World')"
+    uv run skaha create headless skaha/terminal:1.1.2 -- env
     ```
 
 ### `skaha ps`
