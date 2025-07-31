@@ -1,4 +1,5 @@
 """Generate funny names."""
+
 import secrets
 
 WORDLIST: list[str] = [
