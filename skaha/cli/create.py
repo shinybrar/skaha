@@ -37,7 +37,7 @@ class CreateUsageMessage(AliasGroup):
 
 
 create = typer.Typer(
-    name="create | launch",
+    name="create",
     no_args_is_help=True,
     cls=AliasGroup,
 )

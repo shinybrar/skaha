@@ -15,7 +15,7 @@ from skaha.session import AsyncSession
 console = Console()
 
 delete = typer.Typer(
-    name="delete | rm",
+    name="delete",
     no_args_is_help=True,
     cls=AliasGroup,
 )

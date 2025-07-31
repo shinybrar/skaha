@@ -88,13 +88,6 @@ cli.add_typer(
 )
 
 cli.add_typer(
-    stats,
-    help="Show cluster stats",
-    no_args_is_help=False,
-    rich_help_panel="Cluster Information",
-)
-
-cli.add_typer(
     logs,
     help="Show session logs",
     no_args_is_help=False,
@@ -112,6 +105,38 @@ cli.add_typer(
     no_args_is_help=True,
     rich_help_panel="Session Management",
 )
+
+cli.add_typer(
+    create,
+    name="run | launch",
+    help="Aliases for create.",
+    no_args_is_help=True,
+    rich_help_panel="Aliases",
+)
+
+cli.add_typer(
+    ps,
+    name="get | ls | ps",
+    help="Aliases for ps.",
+    no_args_is_help=False,
+    rich_help_panel="Aliases",
+)
+
+cli.add_typer(
+    delete,
+    name="del | rm",
+    help="Aliases for delete.",
+    no_args_is_help=True,
+    rich_help_panel="Aliases",
+)
+
+cli.add_typer(
+    stats,
+    help="Show cluster stats",
+    no_args_is_help=False,
+    rich_help_panel="Cluster Information",
+)
+
 
 cli.add_typer(
     config,
