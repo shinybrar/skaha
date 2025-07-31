@@ -85,7 +85,7 @@ def test_valid_happy_path() -> None:
 
 def test_valid_file_not_found() -> None:
     """Test that `valid` raises FileNotFoundError for a non-existent file."""
-    non_existent_path = Path("/tmp/this/path/does/not.exist")
+    non_existent_path = Path("/this/path/does/not.exist")
     with pytest.raises(FileNotFoundError):
         x509_auth.valid(non_existent_path)
 
