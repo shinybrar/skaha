@@ -1,4 +1,5 @@
-import random
+"""Generate funny names."""
+import secrets
 
 WORDLIST: list[str] = [
     "abandon",
@@ -2058,7 +2059,5 @@ def name() -> str:
     Returns:
         str: A random name.
     """
-    random.seed()
-    random.shuffle(WORDLIST)
-    who: str = f"{random.choice(WORDLIST)}-{random.choice(WORDLIST)}"  # noqa: S311
+    who: str = f"{secrets.choice(WORDLIST)}-{secrets.choice(WORDLIST)}"
     return who
