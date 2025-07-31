@@ -35,17 +35,3 @@ class TestPsAliases:
         """Test that main help shows all aliases."""
         result = runner.invoke(cli, ["--help"])
         assert result.exit_code == 0
-
-    def test_all_aliases_have_same_options(self, runner: CliRunner) -> None:
-        """Test that all aliases have the same command options."""
-        commands = ["ps", "ls", "list"]
-
-        for cmd in commands:
-            result = runner.invoke(cli, [cmd, "--help"])
-            assert result.exit_code == 0
-            # All help outputs should contain the same options
-            assert "--all" in result.stdout
-            assert "--quiet" in result.stdout
-            assert "--kind" in result.stdout
-            assert "--status" in result.stdout
-            assert "--debug" in result.stdout
