@@ -127,6 +127,48 @@ class CreateRequest(BaseModel):
             raise ValueError(msg)
         return value
 
+    @field_validator("image")
+    @classmethod
+    def _validate_image(cls, value: str) -> str:
+        """Validate and normalize container image reference.
+
+        Only supports the CANFAR registry (images.canfar.net).
+        Adds default registry if not specified and :latest tag if no tag specified.
+
+        Args:
+            value (str): Container image reference.
+
+        Returns:
+            str: Normalized image reference.
+
+        Raises:
+            ValueError: If a custom registry is specified (not images.canfar.net).
+
+        Examples:
+            skaha/astroml -> images.canfar.net/skaha/astroml:latest
+            skaha/astroml:v1.0 -> images.canfar.net/skaha/astroml:v1.0
+            images.canfar.net/skaha/astroml -> images.canfar.net/skaha/astroml:latest
+        """
+        # Check if a custom registry is being used (not CANFAR registry)
+        # Only reject if there's a slash AND the first component looks like a registry
+        if "/" in value:
+            server = value.split("/")[0]
+            if ("." in server or ":" in server) and not value.startswith(
+                "images.canfar.net/"
+            ):
+                msg = f"Only images.canfar.net registry is supported, got: {value}"
+                raise ValueError(msg)
+
+        # Add default CANFAR registry if not present
+        if not value.startswith("images.canfar.net/"):
+            value = f"images.canfar.net/{value}"
+
+        # Add :latest tag if no tag specified (check only the last component)
+        if ":" not in value.split("/")[-1]:
+            value += ":latest"
+
+        return value
+
 
 class FetchRequest(BaseModel):
     """Payload specification for fetching session[s] information."""

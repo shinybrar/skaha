@@ -9,6 +9,7 @@ import click
 import typer
 from rich.console import Console
 
+from skaha.hooks.typer.aliases import AliasGroup
 from skaha.models.types import Kind
 from skaha.session import AsyncSession
 from skaha.utils import funny
@@ -16,7 +17,7 @@ from skaha.utils import funny
 console = Console()
 
 
-class CreateUsageMessage(typer.core.TyperGroup):
+class CreateUsageMessage(AliasGroup):
     """Custom usage message for prune command.
 
     Args:
@@ -37,9 +38,8 @@ class CreateUsageMessage(typer.core.TyperGroup):
 
 create = typer.Typer(
     name="create",
-    help="Create a new Skaha session.",
     no_args_is_help=True,
-    cls=CreateUsageMessage,
+    cls=AliasGroup,
 )
 
 
@@ -71,7 +71,7 @@ def creation(
     name: Annotated[
         str, typer.Option("--name", "-n", help="Name of the session.")
     ] = funny.name(),
-    cpus: Annotated[int, typer.Option("--cpus", "-c", help="Number of CPU cores.")] = 1,
+    cpu: Annotated[int, typer.Option("--cpu", "-c", help="Number of CPU cores.")] = 1,
     memory: Annotated[
         int, typer.Option("--memory", "-m", help="Amount of RAM in GB.")
     ] = 2,
@@ -102,7 +102,13 @@ def creation(
         ),
     ] = False,
 ) -> None:
-    """Create a new Skaha session."""
+    """Launch a new session.
+
+    Examples:
+    skaha create notebook skaha/base-notebook:latest
+    skaha create notebook images.canfar.net/skaha/base-notebook:latest
+    skaha create headless skaha/base-notebook:latest -- python3 -V
+    """
     cmd = None
     args = ""
     environment: dict[str, Any] = {}
@@ -124,12 +130,11 @@ def creation(
     async def _create() -> None:
         log_level = "DEBUG" if debug else "INFO"
         async with AsyncSession(loglevel=log_level) as session:
-            console.print(f"[bold blue]Creating {kind} session '{name}'...[/bold blue]")
             try:
                 session_ids = await session.create(
                     name=name,
                     image=image,
-                    cores=cpus,
+                    cores=cpu,
                     ram=memory,
                     kind=kind,
                     gpu=gpu,
@@ -169,7 +174,7 @@ def creation(
         console.print(f"[dim]  Kind: {kind}[/dim]")
         console.print(f"[dim]  Image: {image}[/dim]")
         console.print(f"[dim]  Name: {name}[/dim]")
-        console.print(f"[dim]  CPUs: {cpus}[/dim]")
+        console.print(f"[dim]  CPUs: {cpu}[/dim]")
         console.print(f"[dim]  Memory: {memory}GB[/dim]")
         console.print(f"[dim]  GPU: {gpu}[/dim]")
         console.print(f"[dim]  Env: {environment}[/dim]")

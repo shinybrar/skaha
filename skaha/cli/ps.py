@@ -13,6 +13,7 @@ from rich import box
 from rich.console import Console
 from rich.table import Table
 
+from skaha.hooks.typer.aliases import AliasGroup
 from skaha.models.session import FetchResponse
 from skaha.models.types import Kind, Status
 from skaha.session import AsyncSession
@@ -20,9 +21,9 @@ from skaha.session import AsyncSession
 console = Console()
 
 ps = typer.Typer(
-    name="ps",
-    help="List sessions.",
+    name="list",
     no_args_is_help=False,
+    cls=AliasGroup,
 )
 
 
@@ -77,6 +78,7 @@ def list_sessions(
                 FetchResponse.model_validate(item)
                 for item in await session.fetch(kind=kind, status=status)
             ]
+        sessions = sorted(sessions, key=lambda x: x.startTime, reverse=False)
 
         if quiet:
             for instance in sessions:

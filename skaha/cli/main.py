@@ -18,6 +18,7 @@ from skaha.cli.ps import ps
 from skaha.cli.stats import stats
 from skaha.cli.version import version
 from skaha.exceptions.context import AuthContextError
+from skaha.hooks.typer.aliases import AliasGroup
 
 console = Console()
 
@@ -43,6 +44,7 @@ cli: typer.Typer = typer.Typer(
     rich_help_panel="Skaha CLI Commands",
     callback=callback,
     invoke_without_command=True,  # Allow callback to be called without subcommand
+    cls=AliasGroup,
 )
 
 cli.add_typer(
@@ -55,21 +57,17 @@ cli.add_typer(
 
 cli.add_typer(
     create,
-    name="create",
-    help="Create a new session",
     no_args_is_help=True,
     rich_help_panel="Session Management",
 )
 
 cli.add_typer(
     ps,
-    help="Show running sessions",
     no_args_is_help=False,
     rich_help_panel="Session Management",
 )
 cli.add_typer(
     events,
-    help="Show session events",
     no_args_is_help=False,
     rich_help_panel="Session Management",
 )
@@ -90,13 +88,6 @@ cli.add_typer(
 )
 
 cli.add_typer(
-    stats,
-    help="Show cluster stats",
-    no_args_is_help=False,
-    rich_help_panel="Cluster Information",
-)
-
-cli.add_typer(
     logs,
     help="Show session logs",
     no_args_is_help=False,
@@ -105,17 +96,47 @@ cli.add_typer(
 
 cli.add_typer(
     delete,
-    help="Delete one or more sessions",
     no_args_is_help=True,
     rich_help_panel="Session Management",
 )
 
 cli.add_typer(
     prune,
-    help="Prune sessions by criteria",
     no_args_is_help=True,
     rich_help_panel="Session Management",
 )
+
+cli.add_typer(
+    create,
+    name="run | launch",
+    help="Aliases for create.",
+    no_args_is_help=True,
+    rich_help_panel="Aliases",
+)
+
+cli.add_typer(
+    ps,
+    name="get | ls | ps",
+    help="Aliases for ps.",
+    no_args_is_help=False,
+    rich_help_panel="Aliases",
+)
+
+cli.add_typer(
+    delete,
+    name="del | rm",
+    help="Aliases for delete.",
+    no_args_is_help=True,
+    rich_help_panel="Aliases",
+)
+
+cli.add_typer(
+    stats,
+    help="Show cluster stats",
+    no_args_is_help=False,
+    rich_help_panel="Cluster Information",
+)
+
 
 cli.add_typer(
     config,

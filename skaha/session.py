@@ -618,6 +618,7 @@ class AsyncSession(SkahaClient):
 
         async def bounded(parameters: list[tuple[str, Any]]) -> Any:
             async with semaphore:
+                log.debug("HTTP Request Parameters: %s", parameters)
                 response = await self.asynclient.post(url="session", params=parameters)
                 return response.text.rstrip("\r\n")
 

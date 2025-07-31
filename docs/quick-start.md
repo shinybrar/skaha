@@ -55,14 +55,15 @@ Lets launch a Jupyter notebook with astronomy tools pre-installed,
 
 <!-- termynal -->
 ```
-$ skaha create notebook images.canfar.net/skaha/astroml-notebook:latest
+$ skaha create notebook skaha/astroml-notebook:latest
 Creating notebook session 'scare-monster'...
 Successfully created session 'scare-monster' (ID: tcgle3m3)
 ```
 
 !!! success "What just happened?"
     - Skaha connected to CANFAR using your certificate
-    - A Jupyter notebook was launched with `skaha/astroml-notebook:latest` container image
+    - Skaha defaulted the container image to `images.canfar.net/skaha/astroml-notebook:latest`
+    - A Jupyter notebook was launched with the container image
     - A random name was generated for your session, `scare-monster` in this case
     - The Science Platform allocated resources for your notebook and started it.
 
