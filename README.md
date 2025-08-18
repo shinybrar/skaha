@@ -1,14 +1,16 @@
-# Skaha
+# Skaha → Canfar
 
-[![Continous Integration](https://github.com/shinybrar/skaha/actions/workflows/ci.yml/badge.svg)](https://github.com/shinybrar/skaha/actions/workflows/ci.yml)
-[![Continous Deployment](https://github.com/shinybrar/skaha/actions/workflows/cd.yml/badge.svg)](https://github.com/shinybrar/skaha/actions/workflows/cd.yml)
-[![codecov](https://codecov.io/gh/shinybrar/skaha/graph/badge.svg?token=T247EQ0S2M)](https://codecov.io/gh/shinybrar/skaha)
-[![CodeQL](https://github.com/shinybrar/skaha/actions/workflows/codeql-analysis.yml/badge.svg)](https://github.com/shinybrar/skaha/actions/workflows/codeql-analysis.yml)
-[![OpenSSF Scorecard](https://api.scorecard.dev/projects/github.com/shinybrar/skaha/badge)](https://scorecard.dev/viewer/?uri=github.com/shinybrar/skaha)
+Skaha has officially migrated to be supported by the Canadian Astronomy Data Centre: [`opencadc/canfar`](https://github.com/opencadc/canfar).
 
-## For more information, [check out the official documentation](https://shinybrar.github.io/skaha/).
+As part of this move:  
+- The package has been **renamed** to `canfar`.
+- `canfar` `v1.0` is slated for release in fall 2025.
+- Backward compatibility is preserved for the main API under, 
+  - `skaha.session` is now available under `canfar.sessions`
 
----
+## Migration Guide
+For more details and step-by-step instructions, see the [opencadc/canfar repository](https://github.com/opencadc/canfar).
+
 <p align="center">
   <a href="Some Love">
     <img src="https://forthebadge.com/images/badges/built-with-love.svg">
